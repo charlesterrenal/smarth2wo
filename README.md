@@ -1,7 +1,7 @@
 # SmartH2wo: IoT-Based Smart Water Dispenser
 
 ![Status](https://img.shields.io/badge/Status-Prototype_Development-orange)
-![Platform](https://img.shields.io/badge/Platform-ESP32-blue)
+![Platform](https://img.shields.io/badge/Platform-ESP32-blue,https://img.shields.io/badge/Arduino-00878F?logo=arduino&logoColor=fff&style=plastic)
 
 An IoT-based water dispenser prototype developed for the **PUP ITECH** campus. This project integrates hardware sensors with machine learning to provide real-time monitoring and predictive maintenance.
 
