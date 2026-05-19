@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - smarth2wo-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+    command: npm run dev -- --host
+    depends_on:
+      - backend
+    networks:
+      - smarth2wo-network
+
+networks:
+  smarth2wo-network:
+    driver: bridge
+
+# Usage:
+# docker-compose up       # Run both services
+# docker-compose down     # Stop services
+# docker-compose logs -f  # View logs

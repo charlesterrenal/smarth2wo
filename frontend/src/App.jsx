@@ -1,0 +1,121 @@
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import Sidebar from './components/Sidebar'
+import Dashboard from './pages/Dashboard'
+import Transaction from './pages/Transaction'
+import Analytics from './pages/Analytics'
+import Logs from './pages/Logs'
+import Settings from './pages/Settings'
+import Login from './pages/Login'
+import { supabase } from './lib/supabase'
+
+function AppContent() {
+  const location = useLocation()
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+  
+  return (
+    <main style={{ 
+      flex: 1, 
+      marginLeft: isMobile ? '0' : 'var(--sidebar-width)', 
+      overflow: 'hidden',
+      width: '100%',
+      animation: 'pageTransition 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+      background: 'var(--color-bg)',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <div style={{
+        flex: 1,
+        overflow: 'auto',
+        width: '100%',
+      }}>
+        <Routes key={location.pathname}>
+          <Route path="/"            element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard"   element={<Dashboard />} />
+          <Route path="/transaction" element={<Transaction />} />
+          <Route path="/analytics"   element={<Analytics />} />
+          <Route path="/logs"        element={<Logs />} />
+          <Route path="/settings"    element={<Settings />} />
+        </Routes>
+      </div>
+    </main>
+  )
+}
+
+function AppInner() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const location = useLocation()
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription?.unsubscribe()
+  }, [])
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: 'var(--color-bg)',
+        color: 'var(--color-text)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '12px' }}>Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // If not logged in, only show login
+  if (!user) {
+    return <Routes><Route path="*" element={<Login />} /></Routes>
+  }
+
+  // If logged in, show dashboard layout with all routes
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--color-bg)' }}>
+      <Sidebar />
+      <AppContent />
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <style>{`
+        @keyframes pageTransition {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      <AppInner />
+    </BrowserRouter>
+  )
+}
