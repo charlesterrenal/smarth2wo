@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Transaction from './pages/Transaction'
+import AdminPayments from './pages/AdminPayments'
 import Analytics from './pages/Analytics'
 import Logs from './pages/Logs'
 import Settings from './pages/Settings'
@@ -43,6 +44,7 @@ function AppContent() {
           <Route path="/"            element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"   element={<Dashboard />} />
           <Route path="/transaction" element={<Transaction />} />
+          <Route path="/admin/payments" element={<AdminPayments />} />
           <Route path="/analytics"   element={<Analytics />} />
           <Route path="/logs"        element={<Logs />} />
           <Route path="/settings"    element={<Settings />} />

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ArrowLeftRight, BarChart2, ClipboardList, Settings, Sun, Moon, Menu, X, LogOut } from 'lucide-react'
+import { LayoutDashboard, ArrowLeftRight, CreditCard, BarChart2, ClipboardList, Settings, Sun, Moon, Menu, X, LogOut } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 
 const navItems = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard'   },
   { to: '/transaction', icon: ArrowLeftRight,  label: 'Transaction'  },
+  { to: '/admin/payments', icon: CreditCard,  label: 'Admin Payments' },
   { to: '/analytics',   icon: BarChart2,       label: 'Analytics'    },
   { to: '/logs',        icon: ClipboardList,   label: 'Logs'         },
   { to: '/settings',    icon: Settings,        label: 'Settings'     },
