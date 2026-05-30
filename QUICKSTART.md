@@ -44,24 +44,9 @@ npm install
 
 # Setup Supabase credentials
 cp .env.example .env.local
-# Edit .env.local and fill in VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
-
-# Create Supabase client file
-# Create src/lib/supabase.js with the following content:
-# ---
-# import { createClient } from '@supabase/supabase-js'
-# 
-# const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-# const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-# 
-# export const isSupabaseConfigured = () => {
-#   return !!(supabaseUrl && supabaseAnonKey)
-# }
-# 
-# export const supabase = isSupabaseConfigured()
-#   ? createClient(supabaseUrl, supabaseAnonKey)
-#   : null
-# ---
+# Edit .env.local and fill in VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
+# (Get these from https://app.supabase.com → Settings → API)
+# NOTE: Use the "anon" public key, NOT the secret key
 
 npm run dev
 ```
