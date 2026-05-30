@@ -280,7 +280,7 @@ async def create_payment_checkout(request: CreatePaymentRequest):
                     "status": "scheduled",
                     "message": f"QR code generated for {request.volume_ml}ml at P{request.amount_pesos}",
                     "volume_ml": request.volume_ml,
-                    "payment": "qr",
+                    "payment_method": "qr",
                     "created_at": datetime.utcnow().isoformat()
                 }).execute()
             except Exception as log_err:
@@ -317,7 +317,7 @@ async def handle_payment_webhook(payload: dict):
                         "status": "success",
                         "message": f"Payment confirmed for {result.get('volume_ml')}ml - P{result.get('amount_pesos')}",
                         "volume_ml": result.get("volume_ml"),
-                        "payment": result.get("payment_method", "qr"),
+                        "payment_method": result.get("payment_method", "qr"),
                         "created_at": datetime.utcnow().isoformat()
                     }).execute()
                 except Exception as log_err:

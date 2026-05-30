@@ -17,11 +17,15 @@ create table if not exists transactions (
 create table if not exists logs (
   id          uuid default gen_random_uuid() primary key,
   event       text not null,
+  message     text,
   volume_ml   int,
-  payment     numeric(8,2),
-  status      text not null check (status in ('Success', 'Scheduled', 'Failed')),
+  payment_method text,
+  status      text not null check (status in ('success', 'scheduled', 'error', 'warning')),
   created_at  timestamptz default now()
 );
+
+-- Enable RLS immediately on logs
+alter table logs enable row level security;
 
 -- 3. Sensor status table (single row — always update, never insert)
 create table if not exists sensor_status (
@@ -62,7 +66,6 @@ on conflict (day) do nothing;
 -- ============================================================
 
 alter table transactions  enable row level security;
-alter table logs          enable row level security;
 alter table sensor_status enable row level security;
 alter table schedule      enable row level security;
 

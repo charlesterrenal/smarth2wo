@@ -84,42 +84,46 @@ export const mockLogs = [
     id: 1,
     event: 'System startup',
     status: 'success',
+    message: 'System initialized successfully',
     created_at: new Date(Date.now() - 3600000).toISOString(),
-    message: 'System initialized successfully'
   },
   {
     id: 2,
-    event: 'Sensor reading',
-    status: 'success',
+    event: 'Transaction created',
+    status: 'scheduled',
+    message: 'QR code generated for 500ml at P10',
+    volume_ml: 500,
+    payment_method: 'qr',
     created_at: new Date(Date.now() - 1800000).toISOString(),
-    message: 'Water level: 85%'
   },
   {
     id: 3,
-    event: 'Transaction processed',
+    event: 'Payment received',
     status: 'success',
+    message: 'Payment confirmed for 500ml - P10',
+    volume_ml: 500,
+    payment_method: 'qr',
     created_at: new Date(Date.now() - 900000).toISOString(),
-    message: 'Transaction ID: 12345'
   },
   {
     id: 4,
     event: 'Maintenance alert',
     status: 'warning',
+    message: 'Filter replacement recommended',
     created_at: new Date(Date.now() - 600000).toISOString(),
-    message: 'Filter replacement recommended'
   },
   {
     id: 5,
     event: 'Connection lost',
     status: 'error',
+    message: 'Cannot reach backend API',
     created_at: new Date(Date.now() - 300000).toISOString(),
-    message: 'Cannot reach backend API'
   },
   {
     id: 6,
     event: 'Reconnected',
     status: 'success',
+    message: 'Connection restored',
     created_at: new Date(Date.now() - 60000).toISOString(),
-    message: 'Connection restored'
   },
 ]

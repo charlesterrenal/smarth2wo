@@ -57,11 +57,11 @@ export default function Logs() {
     borderRadius: '6px',
     fontSize: '12px',
     fontWeight: 500,
-    background: status === 'Success' ? '#d1fae5' : status === 'Failed' ? '#fee2e2' : '#fef3c7',
-    color: status === 'Success' ? '#065f46' : status === 'Failed' ? '#7f1d1d' : '#92400e'
+    background: status === 'success' ? '#d1fae5' : status === 'error' ? '#fee2e2' : '#fef3c7',
+    color: status === 'success' ? '#065f46' : status === 'error' ? '#7f1d1d' : '#92400e'
   })
   const handleExport = () => {
-    const csv = ['Date,Time,Event,Volume,Payment,Status', ...filtered.map(l => `${formatDate(l.created_at)},${formatTime(l.created_at)},${l.event},${l.volume_ml || ''},${l.payment || ''},${l.status}`)].join('\n')
+    const csv = ['Date,Time,Event,Volume,Payment Method,Status', ...filtered.map(l => `${formatDate(l.created_at)},${formatTime(l.created_at)},${l.event},${l.volume_ml || ''},${l.payment_method || ''},${l.status}`)].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -90,9 +90,10 @@ export default function Logs() {
         <select value={filter} onChange={e => setFilter(e.target.value)}
           style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: '#f9fafb' }}>
           <option>All</option>
-          <option>Success</option>
-          <option>Scheduled</option>
-          <option>Failed</option>
+          <option>success</option>
+          <option>scheduled</option>
+          <option>error</option>
+          <option>warning</option>
         </select>
         <select value={sort} onChange={e => setSort(e.target.value)}
           style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: '#f9fafb' }}>
