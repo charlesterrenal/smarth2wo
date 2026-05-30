@@ -272,6 +272,19 @@ async def create_payment_checkout(request: CreatePaymentRequest):
                 "payment_method": "qr",
                 "created_at": datetime.now().isoformat()
             }).execute()
+            
+            # Log event to system logs
+            try:
+                supabase.table("logs").insert({
+                    "event": "Transaction created",
+                    "status": "scheduled",
+                    "message": f"QR code generated for {request.volume_ml}ml at P{request.amount_pesos}",
+                    "volume_ml": request.volume_ml,
+                    "payment": "qr",
+                    "created_at": datetime.utcnow().isoformat()
+                }).execute()
+            except Exception as log_err:
+                print(f"Logging error (non-critical): {log_err}")
         
         return checkout
     except Exception as e:
@@ -296,6 +309,19 @@ async def handle_payment_webhook(payload: dict):
                 supabase.table("transactions").update({
                     "payment_method": result.get("payment_method", "qr")
                 }).eq("id", transaction_id).execute()
+                
+                # Log payment event
+                try:
+                    supabase.table("logs").insert({
+                        "event": "Payment received",
+                        "status": "success",
+                        "message": f"Payment confirmed for {result.get('volume_ml')}ml - P{result.get('amount_pesos')}",
+                        "volume_ml": result.get("volume_ml"),
+                        "payment": result.get("payment_method", "qr"),
+                        "created_at": datetime.utcnow().isoformat()
+                    }).execute()
+                except Exception as log_err:
+                    print(f"Logging error (non-critical): {log_err}")
             
             # TODO: Signal ESP32 to dispense water via MQTT/WebSocket
             # mqtt_client.publish("smarth2o/dispense", json.dumps({
@@ -310,6 +336,18 @@ async def handle_payment_webhook(payload: dict):
                 "should_dispense": True
             }
         else:
+            # Log failed payment
+            if supabase:
+                try:
+                    supabase.table("logs").insert({
+                        "event": "Payment failed",
+                        "status": "error",
+                        "message": result.get("message"),
+                        "created_at": datetime.utcnow().isoformat()
+                    }).execute()
+                except Exception as log_err:
+                    print(f"Logging error (non-critical): {log_err}")
+            
             return {
                 "success": False,
                 "message": result.get("message"),
