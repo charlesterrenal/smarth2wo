@@ -7,10 +7,12 @@ from datetime import datetime, timedelta
 import random
 import os
 from dotenv import load_dotenv
-from supabase import create_client, Client
-
 # I-load ang mga variables mula sa .env file
 load_dotenv()
+
+from supabase import create_client, Client
+from paymongo_service import create_checkout_session, handle_webhook, CreatePaymentRequest
+
 
 app = FastAPI(
     title="SmartH2O Backend API",
@@ -204,7 +206,7 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
             
             supabase.table("logs").insert({
                 "event": f"Maintenance Prediction: {prediction.reason} (Days remaining: {prediction.days_remaining})",
-                "status": "Pending",
+                "status": "pending",
                 "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
             }).execute()
         return prediction
@@ -227,7 +229,7 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
                 for anomaly in anomalies:
                     supabase.table("logs").insert({
                         "event": f"ANOMALY TRIGGERED - Type: {anomaly.type} | Msg: {anomaly.message}",
-                        "status": "Pending",
+                        "status": "pending",
                         "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
                     }).execute()
         return anomalies
@@ -248,6 +250,104 @@ def get_status_summary():
         "total_transactions": 0,
         "total_revenue": 0,
     }
+
+# ============ Payment Routes (PayMongo QR Code) ============
+
+@app.post("/api/payments/create-checkout")
+async def create_payment_checkout(request: CreatePaymentRequest):
+    """
+    Create a dynamic QR code payment session for water dispenser
+    
+    Returns QR code (base64) to display on ESP32 TFT screen
+    """
+    try:
+        checkout = create_checkout_session(request)
+        
+        # Log transaction to Supabase as pending
+        if supabase:
+            supabase.table("transactions").insert({
+                "customer": request.customer_email,
+                "volume_ml": request.volume_ml,
+                "price": request.amount_pesos,
+                "payment_method": "qr",
+                "created_at": datetime.now().isoformat()
+            }).execute()
+        
+        return checkout
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/payments/webhook")
+async def handle_payment_webhook(payload: dict):
+    """
+    Handle PayMongo webhook for payment confirmation
+    
+    Called when customer completes GCash payment
+    Updates transaction status and signals ESP32 to dispense
+    """
+    try:
+        result = handle_webhook(payload)
+        
+        if result.get("success"):
+            transaction_id = result.get("transaction_id")
+            
+            # Update transaction status in Supabase
+            if supabase:
+                supabase.table("transactions").update({
+                    "payment_method": result.get("payment_method", "qr")
+                }).eq("id", transaction_id).execute()
+                
+                # Log successful transaction
+                supabase.table("logs").insert({
+                    "event": f"Payment confirmed for {result.get('volume_ml')}ml - ₱{result.get('amount_pesos')}",
+                    "status": "success",
+                    "volume_ml": result.get("volume_ml")
+                }).execute()
+            
+            # TODO: Signal ESP32 to dispense water via MQTT/WebSocket
+            # mqtt_client.publish("smarth2o/dispense", json.dumps({
+            #     "transaction_id": transaction_id,
+            #     "volume_ml": result.get("volume_ml")
+            # }))
+            
+            return {
+                "success": True,
+                "message": result.get("message"),
+                "transaction_id": transaction_id,
+                "should_dispense": True
+            }
+        else:
+            return {
+                "success": False,
+                "message": result.get("message"),
+                "should_dispense": False
+            }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webhook error: {str(e)}")
+
+@app.get("/api/payments/status/{transaction_id}")
+async def check_payment_status(transaction_id: str):
+    """Check status of a payment transaction"""
+    try:
+        if not supabase:
+            return {"status": "unknown", "message": "Database not configured"}
+        
+        response = supabase.table("transactions").select("*").eq(
+            "id", transaction_id
+        ).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        
+        transaction = response.data[0]
+        return {
+            "transaction_id": transaction_id,
+            "volume_ml": transaction.get("volume_ml"),
+            "price": transaction.get("price"),
+            "created_at": transaction.get("created_at")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

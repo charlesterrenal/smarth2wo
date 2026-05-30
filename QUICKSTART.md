@@ -172,7 +172,27 @@ All backend endpoints start with `http://localhost:8000`
 - `POST /api/maintenance/predict` - Predict maintenance needs
 - `POST /api/anomalies/detect` - Detect anomalies
 
+### Payments (PayMongo QR Code)
+- `POST /api/payments/create-checkout` - Generate QR code for transaction
+- `POST /api/payments/webhook` - PayMongo webhook (payment confirmation)
+- `GET /api/payments/status/{transaction_id}` - Check payment status
+
 **Full API docs:** http://localhost:8000/docs
+
+---
+
+## 💳 Payment Integration (Optional)
+
+For QR code payment via PayMongo:
+
+1. Sign up at [PayMongo](https://dashboard.paymongo.com)
+2. Get API keys from PayMongo dashboard
+3. Add to `backend/.env`:
+   ```env
+   PAYMONGO_PUBLIC_KEY=pk_test_your_key
+   PAYMONGO_SECRET_KEY=sk_test_your_key
+   ```
+4. See [backend/PAYMONGO_SETUP.md](./backend/PAYMONGO_SETUP.md) for full setup
 
 ---
 
