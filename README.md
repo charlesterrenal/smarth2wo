@@ -2,24 +2,19 @@
 
 Complete full-stack IoT solution for smart water dispensers with **real-time monitoring**, **predictive maintenance**, and **payment processing**.
 
-```
-smarth2wo/
-├── frontend/              React Dashboard
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.js
-├── backend/               FastAPI Backend
-│   ├── main.py
-│   ├── requirements.txt
-│   └── venv/
-├── README.md              (this file)
-├── .gitignore
-└── docker-compose.yml     (optional)
-```
+---
+
+## 🚀 Getting Started
+
+**New to SmartH2wo?** Start here: **[→ SETUP.md](SETUP.md)** (Complete step-by-step guide for all team members)
+
+**Already set up? Quick reference:** [QUICKSTART.md](QUICKSTART.md)
+
+**GitHub workflow?** See: [GITHUB_SETUP.md](GITHUB_SETUP.md)
 
 ---
 
-## Project Overview
+## Overview
 
 SmartH2wo monitors water dispensers through:
 - **Real-time sensor analytics** (water level, temperature, flow rate, pressure)
