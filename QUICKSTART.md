@@ -92,15 +92,6 @@ curl http://localhost:8000/health
 2. SQL Editor → New Query
 3. Run: `SELECT * FROM logs ORDER BY created_at DESC LIMIT 10;`
 
-### Reset Database
-```sql
--- Run in Supabase SQL Editor
-DROP TABLE IF EXISTS logs CASCADE;
-DROP TABLE IF EXISTS transactions CASCADE;
-
--- Then run the SQL from SETUP.md Step 2
-```
-
 ---
 
 ## Troubleshooting

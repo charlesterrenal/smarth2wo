@@ -4,9 +4,9 @@ Complete full-stack IoT solution for smart water dispensers with **real-time mon
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-**New to SmartH2wo?** Start here: **[→ SETUP.md](SETUP.md)** (Complete step-by-step guide for all team members)
+**New to SmartH2wo?** Start here: **[SETUP.md](SETUP.md)** (Complete step-by-step guide for all team members)
 
 **Already set up? Quick reference:** [QUICKSTART.md](QUICKSTART.md)
 
@@ -227,15 +227,7 @@ VITE_API_URL=http://localhost:8000
 
 ---
 
-## Docker (Optional)
 
-Run both frontend and backend with Docker:
-
-```bash
-docker-compose up
-```
-
----
 
 ## Troubleshooting
 

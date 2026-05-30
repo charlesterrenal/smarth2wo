@@ -76,7 +76,7 @@ CREATE POLICY "Allow all for anon" ON logs FOR ALL USING (true) WITH CHECK (true
 ```
 
 6. Click **Run** (green play button)
-7. ✅ Database is ready!
+7. Database is ready!
 
 ### Step 3: Backend Setup
 
@@ -121,7 +121,7 @@ Expected output:
 INFO:     Uvicorn running on http://127.0.0.1:8000
 ```
 
-✅ Visit http://localhost:8000/docs to see API documentation
+Visit http://localhost:8000/docs to see API documentation
 
 **Keep this terminal running** for the next steps.
 
@@ -159,7 +159,7 @@ Expected output:
   ➜  press h to show help
 ```
 
-✅ Visit http://localhost:5173 to see dashboard
+Visit http://localhost:5173 to see dashboard
 
 ---
 
@@ -470,10 +470,10 @@ CORS error, Backend not running, etc.
 
 | Variable | Required | Example | Notes |
 |----------|----------|---------|-------|
-| `SUPABASE_URL` | ✅ Yes | `https://xxx.supabase.co` | From Supabase Dashboard |
-| `SUPABASE_ANON_KEY` | ✅ Yes | `eyJhbGc...` | Anon public key, NOT secret |
-| `PAYMONGO_PUBLIC_KEY` | ❌ No | `pk_live_xxx` | For payment testing |
-| `PAYMONGO_SECRET_KEY` | ❌ No | `sk_live_xxx` | For payment testing |
+| `SUPABASE_URL` | Yes | `https://xxx.supabase.co` | From Supabase Dashboard |
+| `SUPABASE_ANON_KEY` | Yes | `eyJhbGc...` | Anon public key, NOT secret |
+| `PAYMONGO_PUBLIC_KEY` | No | `pk_live_xxx` | For payment testing |
+| `PAYMONGO_SECRET_KEY` | No | `sk_live_xxx` | For payment testing |
 
 **Example `.env`:**
 ```env
@@ -487,9 +487,9 @@ PAYMONGO_SECRET_KEY=sk_live_optional
 
 | Variable | Required | Example | Notes |
 |----------|----------|---------|-------|
-| `VITE_SUPABASE_URL` | ✅ Yes | `https://xxx.supabase.co` | Same as backend |
-| `VITE_SUPABASE_ANON_KEY` | ✅ Yes | `eyJhbGc...` | Same as backend |
-| `VITE_API_URL` | ❌ No | `http://localhost:8000` | Default: http://localhost:8000 |
+| `VITE_SUPABASE_URL` | Yes | `https://xxx.supabase.co` | Same as backend |
+| `VITE_SUPABASE_ANON_KEY` | Yes | `eyJhbGc...` | Same as backend |
+| `VITE_API_URL` | No | `http://localhost:8000` | Default: http://localhost:8000 |
 
 **Example `.env.local`:**
 ```env

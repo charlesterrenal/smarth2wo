@@ -4,11 +4,11 @@ FastAPI-based backend service for the SmartH2O water dispenser management system
 
 ## Features
 
-- 🤖 **Maintenance Prediction** - AI-driven maintenance scheduling based on sensor data
-- 🚨 **Anomaly Detection** - Real-time detection of system anomalies
-- 📊 **Sensor Analytics** - Process and analyze water dispenser telemetry
-- 🔄 **CORS Enabled** - Seamless integration with frontend
-- 📚 **Auto Documentation** - Swagger UI at `/docs`
+- **Maintenance Prediction** - AI-driven maintenance scheduling based on sensor data
+- **Anomaly Detection** - Real-time detection of system anomalies
+- **Sensor Analytics** - Process and analyze water dispenser telemetry
+- **CORS Enabled** - Seamless integration with frontend
+- **Auto Documentation** - Swagger UI at `/docs`
 
 ## Quick Start
 
@@ -54,7 +54,7 @@ pip install -r requirements.txt
 # Edit .env with your settings if needed
 ```
 
-### 🚀 Running the Server
+### Running the Server
 
 **Every time you want to run the backend:**
 
@@ -80,7 +80,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 
 **Access the API:**
 - 🌐 API Base: `http://localhost:8000`
-- 📚 Interactive Docs (Swagger UI): `http://localhost:8000/docs`
+- Interactive Docs (Swagger UI): `http://localhost:8000/docs`
 - 🔍 Alternative Docs (ReDoc): `http://localhost:8000/redoc`
 
 **For Development with Auto-Reload:**

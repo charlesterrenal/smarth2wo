@@ -1,4 +1,4 @@
-# 🚀 Pushing SmartH2O Backend to GitHub
+# Pushing SmartH2O Backend to GitHub
 
 ## Step 1: Create GitHub Repository
 
