@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import random
 import os
 from dotenv import load_dotenv
@@ -206,7 +206,7 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
             
             supabase.table("logs").insert({
                 "event": f"Maintenance Prediction: {prediction.reason} (Days remaining: {prediction.days_remaining})",
-                "status": "pending",
+                "status": "scheduled",
                 "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
             }).execute()
         return prediction
@@ -229,7 +229,7 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
                 for anomaly in anomalies:
                     supabase.table("logs").insert({
                         "event": f"ANOMALY TRIGGERED - Type: {anomaly.type} | Msg: {anomaly.message}",
-                        "status": "pending",
+                        "status": "warning",
                         "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
                     }).execute()
         return anomalies
@@ -281,7 +281,7 @@ async def create_payment_checkout(request: CreatePaymentRequest):
                     "message": f"QR code generated for {request.volume_ml}ml at P{request.amount_pesos}",
                     "volume_ml": request.volume_ml,
                     "payment_method": "qr",
-                    "created_at": datetime.utcnow().isoformat()
+                    "created_at": datetime.now(timezone.utc).isoformat()
                 }).execute()
             except Exception as log_err:
                 print(f"Logging error (non-critical): {log_err}")
@@ -318,7 +318,7 @@ async def handle_payment_webhook(payload: dict):
                         "message": f"Payment confirmed for {result.get('volume_ml')}ml - P{result.get('amount_pesos')}",
                         "volume_ml": result.get("volume_ml"),
                         "payment_method": result.get("payment_method", "qr"),
-                        "created_at": datetime.utcnow().isoformat()
+                        "created_at": datetime.now(timezone.utc).isoformat()
                     }).execute()
                 except Exception as log_err:
                     print(f"Logging error (non-critical): {log_err}")
@@ -343,7 +343,7 @@ async def handle_payment_webhook(payload: dict):
                         "event": "Payment failed",
                         "status": "error",
                         "message": result.get("message"),
-                        "created_at": datetime.utcnow().isoformat()
+                        "created_at": datetime.now(timezone.utc).isoformat()
                     }).execute()
                 except Exception as log_err:
                     print(f"Logging error (non-critical): {log_err}")
