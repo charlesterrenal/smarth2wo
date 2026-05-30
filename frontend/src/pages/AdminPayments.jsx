@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PageHeader from '../components/PageHeader';
 import { createCheckout, checkPaymentStatus, simulatePayment } from '../lib/paymentApi';
 
 // Fixed dispenser options - hardcoded for 3-button physical unit
@@ -122,243 +123,356 @@ export default function AdminPayments() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">💳 Admin Payment Dashboard</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '24px', padding: '24px' }}>
+      <PageHeader title="Admin Payments" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* LEFT COLUMN - Testing Tools */}
-          <div className="space-y-6">
-            {/* Dispenser Buttons Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">🚰 Dispenser Buttons</h2>
-              <p className="text-gray-600 text-sm mb-4">Simulates the 3 physical buttons on the dispenser</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+        {/* Dispenser Buttons Card */}
+        <div style={{
+          background: 'var(--color-surface)',
+          border: '1.5px solid var(--color-border)',
+          borderRadius: '0px',
+          padding: '20px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text)', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Dispenser Buttons
+          </h2>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
+            Test the 3 fixed dispenser options
+          </p>
 
-              <div className="space-y-3">
-                {DISPENSER_OPTIONS.map((option) => (
-                  <button
-                    key={option.volume_ml}
-                    onClick={() => handleQuickCheckout(option.volume_ml, option.price_pesos)}
-                    disabled={isCreating}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-3 rounded-lg transition flex justify-between items-center"
-                  >
-                    <span>{option.volume_ml === 1000 ? '1 Liter' : `${option.volume_ml}ml`}</span>
-                    <span className="bg-white/20 px-3 py-1 rounded">₱{option.price_pesos}</span>
-                  </button>
-                ))}
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {DISPENSER_OPTIONS.map((option) => (
+              <button
+                key={option.volume_ml}
+                onClick={() => handleQuickCheckout(option.volume_ml, option.price_pesos)}
+                disabled={isCreating}
+                style={{
+                  width: '100%',
+                  background: isCreating ? 'var(--color-text-muted)' : 'var(--color-blue)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0px',
+                  padding: '16px 12px',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: isCreating ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.3s ease',
+                  opacity: isCreating ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => !isCreating && (e.target.style.background = 'var(--color-blue-dark)')}
+                onMouseLeave={(e) => (e.target.style.background = 'var(--color-blue)')}
+              >
+                <span>{option.volume_ml === 1000 ? '1 Liter' : `${option.volume_ml}ml`}</span>
+                <span style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '6px 12px', borderRadius: '0px', fontWeight: 700 }}>
+                  P{option.price_pesos}
+                </span>
+              </button>
+            ))}
+          </div>
 
-              {createError && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                  {createError}
-                </div>
-              )}
-
-              {isCreating && (
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-700 text-sm">
-                  Creating checkout...
-                </div>
-              )}
+          {createError && (
+            <div style={{ marginTop: '16px', padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '13px' }}>
+              {createError}
             </div>
+          )}
 
-            {/* Check Status Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Check Status</h2>
-              <p className="text-gray-600 text-sm mb-4">Look up a transaction</p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Transaction ID
-                  </label>
-                  <input
-                    type="text"
-                    value={statusId}
-                    onChange={(e) => setStatusId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                    placeholder="92dc54f1-2397-4bb6-bbd4-d095def6da19"
-                  />
-                </div>
-
-                {statusError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                    {statusError}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleCheckStatus}
-                  disabled={isCheckingStatus}
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition"
-                >
-                  {isCheckingStatus ? 'Checking...' : 'Check Status'}
-                </button>
-
-                {statusData && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded">
-                    <p className="text-sm text-gray-600 mb-2">
-                      <strong>Status:</strong> {statusData.status || 'N/A'}
-                    </p>
-                    <p className="text-sm text-gray-600 mb-2">
-                      <strong>Volume:</strong> {statusData.volume_ml}ml
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <strong>Price:</strong> ₱{statusData.price}
-                    </p>
-                  </div>
-                )}
-              </div>
+          {isCreating && (
+            <div style={{ marginTop: '16px', padding: '12px', background: '#dbeafe', border: '1px solid #93c5fd', color: '#1e40af', fontSize: '13px' }}>
+              Generating QR code...
             </div>
+          )}
+        </div>
 
-            {/* Simulate Webhook Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Simulate Payment</h2>
-              <p className="text-gray-600 text-sm mb-4">Test webhook without actual payment</p>
+        {/* Check Status Card */}
+        <div style={{
+          background: 'var(--color-surface)',
+          border: '1.5px solid var(--color-border)',
+          borderRadius: '0px',
+          padding: '20px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text)', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Transaction Status
+          </h2>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
+            Look up any transaction by ID
+          </p>
 
-              {simulateError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm mb-4">
-                  {simulateError}
-                </div>
-              )}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Transaction ID
+            </label>
+            <input
+              type="text"
+              value={statusId}
+              onChange={(e) => setStatusId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1.5px solid var(--color-border)',
+                background: 'var(--color-surface)',
+                color: 'var(--color-text)',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+                boxSizing: 'border-box',
+              }}
+              placeholder="92dc54f1-2397-4bb6-bbd4-d095def6da19"
+            />
+          </div>
+
+          {statusError && (
+            <div style={{ padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '13px', marginBottom: '16px' }}>
+              {statusError}
+            </div>
+          )}
+
+          <button
+            onClick={handleCheckStatus}
+            disabled={isCheckingStatus}
+            style={{
+              width: '100%',
+              background: isCheckingStatus ? 'var(--color-text-muted)' : 'var(--color-green)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '0px',
+              padding: '12px 12px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: isCheckingStatus ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease',
+              opacity: isCheckingStatus ? 0.6 : 1,
+            }}
+            onMouseEnter={(e) => !isCheckingStatus && (e.target.style.background = 'var(--color-green-dark)')}
+            onMouseLeave={(e) => (e.target.style.background = 'var(--color-green)')}
+          >
+            {isCheckingStatus ? 'Checking...' : 'Check Status'}
+          </button>
+
+          {statusData && (
+            <div style={{ marginTop: '16px', padding: '12px', background: '#dcfce7', border: '1px solid #86efac', color: '#166534', fontSize: '13px' }}>
+              <p style={{ marginBottom: '8px' }}>
+                <strong>Status:</strong> {statusData.status || 'N/A'}
+              </p>
+              <p style={{ marginBottom: '8px' }}>
+                <strong>Volume:</strong> {statusData.volume_ml}ml
+              </p>
+              <p>
+                <strong>Price:</strong> P{statusData.price}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* QR Code Card */}
+        {activeCheckout && qrCodeVisible && (
+          <div style={{
+            background: 'var(--color-surface)',
+            border: '1.5px solid var(--color-border)',
+            borderRadius: '0px',
+            padding: '20px',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text)', textTransform: 'uppercase', marginBottom: '16px' }}>
+              QR Code
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <img
+                src={activeCheckout.qr_code_base64}
+                alt="Payment QR Code"
+                style={{
+                  width: '200px',
+                  height: '200px',
+                  border: '2px solid var(--color-border)',
+                  padding: '8px',
+                  background: '#ffffff',
+                }}
+              />
+
+              <div style={{ textAlign: 'center', width: '100%' }}>
+                <p style={{ fontSize: '13px', color: 'var(--color-text)', marginBottom: '8px' }}>
+                  <strong>Amount:</strong> P{activeCheckout.amount_pesos}
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--color-text)', marginBottom: '8px' }}>
+                  <strong>Volume:</strong> {activeCheckout.volume_ml}ml
+                </p>
+                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                  {activeCheckout.transaction_id}
+                </p>
+              </div>
 
               <button
-                onClick={handleSimulatePayment}
-                disabled={isSimulating || !activeCheckout}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition"
+                onClick={() => setQrCodeVisible(false)}
+                style={{
+                  background: 'transparent',
+                  color: 'var(--color-blue)',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
               >
-                {isSimulating ? 'Simulating...' : 'Simulate Payment Success'}
+                Hide QR Code
               </button>
+            </div>
+          </div>
+        )}
 
-              {simulateResult && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded">
-                  <p className="text-sm font-semibold text-green-900 mb-2">✅ Payment Simulated</p>
-                  <p className="text-sm text-gray-600">
-                    {simulateResult.message}
-                  </p>
-                  {simulateResult.should_dispense && (
-                    <p className="text-sm text-green-700 mt-2 font-semibold">
-                      💧 Ready to dispense: {simulateResult.message}
-                    </p>
-                  )}
-                </div>
+        {/* Simulate Payment Card */}
+        <div style={{
+          background: 'var(--color-surface)',
+          border: '1.5px solid var(--color-border)',
+          borderRadius: '0px',
+          padding: '20px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text)', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Simulate Payment
+          </h2>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
+            Test webhook without real payment
+          </p>
+
+          {simulateError && (
+            <div style={{ padding: '12px', background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', fontSize: '13px', marginBottom: '16px' }}>
+              {simulateError}
+            </div>
+          )}
+
+          <button
+            onClick={handleSimulatePayment}
+            disabled={isSimulating || !activeCheckout}
+            style={{
+              width: '100%',
+              background: (isSimulating || !activeCheckout) ? 'var(--color-text-muted)' : 'var(--color-purple)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '0px',
+              padding: '12px 12px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: (isSimulating || !activeCheckout) ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease',
+              opacity: (isSimulating || !activeCheckout) ? 0.6 : 1,
+            }}
+            onMouseEnter={(e) => !isSimulating && activeCheckout && (e.target.style.background = 'var(--color-purple-dark)')}
+            onMouseLeave={(e) => (e.target.style.background = 'var(--color-purple)')}
+          >
+            {isSimulating ? 'Simulating...' : 'Simulate Payment Success'}
+          </button>
+
+          {simulateResult && (
+            <div style={{ marginTop: '16px', padding: '12px', background: '#dcfce7', border: '1px solid #86efac', color: '#166534', fontSize: '13px' }}>
+              <p style={{ marginBottom: '8px', fontWeight: 600 }}>Payment Simulated</p>
+              <p style={{ marginBottom: '8px' }}>{simulateResult.message}</p>
+              {simulateResult.should_dispense && (
+                <p style={{ fontWeight: 600, marginTop: '8px' }}>
+                  Ready to dispense: {simulateResult.message}
+                </p>
               )}
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* RIGHT COLUMN - QR Code & Transactions */}
-          <div className="space-y-6">
-            {/* QR Code Display */}
-            {activeCheckout && qrCodeVisible && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">📱 QR Code</h2>
+        {/* Recent Transactions Card */}
+        <div style={{
+          background: 'var(--color-surface)',
+          border: '1.5px solid var(--color-border)',
+          borderRadius: '0px',
+          padding: '20px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          gridColumn: 'span 1',
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--color-text)', textTransform: 'uppercase', marginBottom: '16px' }}>
+            Recent Transactions
+          </h2>
 
-                <div className="flex flex-col items-center">
-                  <img
-                    src={activeCheckout.qr_code_base64}
-                    alt="Payment QR Code"
-                    className="w-48 h-48 border-2 border-gray-200 rounded-lg p-2"
-                  />
-
-                  <div className="mt-4 text-center w-full">
-                    <p className="text-sm text-gray-600 mb-2">
-                      <strong>Amount:</strong> ₱{activeCheckout.amount_pesos}
-                    </p>
-                    <p className="text-sm text-gray-600 mb-2">
-                      <strong>Volume:</strong> {activeCheckout.volume_ml}ml
-                    </p>
-                    <p className="text-xs text-gray-500 break-all font-mono">
-                      {activeCheckout.transaction_id}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setQrCodeVisible(false)}
-                    className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-semibold"
-                  >
-                    Hide QR Code
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Recent Transactions */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">📊 Recent Transactions</h2>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 px-2 font-semibold text-gray-700">
-                        Amount
-                      </th>
-                      <th className="text-left py-2 px-2 font-semibold text-gray-700">
-                        Volume
-                      </th>
-                      <th className="text-left py-2 px-2 font-semibold text-gray-700">
-                        Status
-                      </th>
-                      <th className="text-left py-2 px-2 font-semibold text-gray-700">
-                        Time
-                      </th>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1.5px solid var(--color-border)' }}>
+                  <th style={{ textAlign: 'left', padding: '10px 8px', fontWeight: 600, color: 'var(--color-text)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
+                    Amount
+                  </th>
+                  <th style={{ textAlign: 'left', padding: '10px 8px', fontWeight: 600, color: 'var(--color-text)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
+                    Volume
+                  </th>
+                  <th style={{ textAlign: 'left', padding: '10px 8px', fontWeight: 600, color: 'var(--color-text)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
+                    Status
+                  </th>
+                  <th style={{ textAlign: 'left', padding: '10px 8px', fontWeight: 600, color: 'var(--color-text)', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em' }}>
+                    Time
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.length > 0 ? (
+                  transactions.slice(0, 5).map((tx, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--color-border)', background: idx % 2 === 0 ? 'transparent' : 'rgba(0, 0, 0, 0.02)' }}>
+                      <td style={{ padding: '12px 8px', color: 'var(--color-text)' }}>P{tx.price}</td>
+                      <td style={{ padding: '12px 8px', color: 'var(--color-text)' }}>{tx.volume_ml}ml</td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            background: tx.status === 'completed' ? 'var(--color-green-light)' : 'var(--color-yellow-light)',
+                            color: tx.status === 'completed' ? 'var(--color-green-dark)' : 'var(--color-yellow-dark)',
+                          }}
+                        >
+                          {tx.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 8px', color: 'var(--color-text-muted)', fontSize: '12px' }}>
+                        {new Date(tx.created_at).toLocaleTimeString()}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.length > 0 ? (
-                      transactions.slice(0, 5).map((tx, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-2">₱{tx.price}</td>
-                          <td className="py-3 px-2">{tx.volume_ml}ml</td>
-                          <td className="py-3 px-2">
-                            <span
-                              className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                                tx.status === 'completed'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}
-                            >
-                              {tx.status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-2 text-xs text-gray-500">
-                            {new Date(tx.created_at).toLocaleTimeString()}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="4" className="py-4 text-center text-gray-500">
-                          No transactions yet
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Instructions */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="font-semibold text-blue-900 mb-3">📋 How to Test</h3>
-              <ol className="text-sm text-blue-800 space-y-2">
-                <li>
-                  <strong>1.</strong> Click any dispenser button (100ml, 500ml, or 1L)
-                </li>
-                <li>
-                  <strong>2.</strong> QR code appears on the right (this is what ESP32 displays)
-                </li>
-                <li>
-                  <strong>3.</strong> Click "Simulate Payment Success" to test the webhook
-                </li>
-                <li>
-                  <strong>4.</strong> Transaction status updates automatically
-                </li>
-                <li>
-                  <strong>5.</strong> Use "Check Status" to look up any transaction
-                </li>
-              </ol>
-            </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" style={{ padding: '20px 8px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                      No transactions yet
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+        </div>
+
+        {/* Instructions Card */}
+        <div style={{
+          background: 'var(--color-surface)',
+          border: '1.5px solid var(--color-border)',
+          borderRadius: '0px',
+          padding: '20px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+        }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            How to Test
+          </h3>
+          <ol style={{ fontSize: '13px', color: 'var(--color-text)', lineHeight: '1.8', paddingLeft: '20px' }}>
+            <li>Click any dispenser button (100ml, 500ml, or 1L)</li>
+            <li>QR code appears (this is what ESP32 displays to customer)</li>
+            <li>Click "Simulate Payment Success" to test webhook</li>
+            <li>Transaction status updates automatically</li>
+            <li>Use "Transaction Status" to look up any payment</li>
+          </ol>
         </div>
       </div>
     </div>
