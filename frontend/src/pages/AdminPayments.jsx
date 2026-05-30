@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { createCheckout, checkPaymentStatus, simulatePayment } from '../lib/paymentApi';
 
-export default function AdminPayments() {
-  // Payment Creation State
-  const [amount, setAmount] = useState('50.00');
-  const [volume, setVolume] = useState('500');
-  const [isCreating, setIsCreating] = useState(false);
-  const [createError, setCreateError] = useState('');
+// Fixed dispenser options - hardcoded for 3-button physical unit
+const DISPENSER_OPTIONS = [
+  { volume_ml: 100, price_pesos: 2 },
+  { volume_ml: 500, price_pesos: 10 },
+  { volume_ml: 1000, price_pesos: 20 }
+];
 
+export default function AdminPayments() {
   // Active Checkout State
   const [activeCheckout, setActiveCheckout] = useState(null);
   const [qrCodeVisible, setQrCodeVisible] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   // Status Check State
   const [statusId, setStatusId] = useState('');
@@ -30,7 +33,7 @@ export default function AdminPayments() {
       transaction_id: '92dc54f1-2397-4bb6-bbd4-d095def6da19',
       customer: 'admin@test.com',
       volume_ml: 500,
-      price: 50.00,
+      price: 10.00,
       payment_method: 'qr',
       created_at: new Date().toISOString(),
       status: 'completed'
@@ -38,18 +41,14 @@ export default function AdminPayments() {
   ]);
 
   /**
-   * Create a new payment checkout
+   * Create a payment checkout with fixed dispenser option
    */
-  const handleCreateCheckout = async () => {
+  const handleQuickCheckout = async (volume_ml, price_pesos) => {
     setCreateError('');
     setIsCreating(true);
 
     try {
-      const result = await createCheckout(
-        parseFloat(amount),
-        parseInt(volume),
-        'admin@test.com'
-      );
+      const result = await createCheckout(price_pesos, volume_ml, 'dispenser@smarth2wo.local');
 
       setActiveCheckout(result);
       setQrCodeVisible(true);
@@ -58,7 +57,7 @@ export default function AdminPayments() {
       setTransactions([
         {
           transaction_id: result.transaction_id,
-          customer: 'admin@test.com',
+          customer: 'dispenser@smarth2wo.local',
           volume_ml: result.volume_ml,
           price: result.amount_pesos,
           payment_method: 'qr',
@@ -130,61 +129,41 @@ export default function AdminPayments() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* LEFT COLUMN - Testing Tools */}
           <div className="space-y-6">
-            {/* Create Checkout Card */}
+            {/* Dispenser Buttons Card */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Create Payment</h2>
-              <p className="text-gray-600 text-sm mb-4">Generate a QR code for testing</p>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">🚰 Dispenser Buttons</h2>
+              <p className="text-gray-600 text-sm mb-4">Simulates the 3 physical buttons on the dispenser</p>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Amount (₱)
-                  </label>
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    step="0.01"
-                    min="1"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="50.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Volume (ml)
-                  </label>
-                  <input
-                    type="number"
-                    value={volume}
-                    onChange={(e) => setVolume(e.target.value)}
-                    step="100"
-                    min="100"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="500"
-                  />
-                </div>
-
-                {createError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                    {createError}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleCreateCheckout}
-                  disabled={isCreating}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 rounded-lg transition"
-                >
-                  {isCreating ? 'Creating...' : 'Generate QR Code'}
-                </button>
+              <div className="space-y-3">
+                {DISPENSER_OPTIONS.map((option) => (
+                  <button
+                    key={option.volume_ml}
+                    onClick={() => handleQuickCheckout(option.volume_ml, option.price_pesos)}
+                    disabled={isCreating}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-400 text-white font-semibold py-3 rounded-lg transition flex justify-between items-center"
+                  >
+                    <span>{option.volume_ml === 1000 ? '1 Liter' : `${option.volume_ml}ml`}</span>
+                    <span className="bg-white/20 px-3 py-1 rounded">₱{option.price_pesos}</span>
+                  </button>
+                ))}
               </div>
+
+              {createError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                  {createError}
+                </div>
+              )}
+
+              {isCreating && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-700 text-sm">
+                  Creating checkout...
+                </div>
+              )}
             </div>
 
             {/* Check Status Card */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Check Status</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Check Status</h2>
               <p className="text-gray-600 text-sm mb-4">Look up a transaction</p>
 
               <div className="space-y-4">
@@ -233,7 +212,7 @@ export default function AdminPayments() {
 
             {/* Simulate Webhook Card */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Simulate Payment</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Simulate Payment</h2>
               <p className="text-gray-600 text-sm mb-4">Test webhook without actual payment</p>
 
               {simulateError && (
@@ -363,10 +342,10 @@ export default function AdminPayments() {
               <h3 className="font-semibold text-blue-900 mb-3">📋 How to Test</h3>
               <ol className="text-sm text-blue-800 space-y-2">
                 <li>
-                  <strong>1.</strong> Enter amount and volume, click "Generate QR Code"
+                  <strong>1.</strong> Click any dispenser button (100ml, 500ml, or 1L)
                 </li>
                 <li>
-                  <strong>2.</strong> QR code appears on the left (this would show on ESP32)
+                  <strong>2.</strong> QR code appears on the right (this is what ESP32 displays)
                 </li>
                 <li>
                   <strong>3.</strong> Click "Simulate Payment Success" to test the webhook
