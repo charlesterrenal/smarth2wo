@@ -180,8 +180,8 @@ def handle_webhook(webhook_data: dict) -> dict:
         event_data = webhook_data.get("data", {})
         attributes = event_data.get("attributes", {})
         
-        # Only handle payment.success events
-        if event_type != "payment.success":
+        # Only handle payment.paid events
+        if event_type != "payment.paid":
             return {
                 "success": False,
                 "message": f"Webhook type '{event_type}' not handled"

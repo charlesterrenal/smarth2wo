@@ -296,13 +296,6 @@ async def handle_payment_webhook(payload: dict):
                 supabase.table("transactions").update({
                     "payment_method": result.get("payment_method", "qr")
                 }).eq("id", transaction_id).execute()
-                
-                # Log successful transaction
-                supabase.table("logs").insert({
-                    "event": f"Payment confirmed for {result.get('volume_ml')}ml - ₱{result.get('amount_pesos')}",
-                    "status": "success",
-                    "volume_ml": result.get("volume_ml")
-                }).execute()
             
             # TODO: Signal ESP32 to dispense water via MQTT/WebSocket
             # mqtt_client.publish("smarth2o/dispense", json.dumps({

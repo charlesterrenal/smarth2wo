@@ -90,10 +90,12 @@ python main.py
 
 PayMongo calls this when payment succeeds.
 
+**Webhook Event to Select in PayMongo Dashboard:** `payment.paid`
+
 **Payload from PayMongo:**
 ```json
 {
-  "type": "payment.success",
+  "type": "payment.paid",
   "data": {
     "attributes": {
       "status": "succeeded",
@@ -186,7 +188,7 @@ Response will include `qr_code_base64` (PNG image).
 curl -X POST http://localhost:8000/api/payments/webhook \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "payment.success",
+    "type": "payment.paid",
     "data": {
       "attributes": {
         "status": "succeeded",
@@ -200,6 +202,178 @@ curl -X POST http://localhost:8000/api/payments/webhook \
     }
   }'
 ```
+
+---
+
+## How PayMongo Webhook Works (Complete Flow)
+
+### The Payment Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. ESP32 / Frontend calls: POST /api/payments/create-checkout  │
+│    → Backend creates PayMongo checkout session                  │
+│    → Generates QR code (base64 PNG)                             │
+│    → Returns: {qr_code_base64, checkout_url, transaction_id}   │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. ESP32 displays QR code on TFT screen                         │
+│    Customer scans with phone (GCash app)                        │
+│    → Redirected to PayMongo payment page (GCash checkout)       │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. Customer completes payment in GCash                          │
+│    → PayMongo processes payment                                 │
+│    → Payment succeeds ✅                                         │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. PayMongo sends WEBHOOK to our backend                        │
+│    POST /api/payments/webhook                                   │
+│    Payload includes: payment.success event + metadata           │
+│    (Contains: transaction_id, volume_ml, customer_email)        │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 5. Backend webhook handler:                                     │
+│    ✅ Verify webhook signature (security)                       │
+│    ✅ Extract transaction_id from metadata                      │
+│    ✅ Update Supabase: mark transaction as "completed"          │
+│    ✅ Log to database                                            │
+│    ✅ TODO: Signal ESP32 via MQTT to dispense water             │
+│    → Return success response to PayMongo                        │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 6. ESP32 receives signal → DISPENSE WATER! 💧                   │
+│    Customer gets their 500ml (or requested amount)              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Points
+
+1. **Webhook is called by PayMongo** - Not by our code. PayMongo automatically calls our endpoint after payment succeeds
+2. **Automatic Retry** - PayMongo retries the webhook if we don't respond with 200 OK
+3. **Webhook Signature Verification** - PayMongo includes a signature header so we can verify the request actually came from PayMongo (prevents fake webhooks)
+4. **Idempotent** - Our code should handle duplicate webhook calls gracefully (same transaction_id called twice)
+
+---
+
+## Webhook Setup for Local Development (ngrok)
+
+For testing webhooks locally without deploying:
+
+### Step 1: Install ngrok
+
+Download from [ngrok.com](https://ngrok.com) or install via package manager:
+
+```bash
+# macOS
+brew install ngrok
+
+# Windows (using choco)
+choco install ngrok
+
+# Or download from website
+```
+
+### Step 2: Start ngrok
+
+In a new terminal:
+
+```bash
+ngrok http 8000
+```
+
+You'll see:
+```
+Session Status       online
+Account              user@example.com
+Version              3.0.0
+Region               us
+Latency              10ms
+Web Interface        http://127.0.0.1:4040
+
+Forwarding           https://1234-567-89-123.ngrok.io -> http://localhost:8000
+```
+
+**Copy the `https://...ngrok.io` URL** - this is your public webhook endpoint!
+
+### Step 3: Set Webhook in PayMongo Dashboard
+
+1. Go to [PayMongo Dashboard](https://dashboard.paymongo.com)
+2. Navigate to **API & Keys** → **Webhooks**
+3. Add New Webhook:
+   - **Webhook URL**: `https://1234-567-89-123.ngrok.io/api/payments/webhook`
+   - **Events**: Select `payment.success`
+   - Save
+
+### Step 4: Test Full Payment Flow
+
+1. **Start backend:**
+   ```bash
+   python main.py
+   ```
+
+2. **Create checkout:**
+   ```bash
+   curl -X POST http://localhost:8000/api/payments/create-checkout \
+     -H "Content-Type: application/json" \
+     -d '{
+       "amount_pesos": 1.00,
+       "volume_ml": 100,
+       "customer_email": "test@example.com"
+     }'
+   ```
+
+3. **Get the `checkout_url`** from response
+
+4. **Manually trigger webhook** (since you can't actually pay in test mode easily):
+   ```bash
+   curl -X POST https://1234-567-89-123.ngrok.io/api/payments/webhook \
+     -H "Content-Type: application/json" \
+     -d '{
+       "type": "payment.success",
+       "data": {
+         "attributes": {
+           "status": "succeeded",
+           "amount": 100,
+           "metadata": {
+             "transaction_id": "YOUR_TRANSACTION_ID_HERE",
+             "volume_ml": 100,
+             "customer_email": "test@example.com"
+           }
+         }
+       }
+     }'
+   ```
+
+5. **Check Supabase** - Transaction should be marked as completed! ✅
+
+6. **Monitor ngrok dashboard** - Go to `http://127.0.0.1:4040` to see all webhook requests in real-time
+
+---
+
+## Webhook Security (Signature Verification)
+
+PayMongo signs all webhook requests using HMAC-SHA256. To verify:
+
+```python
+import hmac
+import hashlib
+
+def verify_webhook_signature(body: str, signature: str) -> bool:
+    expected_signature = hmac.new(
+        PAYMONGO_SECRET_KEY.encode(),
+        body.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return signature == expected_signature
+```
+
+**Note**: Our current implementation doesn't enforce signature verification yet (TODO in code). For production, always verify the signature header!
 
 ---
 
