@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -189,13 +189,27 @@ export default function Login() {
           </button>
         </form>
 
+        {!isSupabaseConfigured && (
+          <div style={{
+            background: '#fff8e6',
+            border: '1px solid #ffd666',
+            borderRadius: '6px',
+            padding: '12px',
+            fontSize: '13px',
+            color: '#614700',
+            marginTop: '8px',
+          }}>
+            Supabase is not configured. Add credentials to <code>frontend/.env</code>, or open the app in demo mode (dashboard loads automatically).
+          </div>
+        )}
+
         <p style={{
           textAlign: 'center',
           fontSize: '12px',
           color: 'var(--color-text-muted)',
           marginTop: '20px'
         }}>
-          Demo: Use your Supabase admin account to log in
+          Use your Supabase admin account to log in
         </p>
       </div>
     </div>

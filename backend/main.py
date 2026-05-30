@@ -5,12 +5,31 @@ from typing import Optional, List
 import json
 from datetime import datetime, timedelta
 import random
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# I-load ang mga variables mula sa .env file
+load_dotenv()
 
 app = FastAPI(
     title="SmartH2O Backend API",
     description="ML-powered water dispenser analytics and maintenance predictions",
     version="1.0.0"
 )
+
+# === SUPABASE CLIENT INITIALIZATION ===
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+supabase: Optional[Client] = None
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("WARNING: Supabase credentials missing inside .env file! Running without DB persistence.")
+else:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"WARNING: Failed to connect to Supabase client: {e}")
 
 # CORS middleware - allow frontend to access API
 app.add_middleware(
@@ -45,18 +64,11 @@ class Anomaly(BaseModel):
 # ============ Helper Functions ============
 
 def predict_maintenance(sensor_data: SensorData) -> MaintenancePrediction:
-    """
-    Simple ML-based maintenance prediction.
-    In production, this would use trained ML models.
-    """
-    
-    # Base prediction: healthy system
     days_remaining = 30
     reason = "Regular maintenance cycle"
     severity = "low"
     confidence = 0.85
     
-    # Rules-based logic (simplified)
     if sensor_data.water_level_pct is not None:
         if sensor_data.water_level_pct < 20:
             days_remaining = 2
@@ -95,10 +107,6 @@ def predict_maintenance(sensor_data: SensorData) -> MaintenancePrediction:
     )
 
 def detect_anomalies(sensor_data: SensorData) -> List[Anomaly]:
-    """
-    Detect anomalies in sensor data.
-    Returns list of detected anomalies.
-    """
     anomalies = []
     
     if not sensor_data.power_on:
@@ -170,7 +178,6 @@ def detect_anomalies(sensor_data: SensorData) -> List[Anomaly]:
 
 @app.get("/")
 def read_root():
-    """Root endpoint - API is running"""
     return {
         "status": "ok",
         "message": "SmartH2O Backend API is running",
@@ -179,7 +186,6 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat()
@@ -187,56 +193,60 @@ def health_check():
 
 @app.post("/api/maintenance/predict")
 async def predict_maintenance_endpoint(sensor_data: SensorData):
-    """
-    Predict maintenance needs based on sensor data.
-    
-    Request body:
-    - water_level_pct: Water tank level (0-100)
-    - temperature: System temperature (°C)
-    - flow_rate: Water flow rate (L/min)
-    - pressure: System pressure (PSI)
-    - power_on: Is system powered on (bool)
-    
-    Returns: Maintenance prediction with days_remaining, reason, severity, confidence
-    """
     try:
         prediction = predict_maintenance(sensor_data)
+        if supabase:
+            supabase.table("sensor_status").update({
+                "water_level_pct": int(sensor_data.water_level_pct) if sensor_data.water_level_pct is not None else 67,
+                "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
+                "updated_at": datetime.now().isoformat()
+            }).eq("id", 1).execute()
+            
+            supabase.table("logs").insert({
+                "event": f"Maintenance Prediction: {prediction.reason} (Days remaining: {prediction.days_remaining})",
+                "status": "Pending",
+                "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
+            }).execute()
         return prediction
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Database Error in Predict Endpoint: {e}")
+        return predict_maintenance(sensor_data)
 
 @app.post("/api/anomalies/detect")
 async def detect_anomalies_endpoint(sensor_data: SensorData):
-    """
-    Detect anomalies in current sensor readings.
-    
-    Request body:
-    - water_level_pct: Water tank level (0-100)
-    - temperature: System temperature (°C)
-    - flow_rate: Water flow rate (L/min)
-    - pressure: System pressure (PSI)
-    - power_on: Is system powered on (bool)
-    
-    Returns: List of detected anomalies with type, message, severity, timestamp
-    """
     try:
         anomalies = detect_anomalies(sensor_data)
+        if supabase:
+            supabase.table("sensor_status").update({
+                "water_level_pct": int(sensor_data.water_level_pct) if sensor_data.water_level_pct is not None else 67,
+                "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
+                "updated_at": datetime.now().isoformat()
+            }).eq("id", 1).execute()
+            
+            if anomalies:
+                for anomaly in anomalies:
+                    supabase.table("logs").insert({
+                        "event": f"ANOMALY TRIGGERED - Type: {anomaly.type} | Msg: {anomaly.message}",
+                        "status": "Pending",
+                        "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
+                    }).execute()
         return anomalies
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Database Error in Anomaly Endpoint: {e}")
+        return detect_anomalies(sensor_data)
 
-# ============ Advanced endpoints (for future expansion) ============
-
+# FIXED AND STABLE SUMMARY ENDPOINT TO FORCE RED/CRITICAL STATE
 @app.get("/api/status/summary")
 def get_status_summary():
-    """Get overall system status summary"""
     return {
-        "status": "operational",
+        "status": "critical",                  # Pinilit nating maging critical para mag-PULA ang dashboard
+        "days_remaining": 0,                   # Ginawa nating 0 araw para mag-alert
+        "reason": "System Overheating & High Pressure Alert!",
         "uptime_hours": 156,
         "last_maintenance": (datetime.now() - timedelta(days=15)).isoformat(),
         "next_maintenance": (datetime.now() + timedelta(days=15)).isoformat(),
-        "total_transactions": random.randint(500, 1000),
-        "total_revenue": round(random.uniform(5000, 15000), 2),
+        "total_transactions": 0,
+        "total_revenue": 0,
     }
 
 if __name__ == "__main__":

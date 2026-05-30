@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
-import { supabase } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { mockLogs } from '../lib/mockData'
 
 export default function Logs() {
   const [logs, setLogs]     = useState([])
@@ -13,11 +14,15 @@ export default function Logs() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
+        if (!isSupabaseConfigured) {
+          setLogs(mockLogs)
+          return
+        }
         const { data, error: queryError } = await supabase
           .from('logs')
           .select('*')
           .order('created_at', { ascending: false })
-        
+
         if (queryError) throw queryError
         setLogs(data ?? [])
       } catch (err) {
@@ -27,7 +32,7 @@ export default function Logs() {
         setLoading(false)
       }
     }
-    
+
     fetchLogs()
   }, [])
 

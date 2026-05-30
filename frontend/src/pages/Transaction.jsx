@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
 import StatCard from '../components/StatCard'
-import { supabase } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { mockTransactions } from '../lib/mockData'
 
 export default function Transaction() {
   const [transactions, setTransactions] = useState([])
@@ -13,11 +14,15 @@ export default function Transaction() {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
+        if (!isSupabaseConfigured) {
+          setTransactions(mockTransactions)
+          return
+        }
         const { data, error: queryError } = await supabase
           .from('transactions')
           .select('*')
           .order('created_at', { ascending: false })
-        
+
         if (queryError) throw queryError
         setTransactions(data ?? [])
       } catch (err) {
@@ -27,7 +32,7 @@ export default function Transaction() {
         setLoading(false)
       }
     }
-    
+
     fetchTransactions()
   }, [])
 

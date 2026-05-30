@@ -45,7 +45,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> **Note**: If you see build errors with `scikit-learn`, it's okay—it's optional. Core dependencies (fastapi, uvicorn, pydantic) are installed.
+> **Note**: `scikit-learn` / `numpy` / `pandas` are optional (see `requirements-ml.txt`). The API runs without them. If `pip` tries to compile packages and asks for Visual C++, use Python 3.12 or install only `requirements.txt` (not `requirements-ml.txt`).
 
 #### 4️⃣ (Optional) Configure Environment
 ```bash

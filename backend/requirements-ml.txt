@@ -1,0 +1,8 @@
+# Optional ML stack — not used by main.py today (rules-based logic only).
+# Install only if you add real ML models later.
+# On Windows, use Python 3.11 or 3.12 (pre-built wheels). Python 3.14 may require
+# Microsoft C++ Build Tools: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+-r requirements.txt
+scikit-learn>=1.5.0
+numpy>=1.26.0
+pandas>=2.1.0

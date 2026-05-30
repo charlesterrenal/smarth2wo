@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
-import { supabase } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { mockSchedule } from '../lib/mockData'
 
 export default function Settings() {
   const [schedule, setSchedule] = useState([])
@@ -8,6 +9,11 @@ export default function Settings() {
   const [power, setPower] = useState(true)
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setSchedule(mockSchedule)
+      setLoading(false)
+      return
+    }
     supabase
       .from('schedule')
       .select('*')
@@ -33,6 +39,10 @@ export default function Settings() {
   }
 
   const handleSave = async () => {
+    if (!isSupabaseConfigured) {
+      alert('Demo mode — connect Supabase in frontend/.env to save settings.')
+      return
+    }
     const { error } = await supabase.from('schedule').upsert(schedule)
     if (error) alert('Save failed: ' + error.message)
     else alert('Schedule saved!')

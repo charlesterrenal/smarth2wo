@@ -7,7 +7,8 @@ import Analytics from './pages/Analytics'
 import Logs from './pages/Logs'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
-import { supabase } from './lib/supabase'
+import SetupBanner from './components/SetupBanner'
+import { supabase, isSupabaseConfigured } from './lib/supabase'
 
 function AppContent() {
   const location = useLocation()
@@ -57,10 +58,20 @@ function AppInner() {
   const location = useLocation()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
+    if (!isSupabaseConfigured) {
       setLoading(false)
-    })
+      return
+    }
+
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null)
+      })
+      .catch((err) => {
+        console.error('Auth session error:', err)
+      })
+      .finally(() => setLoading(false))
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
@@ -68,6 +79,18 @@ function AppInner() {
 
     return () => subscription?.unsubscribe()
   }, [])
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
+        <SetupBanner />
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, background: 'var(--color-bg)' }}>
+          <Sidebar />
+          <AppContent />
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
