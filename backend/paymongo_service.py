@@ -107,7 +107,7 @@ def create_checkout_session(request: CreatePaymentRequest) -> dict:
             "attributes": {
                 "amount": amount_centavos,
                 "currency": "PHP",
-                "payment_method_types": ["gcash"],
+                "payment_method_types": ["qrph"],
                 "description": request.description or f"Water dispenser refill - {request.volume_ml}ml",
                 "line_items": [
                     {
