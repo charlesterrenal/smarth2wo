@@ -12,6 +12,7 @@ load_dotenv()
 
 from supabase import create_client, Client
 from paymongo_service import create_checkout_session, handle_webhook, CreatePaymentRequest
+from mqtt_service import init_mqtt, publish_dispense, disconnect as mqtt_disconnect
 
 
 app = FastAPI(
@@ -41,6 +42,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize MQTT on startup
+@app.on_event("startup")
+async def startup_event():
+    init_mqtt()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    mqtt_disconnect()
 
 # ============ Pydantic Models ============
 
@@ -338,11 +348,12 @@ async def handle_payment_webhook(payload: dict):
                 except Exception as log_err:
                     print(f"Logging error (non-critical): {log_err}")
             
-            # TODO: Signal ESP32 to dispense water via MQTT/WebSocket
-            # mqtt_client.publish("smarth2o/dispense", json.dumps({
-            #     "transaction_id": transaction_id,
-            #     "volume_ml": result.get("volume_ml")
-            # }))
+            # Signal ESP32 to dispense water via MQTT
+            publish_dispense(
+                transaction_id=transaction_id,
+                volume_ml=result.get("volume_ml"),
+                amount_pesos=result.get("amount_pesos")
+            )
             
             return {
                 "success": True,
