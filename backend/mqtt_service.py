@@ -1,5 +1,5 @@
 """
-MQTT Service for SmartH2O - Communicates with ESP32
+MQTT Service for SmartH2wo - Communicates with ESP32
 Publishes dispense signals and receives sensor data
 """
 

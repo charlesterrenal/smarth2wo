@@ -1,4 +1,4 @@
-# SmartH2O Monorepo - GitHub Setup Guide
+# SmartH2wo Monorepo - GitHub Setup Guide
 
 This is now a **monorepo** containing both frontend and backend in one repository.
 

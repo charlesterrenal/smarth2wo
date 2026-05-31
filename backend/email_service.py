@@ -1,5 +1,5 @@
 """
-Email Service for SmartH2O - Handles alerts via Resend
+Email Service for SmartH2wo - Handles alerts via Resend
 Sends notifications for: transactions, water level, maintenance, anomalies
 """
 
@@ -154,7 +154,7 @@ def send_transaction_alert(transaction_id: str, customer_email: str, volume_ml: 
                 </div>
                 
                 <p style="color: #666; font-size: 12px; text-align: center;">
-                    SmartH2O Water Dispenser System
+                    SmartH2wo Water Dispenser System
                 </p>
             </div>
         </body>
@@ -196,7 +196,7 @@ def send_water_level_alert(water_level: float, status: str = "warning") -> bool:
                 </div>
                 
                 <p style="color: #666; font-size: 12px; text-align: center;">
-                    SmartH2O Water Dispenser System
+                    SmartH2wo Water Dispenser System
                 </p>
             </div>
         </body>
@@ -239,7 +239,7 @@ def send_maintenance_due_alert(days_remaining: int, reason: str, severity: str) 
                 </div>
                 
                 <p style="color: #666; font-size: 12px; text-align: center;">
-                    SmartH2O Water Dispenser System
+                    SmartH2wo Water Dispenser System
                 </p>
             </div>
         </body>
@@ -282,7 +282,7 @@ def send_anomaly_alert(anomaly_type: str, message: str, severity: str) -> bool:
                 </div>
                 
                 <p style="color: #666; font-size: 12px; text-align: center;">
-                    SmartH2O Water Dispenser System
+                    SmartH2wo Water Dispenser System
                 </p>
             </div>
         </body>

@@ -32,7 +32,7 @@ def send_mock_data(water, temp, flow, press, description):
 # DEFINED SCENARIOS TABLE
 # =========================================================================
 def run_scenario(choice):
-    print("--- SmartH2O Scenario Switcher Started ---")
+    print("--- SmartH2wo Scenario Switcher Started ---")
     
     if choice == "A":
         send_mock_data(

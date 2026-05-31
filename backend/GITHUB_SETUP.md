@@ -1,10 +1,10 @@
-# Pushing SmartH2O Backend to GitHub
+# Pushing SmartH2wo Backend to GitHub
 
 ## Step 1: Create GitHub Repository
 
 1. Go to **https://github.com/new**
 2. **Repository name**: `smarth2wo-backend`
-3. **Description**: `ML-powered FastAPI backend for SmartH2O water dispenser management`
+3. **Description**: `ML-powered FastAPI backend for SmartH2wo water dispenser management`
 4. **Visibility**: Choose `Public` or `Private`
 5. **DO NOT** initialize with README (we already have one)
 6. Click **Create repository**

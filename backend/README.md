@@ -1,6 +1,6 @@
-# SmartH2O Backend API
+# SmartH2wo Backend API
 
-FastAPI-based backend service for the SmartH2O water dispenser management system. Provides ML-powered maintenance predictions and anomaly detection.
+FastAPI-based backend service for the SmartH2wo water dispenser management system. Provides ML-powered maintenance predictions and anomaly detection.
 
 ## Features
 

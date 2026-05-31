@@ -1,6 +1,6 @@
 # ESP32 MQTT Integration Guide
 
-Complete guide for connecting ESP32 hardware to SmartH2O backend.
+Complete guide for connecting ESP32 hardware to SmartH2wo backend.
 
 ---
 
@@ -132,7 +132,7 @@ Pump:
 
 Open Serial Monitor (115200 baud):
 ```
-SmartH2O ESP32 Starting...
+SmartH2wo ESP32 Starting...
 Connecting to WiFi: YOUR_SSID
 WiFi connected!
 IP: 192.168.x.x

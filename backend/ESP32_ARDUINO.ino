@@ -1,5 +1,5 @@
 /*
-  SmartH2O ESP32 - Water Dispenser Hardware Controller
+  SmartH2wo ESP32 - Water Dispenser Hardware Controller
   
   TEST MODE: Uses LED instead of pump
   
@@ -71,7 +71,7 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   
-  Serial.println("\n\nSmartH2O ESP32 Starting...");
+  Serial.println("\n\nSmartH2wo ESP32 Starting...");
   
   // Initialize pins
   pinMode(BTN_100ML, INPUT_PULLUP);
@@ -132,7 +132,7 @@ void displayStartup() {
   tft.setTextColor(TFT_WHITE);
   tft.setTextSize(2);
   tft.setCursor(20, 60);
-  tft.println("SmartH2O");
+  tft.println("SmartH2wo");
   tft.setTextSize(1);
   tft.setCursor(20, 100);
   tft.println("Connecting...");

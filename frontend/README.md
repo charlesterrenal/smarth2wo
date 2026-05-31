@@ -1,4 +1,4 @@
-# SmartH2O - Smart Water Dispenser Management System
+# SmartH2wo - Smart Water Dispenser Management System
 
 🚀 Complete IoT solution for smart water dispensers with **real-time monitoring**, **predictive maintenance**, and **payment processing**.
 
@@ -640,7 +640,7 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 
 ## 🏆 Team Info
 
-**Project**: SmartH2O - IoT Water Dispenser Management System  
+**Project**: SmartH2wo - IoT Water Dispenser Management System  
 **Org**: [Your Organization/School]  
 **Year**: 2024-2025  
 **Members**: Charles, Member 2, Member 3, Member 4

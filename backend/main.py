@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="SmartH2O Backend API",
+    title="SmartH2wo Backend API",
     description="ML-powered water dispenser analytics and maintenance predictions",
     version="1.0.0",
     lifespan=lifespan
@@ -203,7 +203,7 @@ def detect_anomalies(sensor_data: SensorData) -> List[Anomaly]:
 def read_root():
     return {
         "status": "ok",
-        "message": "SmartH2O Backend API is running",
+        "message": "SmartH2wo Backend API is running",
         "docs": "/docs"
     }
 

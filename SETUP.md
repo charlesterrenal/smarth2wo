@@ -1,6 +1,6 @@
-# SmartH2O - Complete Setup Guide
+# SmartH2wo - Complete Setup Guide
 
-This is the **complete setup guide** for the SmartH2O water dispenser system. Choose your section below.
+This is the **complete setup guide** for the SmartH2wo water dispenser system. Choose your section below.
 
 **New to the project?** Start with [Part 1: Initial Setup](#part-1-initial-setup)
 
@@ -346,7 +346,7 @@ Relay → Pump power (external 12V)
 1. Open Serial Monitor (115200 baud)
 2. Should see:
    ```
-   SmartH2O ESP32 Starting...
+   SmartH2wo ESP32 Starting...
    Connecting to WiFi: YOUR_SSID
    WiFi connected! IP: 192.168.x.x
    Connecting to MQTT: broker.hivemq.com

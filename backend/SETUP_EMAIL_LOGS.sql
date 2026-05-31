@@ -1,4 +1,4 @@
--- SmartH2O Email Logs Table
+-- SmartH2wo Email Logs Table
 -- Run this in Supabase SQL Editor to create the table for tracking sent emails
 
 CREATE TABLE IF NOT EXISTS email_logs (
