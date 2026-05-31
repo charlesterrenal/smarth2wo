@@ -6,17 +6,22 @@ This page is a quick reference for developers who are already set up.
 
 ---
 
-## Start Services (Fastest)
+## Start Services (Every Session)
 
-**Terminal 1 - Backend:**
+### Terminal 1 - Backend
+
 ```bash
 cd backend
-source venv/bin/activate  # macOS/Linux: or venv\Scripts\activate on Windows
+.\venv\Scripts\activate  # Windows
+# or
+source venv/bin/activate  # macOS/Linux
+
 python main.py
 # Running on http://localhost:8000
 ```
 
-**Terminal 2 - Frontend:**
+### Terminal 2 - Frontend
+
 ```bash
 cd frontend
 npm run dev
@@ -29,9 +34,9 @@ npm run dev
 
 ### Backend
 ```bash
-# Activate environment
-source backend/venv/bin/activate  # macOS/Linux
-backend\venv\Scripts\activate     # Windows
+# Activate environment (first time only in new terminal)
+.\venv\Scripts\activate     # Windows
+source venv/bin/activate    # macOS/Linux
 
 # Run server
 python main.py
@@ -46,7 +51,7 @@ pip freeze > requirements.txt
 
 ### Frontend
 ```bash
-# Install dependencies
+# Install dependencies (first time only)
 npm install
 
 # Run dev server
@@ -66,11 +71,13 @@ npm install package-name
 
 ## URLs
 
-- **Dashboard:** http://localhost:5173
-- **Admin Payments:** http://localhost:5173/admin/payments
-- **System Logs:** http://localhost:5173/logs
-- **API Docs:** http://localhost:8000/docs
-- **API ReDoc:** http://localhost:8000/redoc
+| Service | URL |
+|---------|-----|
+| Dashboard | http://localhost:5173 |
+| Admin Payments | http://localhost:5173/admin/payments |
+| System Logs | http://localhost:5173/logs |
+| API Docs | http://localhost:8000/docs |
+| API ReDoc | http://localhost:8000/redoc |
 
 ---
 
@@ -92,17 +99,31 @@ curl http://localhost:8000/health
 2. SQL Editor → New Query
 3. Run: `SELECT * FROM logs ORDER BY created_at DESC LIMIT 10;`
 
+### Test Email Alerts
+```bash
+# Water level alert
+curl -X POST http://localhost:8000/api/maintenance/predict \
+  -H "Content-Type: application/json" \
+  -d '{"water_level_pct": 15, "temperature": 30, "flow_rate": 5.0, "pressure": 50, "power_on": true}'
+
+# Anomaly alert
+curl -X POST http://localhost:8000/api/anomalies/detect \
+  -H "Content-Type: application/json" \
+  -d '{"water_level_pct": 2, "temperature": 52, "flow_rate": 0.05, "pressure": 110, "power_on": false}'
+```
+
 ---
 
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| `Port 8000 in use` | `netstat -ano \| findstr :8000` then `taskkill /PID <PID> /F` (Windows) or `lsof -i :8000 \| kill -9` (Mac/Linux) |
-| `Port 5173 in use` | `netstat -ano \| findstr :5173` then `taskkill /PID <PID> /F` (Windows) or `lsof -i :5173 \| kill -9` (Mac/Linux) |
+| Port 8000 in use | `netstat -ano \| findstr :8000` then `taskkill /PID <PID> /F` (Windows) or `lsof -i :8000 \| kill -9` (Mac/Linux) |
+| Port 5173 in use | Kill process on port 5173 |
 | Backend won't start | Ensure venv is activated (should see `(venv)` in terminal) |
 | Frontend won't start | Delete `node_modules`, run `npm install` again |
 | Can't connect to Supabase | Check credentials in `.env` and `.env.local` |
+| Emails not sending | Verify `RESEND_API_KEY` and sender domain in Resend dashboard |
 
 **Full troubleshooting?** See [SETUP.md → Troubleshooting](SETUP.md#troubleshooting)
 
@@ -112,7 +133,7 @@ curl http://localhost:8000/health
 
 ```
 smarth2wo/
-├── SETUP.md               ← START HERE for new members
+├── SETUP.md               ← START HERE for setup
 ├── README.md              Project overview
 ├── QUICKSTART.md          (this file)
 ├── GITHUB_SETUP.md        Git workflow
@@ -125,8 +146,9 @@ smarth2wo/
 ├── backend/               FastAPI + Python
 │   ├── main.py            All API endpoints
 │   ├── paymongo_service.py PayMongo integration
+│   ├── mqtt_service.py     IoT communication
+│   ├── email_service.py    Email notifications
 │   ├── requirements.txt
-│   ├── PAYMONGO_SETUP.md  Payment integration guide
 │   └── venv/              Virtual environment (local only)
 │
 └── docker-compose.yml     Optional Docker setup
@@ -134,11 +156,24 @@ smarth2wo/
 
 ---
 
+## Key Features
+
+✅ **Real-time MQTT** - ESP32 hardware integration  
+✅ **Payment Processing** - PayMongo QR codes  
+✅ **Email Alerts** - Resend notifications  
+✅ **Predictive Maintenance** - ML-powered predictions  
+✅ **Anomaly Detection** - System health monitoring  
+✅ **Beautiful Dashboard** - React + Tailwind UI  
+
+---
+
 ## Need Help?
 
-- **Setup issues?** → [SETUP.md](SETUP.md#troubleshooting)
-- **Payments?** → [backend/PAYMONGO_SETUP.md](backend/PAYMONGO_SETUP.md)
-- **Backend?** → [backend/README.md](backend/README.md)
-- **Frontend?** → [frontend/README.md](frontend/README.md)
+- **Full setup?** → [SETUP.md](SETUP.md)
+- **Backend details?** → [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md)
 - **Git workflow?** → [GITHUB_SETUP.md](GITHUB_SETUP.md)
+- **Frontend?** → [frontend/README.md](frontend/README.md)
 
+---
+
+**Ready?** Run the commands above and you're all set! 🚀

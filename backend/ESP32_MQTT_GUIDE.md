@@ -39,7 +39,7 @@ pip install paho-mqtt>=1.6.1
 
 2. Update `backend/.env`:
 ```env
-MQTT_BROKER=test.mosquitto.org
+MQTT_BROKER=localhost
 MQTT_PORT=1883
 MQTT_USERNAME=
 MQTT_PASSWORD=

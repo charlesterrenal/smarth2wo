@@ -12,9 +12,10 @@ import json
 load_dotenv()
 
 try:
-    from resend import Resend
-except ImportError:
-    Resend = None
+    import resend
+except ImportError as e:
+    print(f"DEBUG: Failed to import resend: {e}")
+    resend = None
 
 # Configuration
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
@@ -35,12 +36,14 @@ def init_email_service(supabase_client):
         print("WARNING: RESEND_API_KEY not configured - email alerts disabled")
         return False
     
-    if Resend is None:
+    if resend is None:
         print("WARNING: resend package not installed - email alerts disabled")
         return False
     
     try:
-        resend_client = Resend(RESEND_API_KEY)
+        # Set the API key for resend module
+        resend.api_key = RESEND_API_KEY
+        resend_client = resend.emails
         supabase = supabase_client
         print(f"Email service initialized - From: {RESEND_FROM_EMAIL}")
         return True
@@ -64,7 +67,12 @@ def should_send_alert(alert_type: str) -> bool:
         ).limit(1).execute()
         
         # If there's a recent alert, skip sending (cooldown active)
-        return len(response.data) == 0
+        has_recent = len(response.data) > 0
+        if has_recent:
+            print(f"DEBUG: Cooldown active for {alert_type} - skipping email")
+        else:
+            print(f"DEBUG: No recent {alert_type} alert - will send")
+        return not has_recent
     except Exception as e:
         print(f"Cooldown check error: {e}")
         return True  # Send anyway if check fails
@@ -90,26 +98,27 @@ def log_email(alert_type: str, recipient: str, subject: str, status: str, error_
 
 def send_email(to_email: str, subject: str, html: str, alert_type: str = "general") -> bool:
     """Send email via Resend"""
-    if not resend_client:
+    if not resend_client or resend is None:
         print(f"Email service not initialized - cannot send: {subject}")
         return False
     
     try:
-        result = resend_client.emails.send({
+        # Use resend.Emails class to send
+        result = resend.Emails.send({
             "from": RESEND_FROM_EMAIL,
             "to": to_email,
             "subject": subject,
             "html": html
         })
         
-        success = "id" in result
+        success = result.get("id") is not None
         status = "sent" if success else "failed"
         error_msg = result.get("message") if not success else None
         
         log_email(alert_type, to_email, subject, status, error_msg)
         
         if success:
-            print(f"✉️  Email sent: {subject}")
+            print(f"✉️  Email sent: {subject} (ID: {result.get('id')})")
         else:
             print(f"❌ Email failed: {subject} - {error_msg}")
         
@@ -124,7 +133,9 @@ def send_email(to_email: str, subject: str, html: str, alert_type: str = "genera
 
 def send_transaction_alert(transaction_id: str, customer_email: str, volume_ml: int, price: float) -> bool:
     """Alert when transaction is completed"""
+    print(f"DEBUG: send_transaction_alert called for {transaction_id}")
     if not should_send_alert("transaction"):
+        print(f"DEBUG: Transaction alert on cooldown - skipping")
         return False
     
     subject = f"Transaction Confirmed - {volume_ml}ml Water Dispensed"

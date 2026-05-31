@@ -1,333 +1,404 @@
-# SmartH2wo Setup Guide
+# SmartH2O - Complete Setup Guide
 
-Complete setup instructions for the SmartH2wo water dispenser management system. This guide consolidates everything you need to get started without errors.
+This is the **complete setup guide** for the SmartH2O water dispenser system. Choose your section below.
+
+**New to the project?** Start with [Part 1: Initial Setup](#part-1-initial-setup)
+
+**Already set up?** Jump to [QUICKSTART.md](QUICKSTART.md) instead.
 
 ---
 
 ## Table of Contents
 
-1. [Prerequisites](#prerequisites)
-2. [First-Time Setup (Complete)](#first-time-setup-complete)
-3. [Service-Specific Setup](#service-specific-setup)
-4. [Payment Integration (PayMongo)](#payment-integration-paymongo)
-5. [Team Member Setup](#team-member-setup)
-6. [Troubleshooting](#troubleshooting)
-7. [Environment Variables Reference](#environment-variables-reference)
+- [Part 1: Initial Setup](#part-1-initial-setup)
+- [Part 2: Backend Setup](#part-2-backend-setup)
+- [Part 3: Frontend Setup](#part-3-frontend-setup)
+- [Part 4: Hardware Setup (ESP32)](#part-4-hardware-setup-esp32)
+- [Part 5: Production Deployment](#part-5-production-deployment)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## Prerequisites
+## Part 1: Initial Setup
 
-**Required:**
-- Node.js 16+ ([Download](https://nodejs.org/)) - **Verify:** `node --version`
-- Python 3.9+ ([Download](https://www.python.org/)) - **Verify:** `python --version`
-- Git ([Download](https://git-scm.com/)) - **Verify:** `git --version`
-- Supabase account ([Sign up free](https://supabase.com))
+### Prerequisites
 
-**Optional (for payment testing):**
-- PayMongo account ([Sign up](https://dashboard.paymongo.com))
-- ngrok account ([Sign up free](https://ngrok.com))
+- **Python 3.11+** - [Download](https://www.python.org/downloads/)
+- **Node.js 18+** - [Download](https://nodejs.org/)
+- **Git** - [Download](https://git-scm.com/)
+- **Supabase Account** - [Sign up free](https://supabase.com)
+- **PayMongo Account** - [Sign up](https://dashboard.paymongo.com)
+- **Resend Account** - [Sign up free](https://resend.com)
 
----
-
-## First-Time Setup (Complete)
-
-Follow these steps **in order** to avoid setup errors.
-
-### Step 1: Clone Repository
+### Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/smarth2wo.git
+git clone https://github.com/charlesterrenal/smarth2wo.git
 cd smarth2wo
 ```
 
-### Step 2: Setup Supabase Database
+### Install Dependencies
 
-**Estimated time: 5 minutes**
+**Backend:**
+```bash
+cd backend
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+# or
+source venv/bin/activate  # macOS/Linux
 
-1. Go to [Supabase Dashboard](https://app.supabase.com)
-2. Create a new project or use existing one
-3. Go to **Settings → API**
-   - Copy **Project URL** → save it
-   - Copy **anon public key** → save it (NOT the secret key)
-4. Go to **SQL Editor → New Query**
-5. Copy and paste this SQL:
+pip install -r requirements.txt
+```
 
+**Frontend:**
+```bash
+cd frontend
+npm install
+```
+
+---
+
+## Part 2: Backend Setup
+
+### Environment Configuration
+
+1. **Copy template:**
+   ```bash
+   cd backend
+   cp .env.example .env
+   ```
+
+2. **Fill in `.env` with your credentials:**
+
+#### Supabase Configuration
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+```
+Get these from: Supabase Dashboard → Project Settings → API
+
+#### PayMongo Configuration
+```env
+PAYMONGO_PUBLIC_KEY=pk_live_xxxxx
+PAYMONGO_SECRET_KEY=sk_live_xxxxx
+```
+Get these from: [PayMongo Dashboard](https://dashboard.paymongo.com) → API Keys
+
+#### MQTT Configuration (IoT Communication)
+```env
+MQTT_BROKER=broker.hivemq.com  # Public free broker for testing
+MQTT_PORT=1883
+MQTT_USERNAME=
+MQTT_PASSWORD=
+```
+
+#### Resend Email Configuration
+```env
+RESEND_API_KEY=re_xxxxx
+RESEND_FROM_EMAIL=alerts@your-domain.com
+ALERT_RECIPIENT_EMAIL=admin@example.com
+EMAIL_COOLDOWN_MINUTES=30
+```
+Get API key from: [Resend Dashboard](https://resend.com/api-keys)
+
+#### Server Configuration
+```env
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+DEBUG=True
+ENVIRONMENT=development
+```
+
+---
+
+### Database Setup
+
+#### 1. Create Tables in Supabase
+
+Go to Supabase Dashboard → SQL Editor → Run these queries:
+
+**Transactions Table:**
 ```sql
--- Drop old logs table if it exists
-DROP TABLE IF EXISTS logs CASCADE;
-
--- Create new logs table with correct schema
-CREATE TABLE IF NOT EXISTS logs (
-  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  event       TEXT NOT NULL,
-  message     TEXT,
-  volume_ml   INT,
+CREATE TABLE transactions (
+  id TEXT PRIMARY KEY,
+  customer TEXT,
+  volume_ml INT,
+  price DECIMAL,
   payment_method TEXT,
-  status      TEXT NOT NULL CHECK (status IN ('success', 'scheduled', 'error', 'warning')),
-  created_at  TIMESTAMPTZ DEFAULT NOW()
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+**Logs Table:**
+```sql
+CREATE TABLE logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event TEXT,
+  status TEXT,
+  message TEXT,
+  volume_ml INT,
+  payment_method TEXT,
+  created_at TIMESTAMP DEFAULT now()
+);
+```
+
+**Sensor Status Table:**
+```sql
+CREATE TABLE sensor_status (
+  id INT PRIMARY KEY DEFAULT 1,
+  water_level_pct FLOAT,
+  temperature FLOAT,
+  power_on BOOLEAN,
+  updated_at TIMESTAMP DEFAULT now()
+);
+```
+
+**Email Logs Table:**
+```sql
+CREATE TABLE IF NOT EXISTS email_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  alert_type TEXT NOT NULL,
+  recipient_email TEXT NOT NULL,
+  subject TEXT,
+  status TEXT NOT NULL DEFAULT 'sent',
+  error_message TEXT,
+  created_at TIMESTAMP DEFAULT now()
 );
 
+CREATE INDEX IF NOT EXISTS idx_email_logs_alert_type_created ON email_logs(alert_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_email_logs_recipient ON email_logs(recipient_email, created_at DESC);
+
 -- Enable RLS
-ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
 
--- Create policy
-CREATE POLICY "Allow all for anon" ON logs FOR ALL USING (true) WITH CHECK (true);
+-- Create policies
+CREATE POLICY "Allow read email_logs" ON email_logs FOR SELECT USING (true);
+CREATE POLICY "Allow insert email_logs" ON email_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update email_logs" ON email_logs FOR UPDATE USING (true);
 ```
 
-6. Click **Run** (green play button)
-7. Database is ready!
+#### 2. Enable RLS on All Tables
 
-### Step 3: Backend Setup
+For each table (transactions, logs, sensor_status):
+```sql
+ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON table_name FOR ALL USING (true);
+```
 
-**Estimated time: 3 minutes**
+---
 
-Open **Terminal 1:**
+### Running the Backend
 
 ```bash
 cd backend
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Create environment file
-cp .env.example .env
-
-# Edit .env - add your Supabase credentials
-# Use your editor (VS Code, Notepad, etc.)
-# Fill in:
-#   SUPABASE_URL=https://your-project.supabase.co
-#   SUPABASE_ANON_KEY=your-anon-key-here
-#   (Optional) PAYMONGO_PUBLIC_KEY=pk_test_...
-#   (Optional) PAYMONGO_SECRET_KEY=sk_test_...
-```
-
-**Verify backend works:**
-```bash
+.\venv\Scripts\activate
 python main.py
 ```
 
-Expected output:
+You should see:
 ```
-INFO:     Uvicorn running on http://127.0.0.1:8000
+STARTUP EVENT: Initializing MQTT...
+MQTT initialized - Broker: broker.hivemq.com:1883
+STARTUP EVENT: Initializing Email Service...
+Email service initialized - From: alerts@your-domain.com
+API Docs: http://localhost:8000/docs
 ```
 
-Visit http://localhost:8000/docs to see API documentation
+---
 
-**Keep this terminal running** for the next steps.
+### Backend Services
 
-### Step 4: Frontend Setup
+#### MQTT (IoT Communication)
+- **Purpose:** Real-time communication with ESP32 hardware
+- **Broker:** broker.hivemq.com (free public broker)
+- **Topics:**
+  - `smarth2o/dispense` - Backend sends dispense commands
+  - `smarth2o/status` - ESP32 sends status updates
+  - `smarth2o/sensors` - ESP32 sends sensor data
+- **Status:** ✅ Automatically initialized on startup
 
-**Estimated time: 2 minutes**
+#### PayMongo (Payment Processing)
+- **Purpose:** QR code payments via GCash
+- **Flow:** ESP32 → Backend → QR Code → Customer Payment
+- **Setup:** See [PayMongo Documentation](https://developers.paymongo.com)
+- **Testing:** Use "Simulate Payment Success" in admin panel
+- **Status:** ✅ Integrated and working
 
-Open **Terminal 2:**
+#### Resend (Email Alerts)
+- **Purpose:** Automated notifications for system events
+- **Alerts Sent For:**
+  - 💰 Transaction confirmations
+  - 💧 Water level warnings (< 20% or < 10%)
+  - 🔧 Maintenance due notifications
+  - 🚨 System anomalies (pressure, temperature, flow rate)
+- **Cooldown:** Same alert won't send twice within 30 minutes
+- **Status:** ✅ Fully integrated
+
+---
+
+## Part 3: Frontend Setup
+
+### Install & Run
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Create environment file
-cp .env.example .env.local
-
-# Edit .env.local - add your Supabase credentials
-# Fill in:
-#   VITE_SUPABASE_URL=https://your-project.supabase.co
-#   VITE_SUPABASE_ANON_KEY=your-anon-key-here
-```
-
-**Start development server:**
-```bash
 npm run dev
 ```
 
-Expected output:
-```
-  VITE v... ready in ... ms
+Access at: http://localhost:5173
 
-  ➜  Local:   http://localhost:5173/
-  ➜  press h to show help
-```
+### Available Pages
 
-Visit http://localhost:5173 to see dashboard
+| Page | URL | Purpose |
+|------|-----|---------|
+| Dashboard | http://localhost:5173 | Main display |
+| System Logs | http://localhost:5173/logs | View all system events |
+| Admin Payments | http://localhost:5173/admin/payments | Test payment flow |
 
----
+### Payment Testing
 
-## Service-Specific Setup
-
-### Backend (FastAPI)
-
-**Location:** `backend/`
-
-**Start Command:**
-```bash
-cd backend
-source venv/bin/activate  # macOS/Linux
-# or: venv\Scripts\activate  # Windows
-python main.py
-```
-
-**Expected Port:** http://localhost:8000
-
-**Documentation:**
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-**Install New Package:**
-```bash
-pip install package-name
-pip freeze > requirements.txt
-```
-
-**Common Issues:**
-- **ModuleNotFoundError**: Ensure venv is activated (you should see `(venv)` in terminal)
-- **Port 8000 in use**: See [Troubleshooting](#troubleshooting)
-- **Import errors**: Run `pip install -r requirements.txt` again
+1. Go to http://localhost:5173/admin/payments
+2. Click a dispenser button (100ml, 500ml, 1L)
+3. QR code appears on screen
+4. Scan with phone
+5. Click "Simulate Payment Success"
+6. Check logs for dispense confirmation
 
 ---
 
-### Frontend (React + Vite)
+## Part 4: Hardware Setup (ESP32)
 
-**Location:** `frontend/`
+### Prerequisites
 
-**Start Command:**
-```bash
-cd frontend
-npm run dev
+- ESP32 Dev Board
+- 3 Push buttons (GPIO 12, 13, 14)
+- 2.8" TFT SPI display
+- 1 Relay or MOSFET for pump control
+- WiFi network access
+
+### Wiring Diagram
+
+**Buttons:**
+```
+BTN 100ml → GPIO 12 (with 10k pulldown)
+BTN 500ml → GPIO 13 (with 10k pulldown)
+BTN 1000ml → GPIO 14 (with 10k pulldown)
+All → GND
 ```
 
-**Expected Port:** http://localhost:5173
-
-**Key Commands:**
-```bash
-npm install           # Install dependencies
-npm run dev           # Start dev server
-npm run build         # Build for production
-npm run preview       # Preview production build
-npm install package-name  # Install new package
+**TFT Display (SPI):**
+```
+MOSI → GPIO 23
+CLK → GPIO 18
+CS → GPIO 5
+DC → GPIO 27
+RST → GPIO 33
+VCC → 3.3V
+GND → GND
 ```
 
-**Common Issues:**
-- **Port 5173 in use**: See [Troubleshooting](#troubleshooting)
-- **node_modules issues**: Delete and reinstall
-  ```bash
-  rm -rf node_modules
-  rm package-lock.json
-  npm install
-  ```
+**Pump Control:**
+```
+GPIO 26 → Relay/MOSFET gate
+Relay → Pump power (external 12V)
+```
+
+### Arduino IDE Setup
+
+1. Install ESP32 board:
+   - File → Preferences
+   - Add: `https://dl.espressif.com/dl/package_esp32_index.json`
+   - Tools → Board Manager → Search "esp32" → Install
+
+2. Install libraries:
+   - Sketch → Include Library → Manage Libraries
+   - Install: `TFT_eSPI`, `PubSubClient`, `ArduinoJson`
+
+3. Configure TFT_eSPI:
+   - Find: `Arduino/libraries/TFT_eSPI/User_Setup.h`
+   - Uncomment for 2.8" ILI9341:
+   ```cpp
+   #define ILI9341_DRIVER
+   #define TFT_CS   5
+   #define TFT_DC   27
+   #define TFT_RST  33
+   #define TFT_MOSI 23
+   #define TFT_SCLK 18
+   ```
+
+### Flash ESP32
+
+1. Open `backend/ESP32_ARDUINO.ino` in Arduino IDE
+2. Update WiFi credentials:
+   ```cpp
+   const char* WIFI_SSID = "YOUR_SSID";
+   const char* WIFI_PASSWORD = "YOUR_PASSWORD";
+   const char* BACKEND_URL = "http://192.168.x.x:8000";  // Your PC IP
+   ```
+3. Tools → Board → "ESP32 Dev Module"
+4. Tools → Upload Speed → 921600
+5. Upload
+
+### Testing ESP32
+
+1. Open Serial Monitor (115200 baud)
+2. Should see:
+   ```
+   SmartH2O ESP32 Starting...
+   Connecting to WiFi: YOUR_SSID
+   WiFi connected! IP: 192.168.x.x
+   Connecting to MQTT: broker.hivemq.com
+   MQTT connected!
+   ```
+
+3. Press button on ESP32 → QR appears on display
+4. Scan QR → Payment gateway opens
+5. Test payment flow
 
 ---
 
-## Payment Integration (PayMongo)
+## Part 5: Production Deployment
 
-**This is OPTIONAL** - frontend works without it (shows mock QR codes).
+### Backend Deployment
 
-### Setup PayMongo
+**Option 1: Railway (Recommended)**
+1. Push code to GitHub
+2. Connect Railway to GitHub repo
+3. Set environment variables
+4. Deploy
 
-1. **Sign up** at [PayMongo Dashboard](https://dashboard.paymongo.com)
-2. **Get API keys:**
-   - Go to Dashboard → Settings → API Keys
-   - Copy Public Key (starts with `pk_`)
-   - Copy Secret Key (starts with `sk_`)
-3. **Add to `backend/.env`:**
-   ```env
-   PAYMONGO_PUBLIC_KEY=pk_live_xxxxx
-   PAYMONGO_SECRET_KEY=sk_live_xxxxx
-   ```
-4. **Restart backend:**
-   ```bash
-   python main.py
-   ```
-
-### Testing Payments
-
-1. Visit http://localhost:5173/admin/payments
-2. Click any dispenser button (100ml, 500ml, 1L)
-3. QR code appears
-4. Click "Simulate Payment Success" to test webhook
-5. Check System Logs page - transaction should appear
-
-### Webhook Setup (Optional - for real GCash payments)
-
-1. **Setup ngrok** (for public URL):
-   ```bash
-   ngrok config add-authtoken YOUR_AUTHTOKEN
-   ngrok http 8000
-   ```
-   Copy the public URL: `https://xxx.ngrok-free.dev`
-
-2. **Configure in PayMongo Dashboard:**
-   - Settings → Webhooks
-   - Webhook URL: `https://xxx.ngrok-free.dev/api/payments/webhook`
-   - Event: `payment.paid`
-
-3. **For real testing:**
-   - Customer scans QR code
-   - Completes GCash payment
-   - PayMongo sends webhook to your URL
-   - Transaction confirms automatically
-
-See [backend/PAYMONGO_SETUP.md](backend/PAYMONGO_SETUP.md) for detailed PayMongo guide.
-
----
-
-## Team Member Setup
-
-### For New Team Members
-
-**They should:**
-
-1. **Clone repo:**
-   ```bash
-   git clone https://github.com/yourusername/smarth2wo.git
-   cd smarth2wo
-   ```
-
-2. **Follow "First-Time Setup" above** (all 4 steps)
-
-3. **Create feature branch for their work:**
-   ```bash
-   git checkout -b feature/their-feature-name
-   ```
-
-### Onboarding Checklist
-
-- [ ] Node.js and Python installed and verified
-- [ ] Repository cloned
-- [ ] Supabase account and credentials obtained
-- [ ] Backend environment file created with Supabase URL and key
-- [ ] Frontend environment file created with Supabase URL and key
-- [ ] Backend running on port 8000
-- [ ] Frontend running on port 5173
-- [ ] Dashboard loads at http://localhost:5173
-- [ ] (Optional) PayMongo credentials added if testing payments
-
-### Git Workflow
-
+**Option 2: Docker**
 ```bash
-# Create feature branch
-git checkout -b feature/payment-dashboard
+docker build -t smarth2o-backend .
+docker run -e SUPABASE_URL=... -p 8000:8000 smarth2o-backend
+```
 
-# Make changes...
+### Frontend Deployment
 
-# Stage and commit
-git add .
-git commit -m "feat: add payment dashboard"
-
+**Option: Vercel (Recommended)**
+```bash
+npm run build
 # Push to GitHub
-git push origin feature/payment-dashboard
+# Connect Vercel to repo
+# Auto-deploys on push
+```
 
-# Create Pull Request on GitHub
+### ngrok for Webhook Testing
+
+For local testing of PayMongo webhooks:
+
+```bash
+# Install
+brew install ngrok  # macOS
+choco install ngrok # Windows
+
+# Start tunnel
+ngrok config add-authtoken YOUR_AUTH_TOKEN
+ngrok http 8000
+
+# Copy public URL and add to PayMongo dashboard
 ```
 
 ---
@@ -336,221 +407,97 @@ git push origin feature/payment-dashboard
 
 ### Backend Won't Start
 
-**Error: `ModuleNotFoundError: No module named 'fastapi'`**
+**Port 8000 in use:**
 ```bash
-# Solution: Activate virtual environment
-# Windows:
-backend\venv\Scripts\activate
-# macOS/Linux:
-source backend/venv/bin/activate
-
-# Then reinstall:
-pip install -r requirements.txt
-```
-
-**Error: `Address already in use (:8000)`**
-```bash
-# Solution: Kill process using port 8000
-# Windows:
+# Windows
 netstat -ano | findstr :8000
 taskkill /PID <PID> /F
 
-# macOS/Linux:
+# macOS/Linux
 lsof -i :8000
 kill -9 <PID>
 ```
 
-**Error: `No module named 'paymongo_service'`**
+**Missing dependencies:**
 ```bash
-# Solution: Ensure load_dotenv() runs BEFORE importing paymongo_service
-# This is already fixed in main.py, but if you moved code around:
-# Move "load_dotenv()" to line 11, BEFORE any service imports
+pip install -r requirements.txt
 ```
 
----
+**MQTT connection timeout:**
+- Change `MQTT_BROKER` in `.env`
+- Try: `broker.hivemq.com`
+
+**Email not sending:**
+- Check `RESEND_API_KEY` is set
+- Verify sender email is in Resend dashboard
+- Check `email_logs` table in Supabase
 
 ### Frontend Won't Start
 
-**Error: `Port 5173 already in use`**
+**Port 5173 in use:**
 ```bash
-# Solution: Kill process using port 5173
-# Windows:
-netstat -ano | findstr :5173
-taskkill /PID <PID> /F
-
-# macOS/Linux:
-lsof -i :5173
-kill -9 <PID>
+# Kill process on port 5173
 ```
 
-**Error: `Cannot find module '@supabase/supabase-js'`**
+**Node modules issue:**
 ```bash
-# Solution: Reinstall node_modules
 rm -rf node_modules
-rm package-lock.json
 npm install
 ```
 
-**Error: `npm: command not found`**
+### ESP32 Won't Connect
+
+**WiFi issues:**
+- Check SSID/password correct
+- Ensure WiFi 2.4GHz (not 5GHz)
+- Check serial monitor for errors
+
+**MQTT not connecting:**
+- Verify broker is reachable
+- Check firewall allows port 1883
+- Try different broker
+
+**QR not displaying:**
+- Check TFT display wiring
+- Verify correct GPIO pins
+- Check display voltage (3.3V)
+
+---
+
+## Quick Commands Reference
+
 ```bash
-# Solution: Install Node.js from https://nodejs.org/
-# Verify with: node --version
+# Start venv
+cd backend
+.\venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run backend
+python main.py
+
+# Run frontend
+cd frontend
+npm run dev
+
+# View API docs
+# http://localhost:8000/docs
+
+# View database
+# Supabase Dashboard → Table Editor
 ```
 
 ---
 
-### Communication Errors
+## Support & Documentation
 
-**Error: Frontend can't reach backend**
-```
-CORS error, Backend not running, etc.
-```
-
-**Solutions:**
-1. Ensure backend is running on http://localhost:8000
-   ```bash
-   curl http://localhost:8000/health
-   ```
-2. Ensure frontend is running on http://localhost:5173
-3. Check `VITE_API_URL` in frontend/.env.local (should be http://localhost:8000)
+- **API Docs:** http://localhost:8000/docs
+- **Project Overview:** [README.md](README.md)
+- **Quick Reference:** [QUICKSTART.md](QUICKSTART.md)
+- **Git Workflow:** [GITHUB_SETUP.md](GITHUB_SETUP.md)
+- **ESP32 Guide:** [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md)
 
 ---
 
-### Database Connection Errors
-
-**Error: `Supabase connection failed`**
-
-1. Verify credentials in `.env` files:
-   ```bash
-   # Check backend/.env
-   grep SUPABASE backend/.env
-   
-   # Check frontend/.env.local
-   grep VITE_SUPABASE frontend/.env.local
-   ```
-
-2. Go to [Supabase Dashboard](https://app.supabase.com):
-   - Verify Project URL (should match your .env)
-   - Verify Anon Key (copy again if unsure)
-   - Click "Test Connection" in SQL Editor
-
-3. Restart both services after updating credentials
-
----
-
-### Payment/Logging Issues
-
-**Logs page shows no transactions**
-
-1. Ensure logs table exists in Supabase:
-   ```bash
-   # Go to Supabase → SQL Editor
-   # Run: SELECT * FROM logs;
-   # Should show recent transactions
-   ```
-
-2. If table doesn't exist, run the SQL from [Step 2](#step-2-setup-supabase-database)
-
-3. Ensure `payment_method` column exists (not `payment`):
-   ```sql
-   SELECT column_name FROM information_schema.columns WHERE table_name='logs';
-   ```
-
-4. Restart backend:
-   ```bash
-   # Terminal 1: Press Ctrl+C
-   # Then: python main.py
-   ```
-
----
-
-## Environment Variables Reference
-
-### Backend (`backend/.env`)
-
-| Variable | Required | Example | Notes |
-|----------|----------|---------|-------|
-| `SUPABASE_URL` | Yes | `https://xxx.supabase.co` | From Supabase Dashboard |
-| `SUPABASE_ANON_KEY` | Yes | `eyJhbGc...` | Anon public key, NOT secret |
-| `PAYMONGO_PUBLIC_KEY` | No | `pk_live_xxx` | For payment testing |
-| `PAYMONGO_SECRET_KEY` | No | `sk_live_xxx` | For payment testing |
-
-**Example `.env`:**
-```env
-SUPABASE_URL=https://myproject.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-PAYMONGO_PUBLIC_KEY=pk_live_optional
-PAYMONGO_SECRET_KEY=sk_live_optional
-```
-
-### Frontend (`frontend/.env.local`)
-
-| Variable | Required | Example | Notes |
-|----------|----------|---------|-------|
-| `VITE_SUPABASE_URL` | Yes | `https://xxx.supabase.co` | Same as backend |
-| `VITE_SUPABASE_ANON_KEY` | Yes | `eyJhbGc...` | Same as backend |
-| `VITE_API_URL` | No | `http://localhost:8000` | Default: http://localhost:8000 |
-
-**Example `.env.local`:**
-```env
-VITE_SUPABASE_URL=https://myproject.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-VITE_API_URL=http://localhost:8000
-```
-
----
-
-## Project Structure
-
-```
-smarth2wo/
-├── frontend/                   React + Vite Dashboard
-│   ├── src/
-│   │   ├── pages/             Dashboard, Logs, Admin Payments, etc.
-│   │   ├── components/        Reusable UI components
-│   │   ├── lib/               API utilities, Supabase client
-│   │   └── context/           Theme and state management
-│   ├── package.json
-│   ├── vite.config.js
-│   └── .env.example
-│
-├── backend/                    FastAPI + Python Backend
-│   ├── main.py                 FastAPI app, all endpoints
-│   ├── paymongo_service.py     PayMongo integration
-│   ├── requirements.txt        Python dependencies
-│   ├── .env.example
-│   └── venv/                   Virtual environment (created locally)
-│
-├── SETUP.md                    (this file)
-├── README.md                   Project overview
-├── QUICKSTART.md               Quick reference
-├── GITHUB_SETUP.md             Git/GitHub workflow
-└── docker-compose.yml          (optional Docker setup)
-```
-
----
-
-## Next Steps
-
-After setup is complete:
-
-1. **Explore the dashboard:** http://localhost:5173
-2. **Test payment flow:** http://localhost:5173/admin/payments
-3. **Check API docs:** http://localhost:8000/docs
-4. **Read detailed docs:** [README.md](README.md), [backend/README.md](backend/README.md), [frontend/README.md](frontend/README.md)
-5. **Start developing:** Create a feature branch and make changes
-
----
-
-## Support
-
-- **Setup issues?** Check [Troubleshooting](#troubleshooting) above
-- **Questions?** See individual service READMEs:
-  - Backend: [backend/README.md](backend/README.md)
-  - Frontend: [frontend/README.md](frontend/README.md)
-  - Payments: [backend/PAYMONGO_SETUP.md](backend/PAYMONGO_SETUP.md)
-- **Git help?** See [GITHUB_SETUP.md](GITHUB_SETUP.md)
-
----
-
-**Last updated:** May 30, 2026
+**Setup complete?** Jump to [QUICKSTART.md](QUICKSTART.md) for running the system daily.
