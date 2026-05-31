@@ -1,17 +1,26 @@
 /*
   SmartH2O ESP32 - Water Dispenser Hardware Controller
   
+  TEST MODE: Uses LED instead of pump
+  
   This code controls:
   - 3 physical buttons (100ml, 500ml, 1000ml)
-  - 2.8" TFT SPI display (shows QR codes)
-  - Water pump/valve (GPIO output)
+  - 2.8" TFT SPI display (shows status)
+  - LED output (GPIO 26) - toggles when "dispensing"
   - MQTT communication with backend
+  
+  When ready for production:
+  1. Replace LED_PIN with PUMP_PIN
+  2. Connect relay/MOSFET to GPIO 26
+  3. Update dispensePump() to use actual timing
+  See ESP32_MQTT_GUIDE.md for details
   
   Wiring:
   - Button 100ml: GPIO 12
   - Button 500ml: GPIO 13
   - Button 1000ml: GPIO 14
-  - Pump output: GPIO 26
+  - LED output (testing): GPIO 26
+    (Replace with pump relay/MOSFET for production)
   - TFT SPI: MOSI(23), CLK(18), CS(5), DC(27), RST(33)
   
   Before uploading:
@@ -44,7 +53,7 @@ const char* MQTT_STATUS_TOPIC = "smarth2o/status";
 const int BTN_100ML = 12;
 const int BTN_500ML = 13;
 const int BTN_1000ML = 14;
-const int PUMP_PIN = 26;
+const int LED_PIN = 26;  // LED for testing (swap to PUMP_PIN when adding pump)
 
 // ===== Global Objects =====
 TFT_eSPI tft = TFT_eSPI();
@@ -68,8 +77,8 @@ void setup() {
   pinMode(BTN_100ML, INPUT_PULLUP);
   pinMode(BTN_500ML, INPUT_PULLUP);
   pinMode(BTN_1000ML, INPUT_PULLUP);
-  pinMode(PUMP_PIN, OUTPUT);
-  digitalWrite(PUMP_PIN, LOW);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
   
   // Initialize display
   initDisplay();
@@ -378,24 +387,20 @@ void createCheckout(int volumeMl, int pricePesos) {
 // ===== Pump Function =====
 void dispensePump(int volumeMl) {
   displayDispensing();
-  publishStatus("dispensing", "Pump started");
+  publishStatus("dispensing", "LED activated (testing)");
   
-  // Calculate pump duration based on flow rate
-  // Adjust PUMP_ML_PER_SECOND based on your pump specifications
-  const float PUMP_ML_PER_SECOND = 10.0;  // Adjust for your pump
-  int durationMs = (int)(volumeMl / PUMP_ML_PER_SECOND * 1000);
+  Serial.println("LED Test Mode - Simulating dispense");
   
-  Serial.print("Pump for ");
-  Serial.print(durationMs);
-  Serial.println("ms");
+  // Blink LED to simulate pump
+  // In production: replace with actual pump timing
+  digitalWrite(LED_PIN, HIGH);
+  Serial.println("LED ON");
+  delay(2000);  // 2 second blink
+  digitalWrite(LED_PIN, LOW);
+  Serial.println("LED OFF");
   
-  // Turn pump on
-  digitalWrite(PUMP_PIN, HIGH);
-  delay(durationMs);
-  digitalWrite(PUMP_PIN, LOW);
-  
-  Serial.println("Pump stopped");
-  publishStatus("complete", "Water dispensed successfully");
+  Serial.println("Dispense simulation complete");
+  publishStatus("complete", "Water dispensed (LED test)");
   
   isWaitingForPayment = false;
   delay(2000);
