@@ -4,46 +4,51 @@
 
 :root {
   --sidebar-width: 220px;
-  /* Semantic colors - clean and minimal */
-  --color-blue: #0052CC;
-  --color-blue-dark: #003d99;
-  --color-green: #00A651;
-  --color-green-dark: #007d3f;
-  --color-green-light: #dcfce7;
-  --color-yellow: #FFA500;
-  --color-yellow-dark: #cc7000;
-  --color-yellow-light: #fef3c7;
-  --color-pink: #E81B23;
-  --color-purple: #7B3FF2;
-  --color-purple-dark: #5a2fcf;
-  /* Light mode - clean palette */
-  --color-bg: #FFFFFF;
-  --color-surface: #F8F9FA;
-  --color-sidebar: #FFFFFF;
-  --color-text: #24292E;
-  --color-text-muted: #586069;
-  --color-border: #E1E4E8;
+  /* Semantic colors */
+  --color-blue: #2563EB;
+  --color-blue-dark: #1D4ED8;
+  --color-green: #16A34A;
+  --color-green-dark: #0F766E;
+  --color-green-light: #D1FAE5;
+  --color-yellow: #F59E0B;
+  --color-yellow-dark: #D97706;
+  --color-yellow-light: #FEF3C7;
+  --color-pink: #DB2777;
+  --color-purple: #8B5CF6;
+  --color-purple-dark: #6D28D9;
+
+  /* Light mode palette */
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-sidebar: #EFF2F7;
+  --surface-card: #FFFFFF;
+  --surface-card-strong: #F1F5F9;
+  --input-bg: #FFFFFF;
+  --dropdown-bg: #FFFFFF;
+  --dropdown-border: rgba(148, 163, 184, 0.24);
+  --table-row-alt: rgba(15, 23, 42, 0.04);
+  --table-row-hover: rgba(15, 23, 42, 0.06);
+  --color-text: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-border: #E2E8F0;
 }
 
-/* Dark mode - Atom Grey theme */
 :root.dark-mode {
-  --color-bg: #282C34;
-  --color-surface: #21252B;
-  --color-sidebar: #21252B;
-  --color-text: #ABB2BF;
-  --color-text-muted: #5C6370;
-  --color-border: #3E4451;
-  --color-blue: #61AFEF;
-  --color-blue-dark: #4a8fcf;
-  --color-green: #98C379;
-  --color-green-dark: #6fa055;
-  --color-green-light: #1b3d25;
-  --color-yellow: #E5C07B;
-  --color-yellow-dark: #b39650;
-  --color-yellow-light: #3d3420;
-  --color-pink: #E06C75;
-  --color-purple: #C678DD;
-  --color-purple-dark: #9d5ba8;
+  --color-bg: #0B1220;
+  --color-surface: #0F1724;
+  --color-sidebar: #0F1724;
+  --surface-card: #111827;
+  --surface-card-strong: #0D1322;
+  --input-bg: #0F172A;
+  --dropdown-bg: #0F172A;
+  --dropdown-border: rgba(148, 163, 184, 0.18);
+  --table-row-alt: rgba(255, 255, 255, 0.02);
+  --table-row-hover: rgba(255, 255, 255, 0.06);
+  --color-text: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #94A3B8;
+  --color-border: #172033;
 }
 
 * {
@@ -130,6 +135,11 @@ input {
 input:focus {
   border-color: var(--color-blue) !important;
   outline: none !important;
+}
+
+.transaction-search-input::placeholder {
+  color: #94A3B8;
+  opacity: 1;
 }
 
 :root.dark-mode input {

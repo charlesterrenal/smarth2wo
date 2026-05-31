@@ -96,13 +96,15 @@ export default function Sidebar() {
                 alignItems: 'center',
                 gap: '10px',
                 padding: '10px 12px',
-                borderRadius: '10px',
+                borderRadius: '14px',
                 textDecoration: 'none',
                 fontSize: '14px',
-                fontWeight: isActive ? 500 : 400,
-                color: isActive ? 'var(--color-blue)' : 'var(--color-text-muted)',
-                background: isActive ? 'rgba(0, 102, 204, 0.1)' : 'transparent',
-                transition: 'all 0.2s ease',
+                fontWeight: isActive ? 600 : 500,
+                color: isActive ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                background: isActive ? (isDark ? 'rgba(97,175,239,0.08)' : 'rgba(0,102,204,0.08)') : 'transparent',
+                borderLeft: isActive ? '4px solid var(--color-blue)' : '4px solid transparent',
+                boxShadow: isActive ? (isDark ? '0 8px 28px rgba(97,175,239,0.08)' : '0 8px 28px rgba(0,102,204,0.08)') : 'none',
+                transition: 'all 0.18s ease',
               })}
             >
               <Icon size={18} />
@@ -127,7 +129,7 @@ export default function Sidebar() {
               background: 'var(--color-surface)',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-              color: 'var(--color-text-muted)',
+                color: 'var(--color-text-secondary)',
               fontSize: '14px',
             }}
             onMouseEnter={(e) => {
@@ -162,7 +164,7 @@ export default function Sidebar() {
               background: 'var(--color-surface)',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-              color: 'var(--color-text-muted)',
+                color: 'var(--color-text-secondary)',
               fontSize: '14px',
             }}
             onMouseEnter={(e) => {

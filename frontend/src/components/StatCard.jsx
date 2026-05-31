@@ -16,35 +16,35 @@ export default function StatCard({ title, value, icon, borderColor, bgColor, chi
     <div style={{
       background: color.includes('var(--color') ? 'var(--color-surface)' : color,
       border: color.includes('var(--color') ? `1.5px solid ${color}` : `1.5px solid transparent`,
-      borderRadius: '0px',
-      padding: '20px',
+      borderRadius: '16px',
+      padding: '24px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      gap: '12px',
+      transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s',
       cursor: 'pointer',
       transform: 'translateY(0)',
-      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+      boxShadow: '0 6px 18px rgba(2,6,23,0.06)',
     }}
     onMouseEnter={(e) => {
-      e.currentTarget.style.transform = 'translateY(-4px)'
-      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.18)'
+      e.currentTarget.style.transform = 'translateY(-6px)'
+      e.currentTarget.style.boxShadow = '0 18px 40px rgba(2,6,23,0.12)'
     }}
     onMouseLeave={(e) => {
       e.currentTarget.style.transform = 'translateY(0)'
-      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.12)'
+      e.currentTarget.style.boxShadow = '0 6px 18px rgba(2,6,23,0.06)'
     }}>
       {title && (
-        <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.08em', color: textColor, textTransform: 'uppercase', marginBottom: '4px' }}>
+        <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.06em', color: textColor, textTransform: 'uppercase', marginBottom: '4px' }}>
           {title}
         </span>
       )}
       {value && (
-        <span style={{ fontSize: '32px', fontWeight: 600, color: textColor }}>
+        <span style={{ fontSize: '2.75rem', lineHeight: 1, fontWeight: 800, color: textColor }}>
           {value}
         </span>
       )}
-      {icon && <div style={{ marginTop: '4px' }}>{icon}</div>}
+      {icon && <div style={{ marginTop: '6px' }}>{icon}</div>}
       {children && <div style={{ color: textColor }}>{children}</div>}
     </div>
   )

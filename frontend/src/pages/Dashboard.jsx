@@ -91,10 +91,10 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
         <div style={{
           background: '#fee2e2',
           border: '1px solid #fca5a5',
-          borderRadius: '0px',
+          borderRadius: '16px',
           padding: '16px 24px',
           marginBottom: '24px',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+          boxShadow: '0 8px 32px rgba(2,6,23,0.06)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <span style={{ fontSize: '24px' }}>⚠️</span>
@@ -114,7 +114,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
                   anomaly.severity === 'high' ? '#f97316' :
                   '#eab308'
                 }`,
-                borderRadius: '0px',
+                borderRadius: '12px',
               }}>
                 <strong>{anomaly.type}</strong> — {anomaly.message}
               </div>
@@ -133,7 +133,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
         }}>
           {/* Water Level */}
           <StatCard title="Water Level" bgColor="#0066CC">
-            <span style={{ fontSize: '32px', fontWeight: 700, color: '#ffffff' }}>
+            <span style={{ fontSize: '2.75rem', fontWeight: 800, color: '#ffffff' }}>
               {sensorStatus?.power_on ? `${sensorStatus.water_level_pct}%` : '—'}
             </span>
             <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '8px' }}>
@@ -143,7 +143,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
 
           {/* Transactions */}
           <StatCard title="Transactions" bgColor="#7B3FF2">
-            <span style={{ fontSize: '32px', fontWeight: 700, color: '#ffffff' }}>
+            <span style={{ fontSize: '2.75rem', fontWeight: 800, color: '#ffffff' }}>
               {transactions.length}
             </span>
             <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '8px' }}>
@@ -153,7 +153,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
 
           {/* Revenue */}
           <StatCard title="Revenue" bgColor="#00B341">
-            <span style={{ fontSize: '32px', fontWeight: 700, color: '#ffffff' }}>
+            <span style={{ fontSize: '2.75rem', fontWeight: 800, color: '#ffffff' }}>
               ₱{(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 1000).toFixed(1)}K
             </span>
             <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '8px' }}>
@@ -173,10 +173,10 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
             }
           >
             {maintenancePrediction ? (
-              <>
+                <>
                 <span style={{
-                  fontSize: '32px',
-                  fontWeight: 700,
+                  fontSize: '2.75rem',
+                  fontWeight: 800,
                   color: '#ffffff'
                 }}>
                   {maintenancePrediction.days_remaining}
@@ -186,8 +186,8 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
                 </p>
               </>
             ) : (
-              <>
-                <span style={{ fontSize: '18px', fontWeight: 600, color: '#6B7280' }}>No Data</span>
+                <>
+                <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-text-muted)' }}>No Data</span>
                 <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '8px' }}>API unavailable</p>
               </>
             )}
@@ -207,9 +207,9 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
           <div style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: '0px',
+            borderRadius: '16px',
             padding: '24px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+            boxShadow: '0 8px 32px rgba(2,6,23,0.06)',
           }}>
             <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)' }}>Revenue — Last 7 Days</p>
             <ResponsiveContainer width="100%" height={200}>
@@ -220,7 +220,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
                   contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12px', background: 'var(--color-surface)' }}
                   formatter={(v) => [`₱${v}`, 'Revenue']}
                 />
-                <Bar dataKey="revenue" fill="var(--color-green)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="revenue" fill="var(--color-green)" radius={[6, 6, 0, 0]} barSize={28} maxBarSize={36} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -229,33 +229,33 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
           <div style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: '0px',
+            borderRadius: '16px',
             padding: '24px',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+            boxShadow: '0 8px 32px rgba(2,6,23,0.06)',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px'
           }}>
             <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.02em' }}>Quick Stats</p>
             
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0, 102, 204, 0.05)', borderRadius: '0px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0, 102, 204, 0.05)', borderRadius: '12px' }}>
               <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Avg. Daily Revenue</span>
-              <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-blue)' }}>
+              <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-blue)' }}>
                 ₱{(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 7).toFixed(0)}
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0, 166, 81, 0.05)', borderRadius: '0px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0, 166, 81, 0.05)', borderRadius: '12px' }}>
               <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>System Status</span>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-green)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-green)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '8px', height: '8px', background: 'var(--color-green)', borderRadius: '50%' }} />
                 Operational
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(123, 63, 242, 0.05)', borderRadius: '0px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(123, 63, 242, 0.05)', borderRadius: '12px' }}>
               <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Active Users</span>
-              <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-purple)' }}>
+              <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-purple)' }}>
                 {new Set(transactions.map(t => t.customer)).size}
               </span>
             </div>
