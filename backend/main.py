@@ -204,11 +204,26 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
                 "updated_at": datetime.now().isoformat()
             }).eq("id", 1).execute()
             
-            supabase.table("logs").insert({
-                "event": f"Maintenance Prediction: {prediction.reason} (Days remaining: {prediction.days_remaining})",
-                "status": "scheduled",
-                "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
-            }).execute()
+            # Only log if it's not the regular maintenance cycle, or if it hasn't been logged today
+            should_log = True
+            if prediction.reason == "Regular maintenance cycle":
+                # Check if already logged today
+                try:
+                    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                    existing = supabase.table("logs").select("id").ilike(
+                        "event", "%Regular maintenance cycle%"
+                    ).gte("created_at", today_start).limit(1).execute()
+                    should_log = len(existing.data) == 0
+                except Exception as check_err:
+                    print(f"Daily log check error (non-critical): {check_err}")
+                    should_log = True
+            
+            if should_log:
+                supabase.table("logs").insert({
+                    "event": f"Maintenance Prediction: {prediction.reason} (Days remaining: {prediction.days_remaining})",
+                    "status": "scheduled",
+                    "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
+                }).execute()
         return prediction
     except Exception as e:
         print(f"Database Error in Predict Endpoint: {e}")
