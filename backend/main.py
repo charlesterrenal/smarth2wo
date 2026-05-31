@@ -7,18 +7,36 @@ from datetime import datetime, timedelta, timezone
 import random
 import os
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 # I-load ang mga variables mula sa .env file
 load_dotenv()
 
 from supabase import create_client, Client
 from paymongo_service import create_checkout_session, handle_webhook, CreatePaymentRequest
 from mqtt_service import init_mqtt, publish_dispense, disconnect as mqtt_disconnect
+from email_service import init_email_service, send_transaction_alert, send_water_level_alert, send_maintenance_due_alert, send_anomaly_alert
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("=" * 60)
+    print("STARTUP EVENT: Initializing MQTT...")
+    init_mqtt()
+    print("STARTUP EVENT: Initializing Email Service...")
+    init_email_service(supabase)
+    print("=" * 60)
+    try:
+        yield
+    finally:
+        print("Shutting down MQTT...")
+        mqtt_disconnect()
 
 
 app = FastAPI(
     title="SmartH2O Backend API",
     description="ML-powered water dispenser analytics and maintenance predictions",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # === SUPABASE CLIENT INITIALIZATION ===
@@ -43,14 +61,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize MQTT on startup
-@app.on_event("startup")
-async def startup_event():
-    init_mqtt()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    mqtt_disconnect()
+# NOTE: lifecycle handled by `lifespan` context manager above (replaces deprecated on_event handlers)
 
 # ============ Pydantic Models ============
 
@@ -234,6 +245,18 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
                     "status": "scheduled",
                     "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
                 }).execute()
+            
+            # Send email alert if maintenance is urgent
+            if prediction.severity in ["high", "critical"]:
+                send_maintenance_due_alert(prediction.days_remaining, prediction.reason, prediction.severity)
+            
+            # Send water level alert if low
+            if sensor_data.water_level_pct is not None:
+                if sensor_data.water_level_pct < 10:
+                    send_water_level_alert(sensor_data.water_level_pct, status="critical")
+                elif sensor_data.water_level_pct < 20:
+                    send_water_level_alert(sensor_data.water_level_pct, status="warning")
+        
         return prediction
     except Exception as e:
         print(f"Database Error in Predict Endpoint: {e}")
@@ -257,6 +280,9 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
                         "status": "warning",
                         "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
                     }).execute()
+                    
+                    # Send email alert for anomalies
+                    send_anomaly_alert(anomaly.type, anomaly.message, anomaly.severity)
         return anomalies
     except Exception as e:
         print(f"Database Error in Anomaly Endpoint: {e}")
@@ -347,6 +373,14 @@ async def handle_payment_webhook(payload: dict):
                     }).execute()
                 except Exception as log_err:
                     print(f"Logging error (non-critical): {log_err}")
+                
+                # Send transaction email alert
+                send_transaction_alert(
+                    transaction_id=transaction_id,
+                    customer_email=result.get("customer_email", "unknown@example.com"),
+                    volume_ml=result.get("volume_ml", 0),
+                    price=result.get("amount_pesos", 0)
+                )
             
             # Signal ESP32 to dispense water via MQTT
             publish_dispense(
