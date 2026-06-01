@@ -141,6 +141,9 @@ def create_checkout_session(request: CreatePaymentRequest) -> dict:
         checkout_id = checkout_data["data"]["id"]
         checkout_url = checkout_data["data"]["attributes"]["checkout_url"]
         
+        # Debug: Log full response to understand QR PH structure
+        print(f"DEBUG: PayMongo checkout response: {json.dumps(checkout_data, indent=2)}")
+        
         # Generate QR code
         qr_code_base64 = generate_qr_code_image(checkout_url)
         
@@ -176,9 +179,12 @@ def handle_webhook(webhook_data: dict) -> dict:
     """
     
     try:
-        event_type = webhook_data.get("type")
-        event_data = webhook_data.get("data", {})
-        attributes = event_data.get("attributes", {})
+        # PayMongo webhook structure: data.attributes.type = "payment.paid"
+        event_wrapper = webhook_data.get("data", {})
+        event_attributes = event_wrapper.get("attributes", {})
+        event_type = event_attributes.get("type")
+        
+        print(f"DEBUG: Parsed event_type: {event_type}")
         
         # Only handle payment.paid events
         if event_type != "payment.paid":
@@ -187,10 +193,16 @@ def handle_webhook(webhook_data: dict) -> dict:
                 "message": f"Webhook type '{event_type}' not handled"
             }
         
-        # Extract transaction details
-        payment_metadata = attributes.get("metadata", {})
+        # Extract payment data: data.attributes.data.attributes
+        payment_data = event_attributes.get("data", {})
+        payment_attributes = payment_data.get("attributes", {})
+        payment_metadata = payment_attributes.get("metadata", {})
+        
+        print(f"DEBUG: Payment metadata: {payment_metadata}")
+        
         transaction_id = payment_metadata.get("transaction_id")
         volume_ml = payment_metadata.get("volume_ml")
+        customer_email = payment_metadata.get("customer_email", "unknown@example.com")
         
         if not transaction_id:
             return {
@@ -198,21 +210,25 @@ def handle_webhook(webhook_data: dict) -> dict:
                 "message": "No transaction_id in webhook metadata"
             }
         
-        payment_status = attributes.get("status", "unknown")
-        amount_cents = attributes.get("amount", 0)
+        payment_status = payment_attributes.get("status", "unknown")
+        amount_cents = payment_attributes.get("amount", 0)
         amount_pesos = amount_cents / 100
+        
+        print(f"DEBUG: Webhook parsed successfully - Transaction: {transaction_id}, Amount: P{amount_pesos}")
         
         return {
             "success": True,
             "transaction_id": transaction_id,
             "payment_status": payment_status,
-            "volume_ml": volume_ml,
+            "volume_ml": int(volume_ml) if volume_ml else 0,
             "amount_pesos": amount_pesos,
+            "customer_email": customer_email,
             "payment_method": "gcash",
             "message": "Payment confirmed - ready to dispense"
         }
     
     except Exception as e:
+        print(f"ERROR: Webhook processing exception: {str(e)}")
         return {
             "success": False,
             "message": f"Webhook processing error: {str(e)}"

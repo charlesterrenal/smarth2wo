@@ -349,6 +349,12 @@ async def handle_payment_webhook(payload: dict):
     Called when customer completes GCash payment
     Updates transaction status and signals ESP32 to dispense
     """
+    print("=" * 60)
+    print("WEBHOOK RECEIVED FROM PAYMONGO")
+    print(f"Event type: {payload.get('type', 'unknown')}")
+    print(f"Payload: {json.dumps(payload, indent=2)}")
+    print("=" * 60)
+    
     try:
         result = handle_webhook(payload)
         

@@ -28,6 +28,18 @@ npm run dev
 # Running on http://localhost:5173
 ```
 
+### Terminal 3 - ngrok (for PayMongo webhooks)
+
+**Required for payment testing to receive webhooks**
+
+```bash
+ngrok http 8000
+# Copy the https://xxxxx.ngrok-free.app URL
+# Update webhook URL in PayMongo dashboard: https://xxxxx.ngrok-free.app/api/payments/webhook
+```
+
+**Note:** ngrok URL changes each time you restart. Update PayMongo webhook URL accordingly.
+
 ---
 
 ## Development Commands
@@ -124,6 +136,8 @@ curl -X POST http://localhost:8000/api/anomalies/detect \
 | Frontend won't start | Delete `node_modules`, run `npm install` again |
 | Can't connect to Supabase | Check credentials in `.env` and `.env.local` |
 | Emails not sending | Verify `RESEND_API_KEY` and sender domain in Resend dashboard |
+| Webhooks not received | 1. Check ngrok is running<br>2. Verify webhook URL in PayMongo dashboard<br>3. Look for "WEBHOOK RECEIVED" in backend logs |
+| QR code won't scan | See backend logs for "DEBUG: PayMongo checkout response" - QR PH string should be present |
 
 **Full troubleshooting?** See [SETUP.md → Troubleshooting](SETUP.md#troubleshooting)
 
