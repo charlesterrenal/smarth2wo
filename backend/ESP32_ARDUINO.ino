@@ -57,30 +57,58 @@ const char* MQTT_DISPENSE_TOPIC = "smarth2o/dispense";
 const char* MQTT_STATUS_TOPIC = "smarth2o/status";
 
 // ===== Hardware Pins =====
-const int BTN_100ML = 12;
-const int BTN_500ML = 13;
-const int BTN_1000ML = 14;
-const int LED_PIN = 26;  // LED for testing (swap to PUMP_PIN when adding pump)
+const int BTN_100ML   = 12;
+const int BTN_500ML   = 13;
+const int BTN_1000ML  = 14;
+const int BTN_QR_PAY  = 25;   // NEW: "Pay with QR PH" button (Phase 1: payment menu)
+const int BTN_COIN_PAY = 32;  // NEW: "Pay with Coins" button (Phase 1: payment menu)
+const int LED_PIN     = 26;   // LED for testing (swap to PUMP_PIN when adding pump)
+
+// (Coin acceptor pulse pin will be wired to GPIO 34 in Phase 2 - not used yet)
 
 // ===== Global Objects =====
 TFT_eSPI tft = TFT_eSPI();
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
+// ===== Application State Machine =====
+// Replaces the old isWaitingForPayment boolean with a proper state enum so
+// the button handler can dispatch correctly per screen.
+enum AppState {
+  STATE_READY,            // main menu: pick a volume
+  STATE_CHOOSE_PAYMENT,   // volume picked, asking QR or Coin
+  STATE_QR_PAYMENT,       // QR shown, waiting for webhook (or TEST timer)
+  STATE_COIN_PAYMENT,     // showing "Insert coins" progress screen
+  STATE_COIN_WARNING,     // partial credit, gentle warning before forfeit
+  STATE_DISPENSING,       // dispensing in progress (LED on)
+  STATE_ERROR             // error screen, returns to READY on any press
+};
+AppState appState = STATE_READY;
+
 // ===== State Variables =====
 String currentTransactionId = "";
 String currentCheckoutUrl = "";
 int currentVolumeMl = 0;
 int currentPricePesos = 0;
-bool isWaitingForPayment = false;
-unsigned long qrDisplayTimeout = 0;
-unsigned long testDispenseAt = 0;  // TEST_MODE only: when to auto-dispense
-unsigned long qrShownAt = 0;       // when the QR first appeared (for cancel lockout)
-const unsigned long QR_DISPLAY_DURATION = 60000;  // 60 seconds
-const unsigned long TEST_AUTO_PAY_DELAY  = 5000;  // TEST_MODE: 5s "scan + pay" simulation
-const unsigned long CANCEL_LOCKOUT_MS    = 1200;  // ignore button cancels for ~1s after QR shows
-                                                  // (prevents the same press that opened the QR
-                                                  // from immediately cancelling it)
+int coinCredit = 0;                  // pesos accumulated in current coin transaction
+unsigned long qrDisplayTimeout = 0;  // QR auto-cancel deadline
+unsigned long testDispenseAt = 0;    // TEST_MODE only: when to auto-dispense (QR sim)
+unsigned long qrShownAt = 0;         // when the QR first appeared (for cancel lockout)
+unsigned long chooseTimeoutAt = 0;   // CHOOSE_PAYMENT auto-cancel deadline
+unsigned long coinTimeoutAt = 0;     // COIN_PAYMENT -> COIN_WARNING deadline
+unsigned long warnTimeoutAt = 0;     // COIN_WARNING -> forfeit deadline
+
+const unsigned long QR_DISPLAY_DURATION   = 60000;  // 60s QR timeout
+const unsigned long TEST_AUTO_PAY_DELAY   = 5000;   // 5s TEST_MODE auto-pay (QR)
+const unsigned long CANCEL_LOCKOUT_MS     = 1200;   // 1.2s lockout after screen change
+                                                    // (prevents the press that opened a
+                                                    // screen from immediately closing it)
+const unsigned long CHOOSE_TIMEOUT_MS     = 15000;  // 15s on payment-select screen
+const unsigned long COIN_TIMEOUT_MS       = 60000;  // 60s primary wait for coins
+const unsigned long COIN_WARNING_MS       = 30000;  // +30s extension before forfeit
+
+unsigned long screenShownAt = 0;     // generic "current screen entered at" timestamp
+                                     // (used by the cancel lockout for non-QR screens too)
 
 // ===== Setup =====
 void setup() {
@@ -90,9 +118,11 @@ void setup() {
   Serial.println("\n\nSmartH2wo ESP32 Starting...");
   
   // Initialize pins
-  pinMode(BTN_100ML, INPUT_PULLUP);
-  pinMode(BTN_500ML, INPUT_PULLUP);
-  pinMode(BTN_1000ML, INPUT_PULLUP);
+  pinMode(BTN_100ML,   INPUT_PULLUP);
+  pinMode(BTN_500ML,   INPUT_PULLUP);
+  pinMode(BTN_1000ML,  INPUT_PULLUP);
+  pinMode(BTN_QR_PAY,  INPUT_PULLUP);
+  pinMode(BTN_COIN_PAY, INPUT_PULLUP);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   
@@ -134,20 +164,59 @@ void loop() {
   // Check button presses
   checkButtons();
 
-  // TEST_MODE: simulate the customer scanning + paying after a short delay
-  if (TEST_MODE && isWaitingForPayment && testDispenseAt > 0 && millis() > testDispenseAt) {
-    testDispenseAt = 0;
-    Serial.println("TEST_MODE: simulated payment confirmed -> dispense");
-    dispensePump(currentVolumeMl);
-    return;
-  }
+  unsigned long now = millis();
 
-  // Timeout QR display if no payment made
-  if (isWaitingForPayment && millis() > qrDisplayTimeout) {
-    isWaitingForPayment = false;
-    testDispenseAt = 0;
-    qrShownAt = 0;
-    displayReady();
+  switch (appState) {
+    case STATE_QR_PAYMENT:
+      // TEST_MODE: simulate the customer scanning + paying after a short delay
+      if (TEST_MODE && testDispenseAt > 0 && now > testDispenseAt) {
+        testDispenseAt = 0;
+        Serial.println("TEST_MODE: simulated payment confirmed -> dispense");
+        dispensePump(currentVolumeMl);
+        return;
+      }
+      // Timeout QR if no payment made within the window
+      if (now > qrDisplayTimeout) {
+        Serial.println("QR display timed out - returning to READY");
+        resetTransactionState();
+        displayReady();
+      }
+      break;
+
+    case STATE_CHOOSE_PAYMENT:
+      // Auto-cancel back to READY if the user walks away
+      if (now > chooseTimeoutAt) {
+        Serial.println("Payment select timed out - returning to READY");
+        resetTransactionState();
+        displayReady();
+      }
+      break;
+
+    case STATE_COIN_PAYMENT:
+      // Primary timeout: move into "still waiting / warning" state
+      if (now > coinTimeoutAt) {
+        Serial.println("Coin payment slow - showing warning");
+        appState = STATE_COIN_WARNING;
+        warnTimeoutAt = now + COIN_WARNING_MS;
+        screenShownAt = now;
+        displayCoinWarning();
+      }
+      break;
+
+    case STATE_COIN_WARNING:
+      // Extension expired - forfeit any partial credit and return to READY
+      if (now > warnTimeoutAt) {
+        if (coinCredit > 0) {
+          Serial.printf("Coin credit forfeited: P%d (timeout)\n", coinCredit);
+          // TODO Phase 2: log to backend ("coin_forfeit", coinCredit)
+        }
+        resetTransactionState();
+        displayReady();
+      }
+      break;
+
+    default:
+      break;
   }
 
   delay(50);
@@ -268,6 +337,10 @@ void displayStartup() {
 }
 
 void displayReady() {
+  // Always anchor on STATE_READY when this screen is drawn.
+  appState      = STATE_READY;
+  screenShownAt = millis();
+
   tft.fillScreen(COL_BG);
 
   uiHeader("SmartH2wo",
@@ -358,6 +431,149 @@ void uiStep(int num, int y, const char* line1, const char* line2,
   }
 }
 
+// ----- Payment-method picker (after a volume is selected) -----
+
+// Single payment-method row (icon + label + which button to press).
+void uiPaymentRow(int y, const char* icon, const char* label,
+                  const char* hint, uint16_t accent) {
+  const int x = 16;
+  const int w = tft.width() - 32;
+  const int h = 56;
+
+  tft.fillRoundRect(x, y, w, h, 8, COL_CARD);
+  tft.drawRoundRect(x, y, w, h, 8, COL_BG_ALT);
+
+  // Accent stripe
+  tft.fillRect(x + 1, y + 1, 4, h - 2, accent);
+
+  // Icon badge (text-based for simplicity)
+  tft.fillRoundRect(x + 14, y + 12, 32, 32, 4, accent);
+  tft.setTextFont(2);
+  tft.setTextSize(1);
+  tft.setTextColor(COL_BG, accent);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(icon, x + 30, y + 28);
+
+  // Label
+  tft.setTextFont(4);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString(label, x + 56, y + 20);
+
+  // Hint (which button to press)
+  tft.setTextFont(2);
+  tft.setTextColor(COL_MUTED, COL_CARD);
+  tft.drawString(hint, x + 56, y + 42);
+
+  tft.setTextDatum(TL_DATUM);
+}
+
+void displayChoosePayment() {
+  tft.fillScreen(COL_BG);
+
+  char hdr[32];
+  snprintf(hdr, sizeof(hdr), "%d ml  -  P%d", currentVolumeMl, currentPricePesos);
+  uiHeader(hdr, TEST_MODE ? "TEST" : "PAY", COL_PRIMARY);
+
+  // Subtitle
+  tft.setTextFont(2);
+  tft.setTextSize(1);
+  tft.setTextColor(COL_MUTED, COL_BG);
+  tft.setTextDatum(TL_DATUM);
+  tft.drawString("How would you like to pay?", 18, 42);
+
+  // Two payment options stacked vertically
+  uiPaymentRow(68,  "QR", "QR PH Payment",  "Press the QR button",   COL_PRIMARY);
+  uiPaymentRow(132, "C",  "Coin Payment",   "Press the COIN button", COL_SUCCESS);
+
+  // Footer hint
+  uiCenterText("Press another volume to change  -  Auto-cancel 15s",
+               tft.height() - 14, 2, 1, COL_DIM, COL_BG);
+}
+
+// Redraw only the header when the user picks a different volume on the
+// payment-select screen (avoids a full screen flash).
+void refreshChoosePayment() {
+  chooseTimeoutAt = millis() + CHOOSE_TIMEOUT_MS;  // reset the auto-cancel timer
+  char hdr[32];
+  snprintf(hdr, sizeof(hdr), "%d ml  -  P%d", currentVolumeMl, currentPricePesos);
+  uiHeader(hdr, TEST_MODE ? "TEST" : "PAY", COL_PRIMARY);
+}
+
+// ----- Coin payment screen (progress) -----
+
+void displayCoinPayment() {
+  tft.fillScreen(COL_BG);
+
+  char hdr[32];
+  snprintf(hdr, sizeof(hdr), "INSERT COINS  -  P%d", currentPricePesos);
+  uiHeader(hdr, TEST_MODE ? "TEST" : "COIN", COL_SUCCESS);
+
+  // Big amount readout: "P5 / P10"
+  char amount[24];
+  snprintf(amount, sizeof(amount), "P%d / P%d", coinCredit, currentPricePesos);
+  uiCenterText(amount, 56, 6, 1, COL_TEXT, COL_BG);
+
+  // Progress bar
+  int barW = 240, barH = 14;
+  int barX = (tft.width() - barW) / 2;
+  int barY = 120;
+  int fillW = (coinCredit >= currentPricePesos) ? barW - 2
+            : (barW - 2) * coinCredit / currentPricePesos;
+
+  tft.drawRoundRect(barX, barY, barW, barH, 4, COL_DIM);
+  if (fillW > 0) {
+    tft.fillRoundRect(barX + 1, barY + 1, fillW, barH - 2, 3, COL_SUCCESS);
+  }
+
+  // Remaining amount
+  int remaining = currentPricePesos - coinCredit;
+  if (remaining < 0) remaining = 0;
+  char remStr[32];
+  snprintf(remStr, sizeof(remStr), "Remaining: P%d", remaining);
+  uiCenterText(remStr, 148, 4, 1, COL_PRIMARY, COL_BG);
+
+  // Phase-1 testing hint OR Phase-2 production hint
+  uiCenterText("TEST: 100ml=P1  500ml=P5  1000ml=P10",
+               186, 2, 1, COL_MUTED, COL_BG);
+
+  // Footer hint
+  uiCenterText("Press COIN to cancel  -  60s timeout",
+               tft.height() - 14, 2, 1, COL_DIM, COL_BG);
+}
+
+// ----- Coin warning (partial credit, soft timeout extension) -----
+
+void displayCoinWarning() {
+  tft.fillScreen(COL_BG);
+
+  uiHeader("STILL WAITING", "WARN", COL_WARNING);
+
+  // Warning icon (triangle with exclamation)
+  int cx = tft.width()/2, cy = 70;
+  tft.fillTriangle(cx - 26, cy + 22, cx + 26, cy + 22, cx, cy - 22, COL_WARNING);
+  tft.fillTriangle(cx - 20, cy + 18, cx + 20, cy + 18, cx, cy - 16, COL_BG);
+  tft.fillRect(cx - 2, cy - 8, 4, 14, COL_WARNING);
+  tft.fillCircle(cx, cy + 12, 2, COL_WARNING);
+
+  // Status
+  char st[40];
+  int remaining = currentPricePesos - coinCredit;
+  if (remaining < 0) remaining = 0;
+  snprintf(st, sizeof(st), "P%d more needed", remaining);
+  uiCenterText(st, 116, 4, 1, COL_TEXT, COL_BG);
+
+  uiCenterText("Insert more coins or press COIN",
+               155, 2, 1, COL_MUTED, COL_BG);
+  uiCenterText("to cancel.  Credit forfeit in 30s.",
+               170, 2, 1, COL_MUTED, COL_BG);
+
+  // Current credit recap
+  char cr[32];
+  snprintf(cr, sizeof(cr), "Inserted so far: P%d", coinCredit);
+  uiCenterText(cr, tft.height() - 14, 2, 1, COL_DIM, COL_BG);
+}
+
 void displayQRMessage() {
   tft.fillScreen(COL_BG);
 
@@ -418,7 +634,7 @@ void displayQRMessage() {
   // Hint right
   tft.setTextColor(COL_MUTED, COL_BG_ALT);
   tft.setTextDatum(MR_DATUM);
-  tft.drawString(TEST_MODE ? "Auto-pay in ~5s" : "Press any button to cancel",
+  tft.drawString(TEST_MODE ? "Auto-pay in ~5s" : "Any button to cancel",
                  tft.width() - 10, footerY + 13);
 
   tft.setTextDatum(TL_DATUM);
@@ -553,90 +769,186 @@ void publishStatus(String status, String message) {
   mqttClient.publish(MQTT_STATUS_TOPIC, jsonStr.c_str());
 }
 
-// ===== Button Functions =====
+// ===== State & Button Helpers =====
 
-// Cancel an in-progress checkout and return to READY.
-// Used when the user presses any button while the QR is being displayed.
-void cancelCheckout() {
-  Serial.println("Checkout cancelled by user");
-  isWaitingForPayment   = false;
+// Clear all per-transaction state. Called when returning to READY for any
+// reason (cancel, timeout, dispense complete, error dismissed).
+void resetTransactionState() {
+  appState              = STATE_READY;
   currentCheckoutUrl    = "";
   currentTransactionId  = "";
   currentVolumeMl       = 0;
   currentPricePesos     = 0;
+  coinCredit            = 0;
   qrDisplayTimeout      = 0;
   qrShownAt             = 0;
   testDispenseAt        = 0;
+  chooseTimeoutAt       = 0;
+  coinTimeoutAt         = 0;
+  warnTimeoutAt         = 0;
+  screenShownAt         = 0;
+}
+
+// Cancel whatever is happening and go back to READY.
+void cancelCheckout(const char* reason) {
+  Serial.print("Cancelled: ");
+  Serial.println(reason ? reason : "user");
+  if (coinCredit > 0) {
+    Serial.printf("Coin credit forfeited on cancel: P%d\n", coinCredit);
+    // TODO Phase 2: log forfeit to backend
+  }
+  resetTransactionState();
   displayReady();
 }
 
-void checkButtons() {
-  // While a QR is on screen, ANY button press cancels back to READY.
-  // We enforce a short lockout window so the same press that opened the QR
-  // (still held down) doesn't immediately cancel it.
-  if (isWaitingForPayment &&
-      qrShownAt > 0 &&
-      millis() - qrShownAt > CANCEL_LOCKOUT_MS) {
-    if (digitalRead(BTN_100ML)  == LOW ||
-        digitalRead(BTN_500ML)  == LOW ||
-        digitalRead(BTN_1000ML) == LOW) {
-      delay(20);  // debounce
-      if (digitalRead(BTN_100ML)  == LOW ||
-          digitalRead(BTN_500ML)  == LOW ||
-          digitalRead(BTN_1000ML) == LOW) {
-        cancelCheckout();
-        delay(500);  // prevent the cancel press from immediately re-triggering
-        return;
-      }
-    }
-    return;  // never start a new checkout while one is active
-  }
+// Read a button with debounce. Returns true if confirmed pressed.
+bool buttonPressed(int pin) {
+  if (digitalRead(pin) != LOW) return false;
+  delay(20);
+  return digitalRead(pin) == LOW;
+}
 
-  if (digitalRead(BTN_100ML) == LOW) {
-    delay(20);  // Debounce
-    if (digitalRead(BTN_100ML) == LOW) {
-      createCheckout(100, 2);
-      delay(500);  // Prevent multiple triggers
-    }
+// Block until the user releases all buttons (prevents one long press from
+// being interpreted as multiple presses across screens).
+void waitForRelease() {
+  while (digitalRead(BTN_100ML)   == LOW ||
+         digitalRead(BTN_500ML)   == LOW ||
+         digitalRead(BTN_1000ML)  == LOW ||
+         digitalRead(BTN_QR_PAY)  == LOW ||
+         digitalRead(BTN_COIN_PAY) == LOW) {
+    delay(10);
   }
+  delay(30);  // extra tail debounce
+}
 
-  if (digitalRead(BTN_500ML) == LOW) {
-    delay(20);
-    if (digitalRead(BTN_500ML) == LOW) {
-      createCheckout(500, 10);
-      delay(500);
-    }
-  }
+// True if the screen has been visible long enough to accept the next input
+// (prevents the press that OPENED this screen from immediately acting on it).
+bool pastLockout() {
+  return screenShownAt > 0 && (millis() - screenShownAt) > CANCEL_LOCKOUT_MS;
+}
 
-  if (digitalRead(BTN_1000ML) == LOW) {
-    delay(20);
-    if (digitalRead(BTN_1000ML) == LOW) {
-      createCheckout(1000, 20);
-      delay(500);
-    }
+// ===== Button Dispatch =====
+// Each screen has its own button handler. checkButtons() routes to the right
+// one based on appState.
+
+void handleReadyButtons() {
+  // Pressing a volume button starts a checkout.
+  // The payment-method buttons are ignored on this screen.
+  if (buttonPressed(BTN_100ML))  { startCheckout(100,  2);  waitForRelease(); return; }
+  if (buttonPressed(BTN_500ML))  { startCheckout(500,  10); waitForRelease(); return; }
+  if (buttonPressed(BTN_1000ML)) { startCheckout(1000, 20); waitForRelease(); return; }
+}
+
+void handleChoosePaymentButtons() {
+  if (!pastLockout()) return;
+
+  // Pressing a different volume just updates the selection (no need to back out).
+  if (buttonPressed(BTN_100ML))  { currentVolumeMl = 100;  currentPricePesos = 2;
+                                   refreshChoosePayment(); waitForRelease(); return; }
+  if (buttonPressed(BTN_500ML))  { currentVolumeMl = 500;  currentPricePesos = 10;
+                                   refreshChoosePayment(); waitForRelease(); return; }
+  if (buttonPressed(BTN_1000ML)) { currentVolumeMl = 1000; currentPricePesos = 20;
+                                   refreshChoosePayment(); waitForRelease(); return; }
+
+  // Commit to a payment method.
+  if (buttonPressed(BTN_QR_PAY))   { chooseQR();   waitForRelease(); return; }
+  if (buttonPressed(BTN_COIN_PAY)) { chooseCoin(); waitForRelease(); return; }
+}
+
+void handleQrButtons() {
+  if (!pastLockout()) return;
+  // ANY of the 5 buttons cancels the QR.
+  if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_500ML)  ||
+      buttonPressed(BTN_1000ML) || buttonPressed(BTN_QR_PAY) ||
+      buttonPressed(BTN_COIN_PAY)) {
+    cancelCheckout("user pressed during QR");
+    waitForRelease();
   }
 }
 
-// ===== Payment Functions =====
-void createCheckout(int volumeMl, int pricePesos) {
-  if (isWaitingForPayment) return;
+void handleCoinButtons() {
+  if (!pastLockout()) return;
 
-  isWaitingForPayment   = true;
-  currentVolumeMl       = volumeMl;
-  currentPricePesos     = pricePesos;
-  currentCheckoutUrl    = "";
-  currentTransactionId  = "";
-  qrDisplayTimeout      = millis() + QR_DISPLAY_DURATION;
+  // PHASE 1 (UI testing): the volume buttons simulate coin denominations.
+  // PHASE 2 (real hardware): these become "cancel" instead; coins arrive via
+  // interrupt on GPIO 34 and call addCoinCredit() directly.
+  if (buttonPressed(BTN_100ML))  { addCoinCredit(1);  waitForRelease(); return; }
+  if (buttonPressed(BTN_500ML))  { addCoinCredit(5);  waitForRelease(); return; }
+  if (buttonPressed(BTN_1000ML)) { addCoinCredit(10); waitForRelease(); return; }
+
+  // QR Pay button = switch payment method to QR (carry the volume)
+  if (buttonPressed(BTN_QR_PAY))   { chooseQR();   waitForRelease(); return; }
+  // Coin Pay button (the one that got us here) = cancel back to READY
+  if (buttonPressed(BTN_COIN_PAY)) { cancelCheckout("user cancelled coin"); waitForRelease(); return; }
+}
+
+void handleErrorButtons() {
+  // Any button dismisses the error.
+  if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_500ML)  ||
+      buttonPressed(BTN_1000ML) || buttonPressed(BTN_QR_PAY) ||
+      buttonPressed(BTN_COIN_PAY)) {
+    resetTransactionState();
+    displayReady();
+    waitForRelease();
+  }
+}
+
+void checkButtons() {
+  switch (appState) {
+    case STATE_READY:          handleReadyButtons();         break;
+    case STATE_CHOOSE_PAYMENT: handleChoosePaymentButtons(); break;
+    case STATE_QR_PAYMENT:     handleQrButtons();            break;
+    case STATE_COIN_PAYMENT:
+    case STATE_COIN_WARNING:   handleCoinButtons();          break;
+    case STATE_ERROR:          handleErrorButtons();         break;
+    case STATE_DISPENSING:     /* ignore buttons while dispensing */ break;
+  }
+}
+
+// ===== Checkout Flow =====
+// startCheckout(): user picked a volume on READY. Move to CHOOSE_PAYMENT.
+// chooseQR()    : on CHOOSE_PAYMENT or COIN screen, kick off PayMongo flow.
+// chooseCoin()  : on CHOOSE_PAYMENT, move to COIN_PAYMENT screen.
+// addCoinCredit(): called per coin (button in Phase 1, interrupt in Phase 2).
+
+void startCheckout(int volumeMl, int pricePesos) {
+  if (appState != STATE_READY) return;
+
+  currentVolumeMl   = volumeMl;
+  currentPricePesos = pricePesos;
+  coinCredit        = 0;
+  appState          = STATE_CHOOSE_PAYMENT;
+  chooseTimeoutAt   = millis() + CHOOSE_TIMEOUT_MS;
+  screenShownAt     = millis();
+
+  Serial.printf("Volume selected: %dml / P%d - awaiting payment method\n",
+                volumeMl, pricePesos);
+  displayChoosePayment();
+}
+
+void chooseQR() {
+  Serial.println("Payment method: QR PH");
+
+  // If we arrived from the coin screen with partial credit, log it as forfeit
+  // (we don't carry credit across methods in Phase 1).
+  if (coinCredit > 0) {
+    Serial.printf("Switching to QR: forfeiting P%d in coin credit\n", coinCredit);
+    coinCredit = 0;
+  }
+
+  appState         = STATE_QR_PAYMENT;
+  qrDisplayTimeout = millis() + QR_DISPLAY_DURATION;
+  currentCheckoutUrl   = "";
+  currentTransactionId = "";
 
   displayProcessing();
-
-  Serial.printf("Creating checkout - Volume: %dml, Price: P%d\n", volumeMl, pricePesos);
 
   // ----- TEST_MODE: don't call backend, just fake a QR + auto-dispense -----
   if (TEST_MODE) {
     currentTransactionId = "TEST-" + String(millis());
     Serial.println("TEST_MODE: skipping HTTP, showing fake QR");
     displayQRMessage();
+    screenShownAt  = millis();
     qrShownAt      = millis();
     testDispenseAt = millis() + TEST_AUTO_PAY_DELAY;
     return;
@@ -645,7 +957,8 @@ void createCheckout(int volumeMl, int pricePesos) {
   // ----- Live mode: call backend -----
   if (WiFi.status() != WL_CONNECTED) {
     displayError("WiFi disconnected");
-    isWaitingForPayment = false;
+    appState = STATE_ERROR;
+    screenShownAt = millis();
     return;
   }
 
@@ -655,8 +968,8 @@ void createCheckout(int volumeMl, int pricePesos) {
   http.addHeader("Content-Type", "application/json");
 
   DynamicJsonDocument doc(256);
-  doc["volume_ml"]   = volumeMl;
-  doc["amount_pesos"] = pricePesos;
+  doc["volume_ml"]    = currentVolumeMl;
+  doc["amount_pesos"] = currentPricePesos;
   String payload;
   serializeJson(doc, payload);
 
@@ -668,7 +981,6 @@ void createCheckout(int volumeMl, int pricePesos) {
     Serial.println("Response: " + response);
 
     // We only care about the small string fields; ignore the big base64 blob.
-    // Use a filter so the QR PNG base64 doesn't blow up RAM.
     StaticJsonDocument<128> filter;
     filter["transaction_id"] = true;
     filter["checkout_url"]   = true;
@@ -681,7 +993,8 @@ void createCheckout(int volumeMl, int pricePesos) {
       Serial.print("JSON parse error: ");
       Serial.println(err.c_str());
       displayError("Bad server reply");
-      isWaitingForPayment = false;
+      appState = STATE_ERROR;
+      screenShownAt = millis();
     } else {
       currentTransactionId = responseDoc["transaction_id"].as<String>();
       currentCheckoutUrl   = responseDoc["checkout_url"].as<String>();
@@ -689,20 +1002,67 @@ void createCheckout(int volumeMl, int pricePesos) {
       Serial.println("Checkout URL:   " + currentCheckoutUrl);
 
       displayQRMessage();
-      qrShownAt = millis();
+      screenShownAt = millis();
+      qrShownAt     = millis();
       publishStatus("waiting_payment", "QR code displayed");
     }
   } else {
     Serial.printf("HTTP error: %d\n", httpCode);
     displayError("Connection failed");
-    isWaitingForPayment = false;
+    appState = STATE_ERROR;
+    screenShownAt = millis();
   }
 
   http.end();
 }
 
+void chooseCoin() {
+  Serial.printf("Payment method: COIN (target P%d)\n", currentPricePesos);
+  appState      = STATE_COIN_PAYMENT;
+  coinCredit    = 0;
+  coinTimeoutAt = millis() + COIN_TIMEOUT_MS;
+  screenShownAt = millis();
+  displayCoinPayment();
+}
+
+// Called when a coin is "received" (Phase 1: simulated by volume button press;
+// Phase 2: real pulse on GPIO 34 -> interrupt -> calls this).
+void addCoinCredit(int pesos) {
+  if (appState != STATE_COIN_PAYMENT && appState != STATE_COIN_WARNING) return;
+
+  coinCredit += pesos;
+  Serial.printf("Coin: +P%d (total P%d / P%d)\n",
+                pesos, coinCredit, currentPricePesos);
+
+  if (coinCredit >= currentPricePesos) {
+    // Paid in full - dispense now.
+    int change = coinCredit - currentPricePesos;
+    if (change > 0) {
+      Serial.printf("Note: P%d overpaid (no change given)\n", change);
+    }
+    publishStatus("paid_coin", "Coin payment complete");
+    dispensePump(currentVolumeMl);
+    return;
+  }
+
+  // Not enough yet - refresh the progress screen and reset the soft timeout.
+  // (Bumping the timeout while they're actively inserting coins is friendly.)
+  if (appState == STATE_COIN_PAYMENT) {
+    coinTimeoutAt = millis() + COIN_TIMEOUT_MS;
+    displayCoinPayment();
+  } else {
+    // They started paying again during the warning - go back to normal screen.
+    appState      = STATE_COIN_PAYMENT;
+    coinTimeoutAt = millis() + COIN_TIMEOUT_MS;
+    warnTimeoutAt = 0;
+    screenShownAt = millis();
+    displayCoinPayment();
+  }
+}
+
 // ===== Pump Function =====
 void dispensePump(int volumeMl) {
+  appState = STATE_DISPENSING;
   displayDispensing();
   if (!TEST_MODE) publishStatus("dispensing", "LED activated (testing)");
 
@@ -720,11 +1080,7 @@ void dispensePump(int volumeMl) {
   Serial.println("Dispense complete");
   if (!TEST_MODE) publishStatus("complete", "Water dispensed (LED test)");
 
-  isWaitingForPayment = false;
-  currentCheckoutUrl  = "";
-  currentTransactionId = "";
-  testDispenseAt = 0;
-  qrShownAt = 0;
   delay(1500);
+  resetTransactionState();
   displayReady();
 }
