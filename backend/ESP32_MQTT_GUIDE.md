@@ -8,23 +8,38 @@ Complete guide for connecting ESP32 hardware to SmartH2wo backend.
 
 ```
 ESP32 (Hardware)
-├── 3 Buttons → POST /api/payments/create-checkout
-├── TFT Display → Show QR codes
+├── 3 Volume Buttons (100ml / 500ml / 1000ml) → start checkout
+├── 2 Payment Buttons (QR Pay / Coin Pay) → pick payment method
+├── Coin Acceptor (Allan 1239A, Phase 2) → pulse stream → coin credit
+├── TFT Display → Ready / Choose Payment / QR / Coin progress / Dispensing
+├── HTTP POST  → /api/payments/create-checkout (QR path only)
 ├── MQTT Listener → smarth2o/dispense topic
 └── Pump Output → GPIO trigger when payment confirmed
 
 ↓ (MQTT) ↓
 
 Backend (FastAPI)
-├── Publishes → smarth2o/dispense when payment confirmed
+├── Publishes  → smarth2o/dispense when payment confirmed
 ├── Subscribes → smarth2o/status (ESP32 status updates)
 └── Subscribes → smarth2o/sensors (sensor data)
 
 ↓ (HTTP) ↓
 
 Frontend (Dashboard)
-└── Shows transaction history & logs
+└── Shows transaction history, logs, sensor status, payments
 ```
+
+### Payment flow
+
+```
+READY → press volume button
+  → CHOOSE_PAYMENT
+       → press QR Pay  → QR_PAYMENT  → scan + pay → MQTT dispense
+       → press Coin Pay → COIN_PAYMENT → insert coins → auto-dispense
+```
+
+Coin payments dispense locally (no backend round-trip) once the credit
+reaches the price. QR payments still go through PayMongo + MQTT as before.
 
 ---
 
@@ -59,32 +74,56 @@ MQTT initialized - Broker: test.mosquitto.org:1883
 
 **Hardware needed:**
 - ESP32 Dev Board
-- 3 Push buttons (100ml, 500ml, 1000ml)
-- 2.8" TFT SPI display
-- 1 Relay or MOSFET for pump control
+- 5 Push buttons total:
+  - 3 volume buttons (100ml, 500ml, 1000ml)
+  - 2 payment buttons (QR Pay, Coin Pay)
+- 2.4" or 2.8" TFT SPI display (ILI9341 driver)
+- 1 LED + 220Ω resistor (for testing) OR relay/MOSFET for actual pump
+- Allan 1239A coin acceptor (or compatible pulse acceptor) — **Phase 2 only**
+- 12V DC supply (1A) for the coin acceptor
 - Wires, breadboard
 
 **Wiring:**
 ```
-Buttons:
-- BTN 100ml → GPIO 12 (with pulldown resistor 10k)
-- BTN 500ml → GPIO 13 (with pulldown resistor 10k)
-- BTN 1000ml → GPIO 14 (with pulldown resistor 10k)
-- All buttons → GND
+Volume buttons (one leg to GPIO, other leg to GND, no external resistor):
+- BTN 100ml   → GPIO 12
+- BTN 500ml   → GPIO 13
+- BTN 1000ml  → GPIO 14
+
+Payment buttons (same wiring pattern):
+- BTN QR Pay  → GPIO 25
+- BTN Coin Pay → GPIO 32
 
 TFT Display (SPI):
 - MOSI → GPIO 23
-- CLK → GPIO 18
-- CS → GPIO 5
-- DC → GPIO 27
-- RST → GPIO 33
-- VCC → 3.3V
-- GND → GND
+- SCLK → GPIO 18
+- MISO → GPIO 19   (optional, not used in firmware)
+- CS   → GPIO 5
+- DC   → GPIO 27
+- RST  → GPIO 33
+- VCC  → 3.3V       (DO NOT use 5V)
+- GND  → GND
+- LED  → 3.3V       (backlight)
 
-Pump:
-- GPIO 26 → Relay In / MOSFET Gate
-- Relay/MOSFET → Pump power (external 12V recommended)
+LED (test) / Pump output:
+- GPIO 26 → LED anode through 220Ω resistor → GND
+            (production: GPIO 26 → Relay In / MOSFET Gate → pump)
+
+Coin acceptor (Phase 2 — wire when ready):
+- Allan 1239A RED   → +12V from external supply
+- Allan 1239A BLACK → external supply GND  AND  ESP32 GND (common ground!)
+- Allan 1239A WHITE → GPIO 34
+    (CAUTION: some 1239A units output 12V on this signal line. Measure with
+     a multimeter BEFORE connecting to GPIO 34. If you see 12V, use either
+     a voltage divider (20kΩ + 10kΩ) or a PC817 optocoupler to drop to 3.3V.
+     If it's floating / open-collector, direct connection is safe.)
+- Allan 1239A GREEN → tied to BLACK, or leave disconnected
 ```
+
+> All buttons use the ESP32's internal pull-up resistors (`INPUT_PULLUP`).
+> Do not add external pull-down resistors — they will conflict and may
+> cause the input to read LOW (which the firmware interprets as a button
+> press) at boot.
 
 **Arduino IDE Setup:**
 
@@ -139,20 +178,45 @@ needing the backend, MQTT broker, or PayMongo account.
    #define TEST_MODE true
    ```
 2. Upload the sketch. The TFT should boot straight to the **READY** menu
-   (header bar reads `[TEST MODE]`).
-3. Press any of the 3 physical buttons. You should see:
-   - `Processing...` for a moment
-   - A real, scannable QR code on the TFT (encodes a dummy
-     `https://smarth2wo.test/pay/<volume>ml` URL — you can verify with any phone
-     camera/QR scanner)
-   - After ~5 seconds it auto-confirms "payment" and goes into the **Dispensing**
-     screen
-   - The LED on GPIO 26 turns on for a volume-proportional duration
-     (100ml ≈ 0.5s, 500ml ≈ 2.5s, 1000ml ≈ 5s)
-   - Returns to **READY**
+   (header pill reads `TEST`).
 
-Once that whole loop works, flip `TEST_MODE` to `false` and continue with the
-live tests below.
+#### Test 0a: QR payment path
+
+1. Press any volume button → **Choose Payment** screen appears
+2. Press the **QR Pay** button → `Processing...` → real scannable QR appears
+3. (Optional: scan the QR with your phone to confirm it decodes; in TEST_MODE
+   the URL is a dummy `https://smarth2wo.test/pay/<volume>ml`)
+4. After ~5 seconds it auto-confirms "payment" and goes to **Dispensing**
+5. The LED on GPIO 26 turns on for a volume-proportional duration
+   (100ml ≈ 0.5s, 500ml ≈ 2.5s, 1000ml ≈ 5s)
+6. Returns to **READY**
+
+#### Test 0b: Coin payment path (simulated)
+
+In Phase 1, the volume buttons double as coin denominations on the coin screen.
+Phase 2 will replace this with real pulses from the Allan 1239A.
+
+1. Press a volume button (e.g. 500ml = ₱10) → **Choose Payment** screen
+2. Press the **Coin Pay** button → **Insert Coins** screen with `P0 / P10`
+3. Simulate coins:
+   - Press **100ml** → adds ₱1
+   - Press **500ml** → adds ₱5
+   - Press **1000ml** → adds ₱10
+   - Progress bar fills as you go
+4. Once credit reaches the price, **Dispensing** triggers automatically
+5. Returns to **READY**
+
+#### Test 0c: Cancel & timeout paths
+
+- On **Choose Payment**, wait 15 seconds with no input → auto-cancel to READY
+- On **Choose Payment**, press a different volume → header updates (no cancel)
+- On **QR** screen, press any button (after 1.2s lockout) → cancel to READY
+- On **Insert Coins**, wait 60s with insufficient credit → amber **warning**
+  screen appears with another 30s extension; wait that out → forfeit + READY
+- On **Insert Coins**, press **Coin Pay** → cancel back to READY
+
+Once all three of these test groups pass, flip `TEST_MODE` to `false` and
+continue with the live tests below.
 
 ### Test 1: WiFi Connection
 

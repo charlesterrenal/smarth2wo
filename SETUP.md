@@ -273,37 +273,62 @@ Access at: http://localhost:5173
 ### Prerequisites
 
 - ESP32 Dev Board
-- 3 Push buttons (GPIO 12, 13, 14)
-- 2.8" TFT SPI display
-- 1 Relay or MOSFET for pump control
+- 5 Push buttons:
+  - 3 volume buttons → GPIO 12, 13, 14
+  - 2 payment buttons → GPIO 25, 32
+- 2.4" or 2.8" TFT SPI display (ILI9341 driver)
+- 1 LED + 220Ω resistor (for testing) OR relay/MOSFET for the pump
+- Allan 1239A coin acceptor + 12V/1A supply (Phase 2)
 - WiFi network access
 
 ### Wiring Diagram
 
-**Buttons:**
+All buttons use the ESP32's internal pull-up (`INPUT_PULLUP`) — no external
+resistors needed.
+
+**Volume buttons:**
 ```
-BTN 100ml → GPIO 12 (with 10k pulldown)
-BTN 500ml → GPIO 13 (with 10k pulldown)
-BTN 1000ml → GPIO 14 (with 10k pulldown)
-All → GND
+BTN 100ml   → GPIO 12 → GND
+BTN 500ml   → GPIO 13 → GND
+BTN 1000ml  → GPIO 14 → GND
+```
+
+**Payment buttons:**
+```
+BTN QR Pay   → GPIO 25 → GND
+BTN Coin Pay → GPIO 32 → GND
 ```
 
 **TFT Display (SPI):**
 ```
 MOSI → GPIO 23
-CLK → GPIO 18
-CS → GPIO 5
-DC → GPIO 27
-RST → GPIO 33
-VCC → 3.3V
-GND → GND
+SCLK → GPIO 18
+MISO → GPIO 19   (optional)
+CS   → GPIO 5
+DC   → GPIO 27
+RST  → GPIO 33
+VCC  → 3.3V       (NOT 5V)
+GND  → GND
+LED  → 3.3V       (backlight)
 ```
 
-**Pump Control:**
+**LED (test) / Pump output:**
 ```
-GPIO 26 → Relay/MOSFET gate
-Relay → Pump power (external 12V)
+GPIO 26 → LED through 220Ω → GND
+          (production: GPIO 26 → Relay In / MOSFET Gate → pump)
 ```
+
+**Coin acceptor (Phase 2):**
+```
+Allan 1239A RED   → +12V external supply
+Allan 1239A BLACK → external supply GND + ESP32 GND (common ground!)
+Allan 1239A WHITE → GPIO 34
+                    (measure signal voltage first; if 12V, use a voltage
+                    divider or PC817 optocoupler)
+```
+
+See [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md) for full details
+on the coin acceptor wiring and Allan 1239A programming.
 
 ### Arduino IDE Setup
 
@@ -314,7 +339,8 @@ Relay → Pump power (external 12V)
 
 2. Install libraries:
    - Sketch → Include Library → Manage Libraries
-   - Install: `TFT_eSPI`, `PubSubClient`, `ArduinoJson`
+   - Install: `TFT_eSPI` (Bodmer), `PubSubClient` (Nick O'Leary),
+     `ArduinoJson` (Benoit Blanchon), `QRCode` (Richard Moore / ricmoo)
 
 3. Configure TFT_eSPI:
    - Find: `Arduino/libraries/TFT_eSPI/User_Setup.h`

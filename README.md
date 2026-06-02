@@ -1,17 +1,20 @@
 # SmartH2wo
 
-SmartH2wo is a smart water dispenser management system that combines an ESP32-controlled physical dispenser, a FastAPI backend with predictive maintenance and anomaly detection, and a React dashboard for live monitoring. Customers pay through QR PH (PayMongo) and the dispenser releases the selected volume automatically once payment is confirmed.
+SmartH2wo is a smart water dispenser management system that combines an ESP32-controlled physical dispenser, a FastAPI backend with predictive maintenance and anomaly detection, and a React dashboard for live monitoring. Customers can pay through QR PH (PayMongo) or by inserting coins, and the dispenser releases the selected volume automatically once payment is confirmed.
 
 ## Overview
 
-The system links three layers. An ESP32 with a 2.4" TFT display and three physical buttons (100ml, 500ml, 1000ml) handles the customer interaction at the dispenser and renders a scannable PayMongo QR code directly on screen. A FastAPI backend brokers payments, runs maintenance and anomaly rules over incoming sensor data, sends email alerts, and dispatches dispense commands to the ESP32 over MQTT. A React dashboard gives administrators a live view of transactions, sensor status, logs, analytics, and payment activity, with Supabase providing realtime sync between backend writes and the frontend.
+The system links three layers. An ESP32 with a 2.4" TFT display, three volume buttons (100ml, 500ml, 1000ml), two payment-method buttons (QR / Coin), and a coin acceptor (Allan 1239A) handles the customer interaction at the dispenser. After picking a volume the customer chooses how to pay: QR PH renders a scannable PayMongo QR directly on the TFT, and Coin shows a live progress screen that counts inserted credit. A FastAPI backend brokers QR payments, runs maintenance and anomaly rules over incoming sensor data, sends email alerts, and dispatches dispense commands to the ESP32 over MQTT. A React dashboard gives administrators a live view of transactions, sensor status, logs, analytics, and payment activity, with Supabase providing realtime sync between backend writes and the frontend.
 
 ## Features
 
-- Dynamic QR PH payment checkout through PayMongo, rendered directly on the dispenser's TFT screen
-- MQTT-driven dispense flow: paid transactions automatically trigger the ESP32 to release water
-- TEST_MODE on the firmware for hardware-only validation without WiFi, backend, or PayMongo
+- Dual payment options at the dispenser: **QR PH** (PayMongo, universal — works with GCash, Maya, BPI, BDO, etc.) and **Coins** (Allan 1239A acceptor)
+- "Choose payment" screen after selecting a volume, with a 15-second auto-cancel
+- Coin progress screen with live credit, progress bar, and a 60+30-second soft-timeout policy (warning before forfeit)
+- Dynamic QR PH rendered directly on the dispenser's TFT — no dashboard required
+- MQTT-driven dispense flow: paid QR transactions automatically trigger the ESP32 to release water
 - Cancel-during-QR: customers can press any button to cancel an in-progress checkout
+- TEST_MODE on the firmware for hardware-only validation without WiFi, backend, or PayMongo (volume buttons double as simulated coin denominations on the coin screen)
 - Predictive maintenance and anomaly detection based on water level, temperature, flow rate, and pressure
 - Email alerts (transactions, low water level, maintenance due, anomalies) through Resend
 - Realtime React dashboard with transactions, logs, analytics, sensor status, and admin payments
@@ -74,7 +77,7 @@ smarth2wo/
 - A Supabase project (URL + anon key)
 - A PayMongo account with test keys
 - A Resend account for email alerts (optional but recommended)
-- For the hardware path: an ESP32, a 2.4" ILI9341 TFT, three push buttons, and an LED or relay
+- For the hardware path: an ESP32, a 2.4" ILI9341 TFT, five push buttons (3 volume + 2 payment-method), an LED or relay, and (optional, Phase 2) an Allan 1239A coin acceptor with a 12V supply
 
 ### Full setup
 
@@ -102,10 +105,12 @@ For the ESP32 firmware, open `backend/ESP32_ARDUINO.ino` in Arduino IDE, install
 
 ```
 ESP32 dispenser
-  buttons ---> POST /api/payments/create-checkout
-  TFT     <--- checkout_url (rendered as QR PH on screen)
-  MQTT    <--- smarth2o/dispense (triggers pump/LED)
-  MQTT    ---> smarth2o/status, smarth2o/sensors
+  volume btn  ---> CHOOSE_PAYMENT screen
+  QR Pay btn  ---> POST /api/payments/create-checkout ---> QR on TFT
+  Coin Pay btn ---> COIN_PAYMENT screen
+  coin pulses ---> credit accumulates ---> auto-dispense when paid
+  MQTT       <--- smarth2o/dispense (triggers pump/LED, QR path)
+  MQTT        ---> smarth2o/status, smarth2o/sensors
 
 Backend (FastAPI)
   PayMongo --> webhook /api/payments/webhook --> MQTT dispense
