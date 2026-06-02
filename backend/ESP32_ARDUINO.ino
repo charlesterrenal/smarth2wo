@@ -75,8 +75,12 @@ int currentPricePesos = 0;
 bool isWaitingForPayment = false;
 unsigned long qrDisplayTimeout = 0;
 unsigned long testDispenseAt = 0;  // TEST_MODE only: when to auto-dispense
+unsigned long qrShownAt = 0;       // when the QR first appeared (for cancel lockout)
 const unsigned long QR_DISPLAY_DURATION = 60000;  // 60 seconds
 const unsigned long TEST_AUTO_PAY_DELAY  = 5000;  // TEST_MODE: 5s "scan + pay" simulation
+const unsigned long CANCEL_LOCKOUT_MS    = 1200;  // ignore button cancels for ~1s after QR shows
+                                                  // (prevents the same press that opened the QR
+                                                  // from immediately cancelling it)
 
 // ===== Setup =====
 void setup() {
@@ -142,6 +146,7 @@ void loop() {
   if (isWaitingForPayment && millis() > qrDisplayTimeout) {
     isWaitingForPayment = false;
     testDispenseAt = 0;
+    qrShownAt = 0;
     displayReady();
   }
 
@@ -413,7 +418,7 @@ void displayQRMessage() {
   // Hint right
   tft.setTextColor(COL_MUTED, COL_BG_ALT);
   tft.setTextDatum(MR_DATUM);
-  tft.drawString(TEST_MODE ? "Auto-pay in ~5s" : "GCash, Maya, BPI, BDO...",
+  tft.drawString(TEST_MODE ? "Auto-pay in ~5s" : "Press any button to cancel",
                  tft.width() - 10, footerY + 13);
 
   tft.setTextDatum(TL_DATUM);
@@ -549,7 +554,44 @@ void publishStatus(String status, String message) {
 }
 
 // ===== Button Functions =====
+
+// Cancel an in-progress checkout and return to READY.
+// Used when the user presses any button while the QR is being displayed.
+void cancelCheckout() {
+  Serial.println("Checkout cancelled by user");
+  isWaitingForPayment   = false;
+  currentCheckoutUrl    = "";
+  currentTransactionId  = "";
+  currentVolumeMl       = 0;
+  currentPricePesos     = 0;
+  qrDisplayTimeout      = 0;
+  qrShownAt             = 0;
+  testDispenseAt        = 0;
+  displayReady();
+}
+
 void checkButtons() {
+  // While a QR is on screen, ANY button press cancels back to READY.
+  // We enforce a short lockout window so the same press that opened the QR
+  // (still held down) doesn't immediately cancel it.
+  if (isWaitingForPayment &&
+      qrShownAt > 0 &&
+      millis() - qrShownAt > CANCEL_LOCKOUT_MS) {
+    if (digitalRead(BTN_100ML)  == LOW ||
+        digitalRead(BTN_500ML)  == LOW ||
+        digitalRead(BTN_1000ML) == LOW) {
+      delay(20);  // debounce
+      if (digitalRead(BTN_100ML)  == LOW ||
+          digitalRead(BTN_500ML)  == LOW ||
+          digitalRead(BTN_1000ML) == LOW) {
+        cancelCheckout();
+        delay(500);  // prevent the cancel press from immediately re-triggering
+        return;
+      }
+    }
+    return;  // never start a new checkout while one is active
+  }
+
   if (digitalRead(BTN_100ML) == LOW) {
     delay(20);  // Debounce
     if (digitalRead(BTN_100ML) == LOW) {
@@ -557,7 +599,7 @@ void checkButtons() {
       delay(500);  // Prevent multiple triggers
     }
   }
-  
+
   if (digitalRead(BTN_500ML) == LOW) {
     delay(20);
     if (digitalRead(BTN_500ML) == LOW) {
@@ -565,7 +607,7 @@ void checkButtons() {
       delay(500);
     }
   }
-  
+
   if (digitalRead(BTN_1000ML) == LOW) {
     delay(20);
     if (digitalRead(BTN_1000ML) == LOW) {
@@ -595,6 +637,7 @@ void createCheckout(int volumeMl, int pricePesos) {
     currentTransactionId = "TEST-" + String(millis());
     Serial.println("TEST_MODE: skipping HTTP, showing fake QR");
     displayQRMessage();
+    qrShownAt      = millis();
     testDispenseAt = millis() + TEST_AUTO_PAY_DELAY;
     return;
   }
@@ -646,6 +689,7 @@ void createCheckout(int volumeMl, int pricePesos) {
       Serial.println("Checkout URL:   " + currentCheckoutUrl);
 
       displayQRMessage();
+      qrShownAt = millis();
       publishStatus("waiting_payment", "QR code displayed");
     }
   } else {
@@ -680,6 +724,7 @@ void dispensePump(int volumeMl) {
   currentCheckoutUrl  = "";
   currentTransactionId = "";
   testDispenseAt = 0;
+  qrShownAt = 0;
   delay(1500);
   displayReady();
 }

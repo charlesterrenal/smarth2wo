@@ -267,6 +267,17 @@ MIT License - feel free to use this project!
 
 ---
 
+## Team
+
+| Name | Role |
+|------|------|
+| **Charles Vincent P. Terrenal** | Project Lead, Full Stack Developer, Hardware Assembly & Integration |
+| **Anne Margareth B. Medina** | Frontend Lead, UI Development & Design |
+| **Marielle Lois P. Bahuyo** | Full Stack Developer, Frontend & Backend Development |
+| **Wilbert Lancelot S. Aguilar** | UI/UX Designer, Hardware Assembly |
+
+---
+
 ## Questions?
 
 Check the individual README files in `frontend/` and `backend/` for detailed setup instructions.
