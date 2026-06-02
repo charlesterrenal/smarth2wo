@@ -96,9 +96,10 @@ Pump:
 2. Install required libraries:
    - Sketch → Include Library → Manage Libraries
    - Search and install:
-     - `TFT_eSPI`
-     - `PubSubClient`
-     - `ArduinoJson`
+     - `TFT_eSPI` (by Bodmer)
+     - `PubSubClient` (by Nick O'Leary)
+     - `ArduinoJson` (by Benoit Blanchon)
+     - `QRCode` (by Richard Moore / ricmoo) — used to render the PayMongo QR directly on the TFT
 
 3. Configure TFT_eSPI:
    - Find: `Arduino/libraries/TFT_eSPI/User_Setup.h`
@@ -128,6 +129,31 @@ Pump:
 
 ## Testing
 
+### Test 0: TEST_MODE (no WiFi / no backend / no PayMongo)
+
+Use this first to verify the **hardware only** — buttons, TFT, and LED — without
+needing the backend, MQTT broker, or PayMongo account.
+
+1. In `ESP32_ARDUINO.ino`, make sure the flag at the top is enabled:
+   ```cpp
+   #define TEST_MODE true
+   ```
+2. Upload the sketch. The TFT should boot straight to the **READY** menu
+   (header bar reads `[TEST MODE]`).
+3. Press any of the 3 physical buttons. You should see:
+   - `Processing...` for a moment
+   - A real, scannable QR code on the TFT (encodes a dummy
+     `https://smarth2wo.test/pay/<volume>ml` URL — you can verify with any phone
+     camera/QR scanner)
+   - After ~5 seconds it auto-confirms "payment" and goes into the **Dispensing**
+     screen
+   - The LED on GPIO 26 turns on for a volume-proportional duration
+     (100ml ≈ 0.5s, 500ml ≈ 2.5s, 1000ml ≈ 5s)
+   - Returns to **READY**
+
+Once that whole loop works, flip `TEST_MODE` to `false` and continue with the
+live tests below.
+
 ### Test 1: WiFi Connection
 
 Open Serial Monitor (115200 baud):
@@ -151,12 +177,18 @@ Subscribed to dispense topic
 
 1. Press 100ml button on ESP32
 2. Display shows "Processing..."
-3. Display shows "Scan QR" with transaction ID
+3. Display shows a **real QR code** encoding the PayMongo `checkout_url`.
+   Scan it with your phone (GCash or any QR scanner) and it should open the
+   PayMongo checkout page for ₱2 / 100ml.
 4. Backend terminal shows:
 ```
 POST /api/payments/create-checkout
-Dispense signal sent: 100ml for transaction...
 ```
+
+> **Note:** The TFT itself cannot "redirect" to PayMongo — it's a display, not
+> a browser. The scan-with-phone flow is the intended UX. If you ever want to
+> bypass scanning during development, use `TEST_MODE` (Test 0) or the
+> "Simulate Payment Success" button on the admin dashboard.
 
 ### Test 4: Payment → Dispense
 
