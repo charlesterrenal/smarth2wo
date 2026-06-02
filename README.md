@@ -1,285 +1,156 @@
-# SmartH2wo - Smart Water Dispenser Management System
+# SmartH2wo
 
-Complete full-stack IoT solution for smart water dispensers with **real-time monitoring**, **predictive maintenance**, and **payment processing**.
-
----
-
-## Getting Started
-
-**New to SmartH2wo?** Start here: **[SETUP.md](SETUP.md)** (Complete step-by-step guide for all team members)
-
-**Already set up? Quick reference:** [QUICKSTART.md](QUICKSTART.md)
-
-**GitHub workflow?** See: [GITHUB_SETUP.md](GITHUB_SETUP.md)
-
----
+SmartH2wo is a smart water dispenser management system that combines an ESP32-controlled physical dispenser, a FastAPI backend with predictive maintenance and anomaly detection, and a React dashboard for live monitoring. Customers pay through QR PH (PayMongo) and the dispenser releases the selected volume automatically once payment is confirmed.
 
 ## Overview
 
-SmartH2wo monitors water dispensers through:
-- **Real-time sensor analytics** (water level, temperature, flow rate, pressure)
-- **ML-powered maintenance predictions** before failures occur
-- **Anomaly detection** for system issues
-- **Payment processing** for refills
-- **IoT hardware integration** (ESP32 with sensors)
+The system links three layers. An ESP32 with a 2.4" TFT display and three physical buttons (100ml, 500ml, 1000ml) handles the customer interaction at the dispenser and renders a scannable PayMongo QR code directly on screen. A FastAPI backend brokers payments, runs maintenance and anomaly rules over incoming sensor data, sends email alerts, and dispatches dispense commands to the ESP32 over MQTT. A React dashboard gives administrators a live view of transactions, sensor status, logs, analytics, and payment activity, with Supabase providing realtime sync between backend writes and the frontend.
 
----
+## Features
 
-## Prerequisites
+- Dynamic QR PH payment checkout through PayMongo, rendered directly on the dispenser's TFT screen
+- MQTT-driven dispense flow: paid transactions automatically trigger the ESP32 to release water
+- TEST_MODE on the firmware for hardware-only validation without WiFi, backend, or PayMongo
+- Cancel-during-QR: customers can press any button to cancel an in-progress checkout
+- Predictive maintenance and anomaly detection based on water level, temperature, flow rate, and pressure
+- Email alerts (transactions, low water level, maintenance due, anomalies) through Resend
+- Realtime React dashboard with transactions, logs, analytics, sensor status, and admin payments
+- Supabase persistence with row-level security for transactions, logs, sensor status, and schedule
+- Role-aware admin payments page that can simulate payments for end-to-end testing
 
-- **Node.js 16+** (for frontend)
-- **Python 3.9+** (for backend)
-- **Git** for version control
-- **Supabase** account (optional, for database)
-
----
-
-## Quick Start (Full Stack)
-
-### Terminal 1: Start Backend
-
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Setup environment variables (REQUIRED)
-cp .env.example .env
-
-# Edit .env with your Supabase credentials:
-# SUPABASE_URL=https://your-project-id.supabase.co
-# SUPABASE_ANON_KEY=your-anon-key-here
-# (Get these from Supabase Dashboard → Settings → API)
-
-# Start the API server
-python main.py
-```
-
-**Backend running on:** `http://localhost:8000`
-- **Docs**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Terminal 2: Start Frontend
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Setup environment variables (REQUIRED)
-cp .env.example .env.local
-
-# Edit .env.local with your Supabase credentials:
-# VITE_SUPABASE_URL=https://your-project-id.supabase.co
-# VITE_SUPABASE_ANON_KEY=your-anon-key-here
-
-# Start dev server
-npm run dev
-```
-
-**Dashboard running on:** `http://localhost:5173`
-
----
-
-## Tech Stack
+## Technology Stack
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | React 18 + Vite + Tailwind CSS + Recharts |
-| **Backend** | FastAPI + Python 3.9+ |
-| **Database** | Supabase (PostgreSQL) |
-| **Hardware** | ESP32 + Arduino sensors |
-| **ML/AI** | Predictive maintenance + Anomaly detection |
+| Frontend framework | React 18 |
+| Build tool | Vite |
+| Styling | Tailwind CSS |
+| Routing | React Router v6 |
+| Charts | Recharts |
+| Database and realtime | Supabase (PostgreSQL) |
+| Backend API | FastAPI (Python 3.11+) |
+| Payments | PayMongo (QR PH) |
+| Messaging | MQTT (paho-mqtt, HiveMQ public broker) |
+| Email | Resend |
+| Hardware | ESP32, ILI9341 2.4" TFT, push buttons, LED/relay |
+| Firmware libraries | TFT_eSPI, PubSubClient, ArduinoJson, QRCode (ricmoo) |
 
----
-
-## Directory Structure
+## Project Structure
 
 ```
 smarth2wo/
-├── frontend/
-│   ├── src/
-│   │   ├── components/       UI components
-│   │   ├── pages/            Page components
-│   │   ├── context/          React context
-│   │   ├── lib/              API & utilities
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   ├── vite.config.js
-│   └── README.md
-│
-├── backend/
-│   ├── main.py               FastAPI application
-│   ├── requirements.txt      Python dependencies
-│   ├── venv/                 Virtual environment
-│   └── README.md
-│
-├── README.md                 (this file)
-├── .gitignore
-└── docker-compose.yml        (optional)
+  backend/
+    main.py                    # FastAPI app and HTTP routes
+    paymongo_service.py        # PayMongo checkout + webhook handling
+    mqtt_service.py            # MQTT publish/subscribe for ESP32
+    email_service.py           # Resend email alerts
+    ESP32_ARDUINO.ino          # ESP32 firmware (Arduino IDE)
+    ESP32_MQTT_GUIDE.md        # Hardware wiring and MQTT integration guide
+    requirements.txt
+    README.md
+  frontend/
+    src/
+      pages/                   # Dashboard, Transaction, AdminPayments,
+                               # Analytics, Logs, Settings, Login
+      components/              # Sidebar, PageHeader, StatCard, SetupBanner
+      context/                 # ThemeContext
+      lib/                     # paymentApi, maintenanceApi, supabase, mockData
+    supabase_schema.sql
+    package.json
+    README.md
+  SETUP.md                     # Complete setup guide (start here)
+  QUICKSTART.md                # Quick reference for daily development
+  GITHUB_SETUP.md              # Git workflow
+  CONTRIBUTING.md              # Branching and commit conventions
+  README.md                    # This file
 ```
 
----
+## Getting Started
 
-## API Endpoints (Backend)
+### Prerequisites
 
-### Maintenance Prediction
-**POST** `/api/maintenance/predict`
-```json
-{
-  "water_level_pct": 75,
-  "temperature": 38,
-  "flow_rate": 2.1,
-  "pressure": 45
-}
+- Python 3.11 or later
+- Node.js 18 or later
+- A Supabase project (URL + anon key)
+- A PayMongo account with test keys
+- A Resend account for email alerts (optional but recommended)
+- For the hardware path: an ESP32, a 2.4" ILI9341 TFT, three push buttons, and an LED or relay
+
+### Full setup
+
+See [SETUP.md](SETUP.md) for the complete step-by-step setup of the backend, frontend, and ESP32 hardware, including TFT_eSPI configuration, library installation, and PayMongo + Supabase + Resend credentials.
+
+### Quick start (already configured)
+
+```bash
+# Terminal 1 - Backend
+cd backend
+python -m venv venv
+venv\Scripts\activate            # Windows
+pip install -r requirements.txt
+python main.py                   # http://localhost:8000
+
+# Terminal 2 - Frontend
+cd frontend
+npm install
+npm run dev                      # http://localhost:5173
 ```
 
-### Anomaly Detection
-**POST** `/api/anomalies/detect`
-```json
-{
-  "water_level_pct": 10,
-  "temperature": 52,
-  "flow_rate": 0.2,
-  "pressure": 90
-}
+For the ESP32 firmware, open `backend/ESP32_ARDUINO.ino` in Arduino IDE, install the libraries listed in [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md), set your WiFi and `BACKEND_URL`, and upload.
+
+## Architecture
+
+```
+ESP32 dispenser
+  buttons ---> POST /api/payments/create-checkout
+  TFT     <--- checkout_url (rendered as QR PH on screen)
+  MQTT    <--- smarth2o/dispense (triggers pump/LED)
+  MQTT    ---> smarth2o/status, smarth2o/sensors
+
+Backend (FastAPI)
+  PayMongo --> webhook /api/payments/webhook --> MQTT dispense
+  Supabase <-- transactions, logs, sensor_status
+  Resend   <-- transaction, water level, maintenance, anomaly alerts
+
+Frontend (React)
+  Realtime <-- Supabase (transactions, logs, sensor status)
+  Admin    --> /admin/payments (create checkout, simulate payment)
 ```
 
-### System Health
-**GET** `/health`
-**GET** `/api/status/summary`
+## Backend API
 
-See full API docs at `http://localhost:8000/docs`
+The dashboard and ESP32 talk to FastAPI at the URL defined by `VITE_API_URL` and `BACKEND_URL` respectively (default `http://localhost:8000`). Interactive docs are served at `/docs` and `/redoc`.
 
----
-
-## Configuration
-
-### Environment Variables (Optional)
-
-Create `.env` files in each directory:
-
-**`backend/.env`:**
-```
-ENVIRONMENT=development
-LOG_LEVEL=INFO
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-```
-
-**`frontend/.env.local`:**
-```
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_API_URL=http://localhost:8000
-```
-
----
-
-## Deployment
-
-### Backend (FastAPI)
-- **Recommended**: Render, Heroku, Railway, or DigitalOcean
-- **Docker**: Included in `docker-compose.yml`
-
-### Frontend (React)
-- **Recommended**: Vercel, Netlify
-- **Build**: `npm run build`
-
-### Database
-- **Supabase**: Free tier available at https://supabase.com
-
----
-
-## Contributing
-
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make your changes
-3. Commit: `git commit -m "feat: add new feature"`
-4. Push: `git push origin feature/your-feature`
-5. Open a Pull Request
-
-### Commit Convention
-- `feat:` new feature
-- `fix:` bug fix
-- `docs:` documentation
-- `style:` formatting
-- `refactor:` code restructuring
-
----
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/` | API status and link to docs |
+| GET | `/health` | Health check |
+| GET | `/api/status/summary` | System status summary used by the dashboard |
+| POST | `/api/maintenance/predict` | Rule-based maintenance prediction from sensor data |
+| POST | `/api/anomalies/detect` | Anomaly detection from sensor data |
+| POST | `/api/payments/create-checkout` | Create a PayMongo QR PH checkout for the dispenser |
+| POST | `/api/payments/webhook` | PayMongo webhook handler; publishes MQTT dispense on success |
+| GET | `/api/payments/status/{transaction_id}` | Look up a transaction |
 
 ## Documentation
 
-- [Backend Setup](./backend/README.md) - Detailed backend instructions
-- [Frontend Setup](./frontend/README.md) - Detailed frontend instructions
-- [GitHub Setup](./backend/GITHUB_SETUP.md) - Push to GitHub guide
-
----
-
-
-
-## Troubleshooting
-
-### Backend won't start
-```bash
-# Ensure virtual environment is activated
-source venv/bin/activate  # macOS/Linux
-# or
-venv\Scripts\activate     # Windows
-
-# Reinstall dependencies
-pip install -r requirements.txt
-
-# Check if port 8000 is free
-netstat -an | grep 8000
-```
-
-### Frontend won't start
-```bash
-# Clear node_modules and reinstall
-rm -rf node_modules package-lock.json
-npm install
-
-# Check if port 5173 is free
-```
-
-### Backend and Frontend can't communicate
-- Ensure backend is running on `http://localhost:8000`
-- Check CORS settings in `backend/main.py`
-- Verify `VITE_API_URL` in frontend `.env.local`
-
----
+- [SETUP.md](SETUP.md) - Complete setup guide (backend, frontend, hardware, deployment, troubleshooting)
+- [QUICKSTART.md](QUICKSTART.md) - Daily development quick reference
+- [backend/README.md](backend/README.md) - Backend details and API reference
+- [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md) - ESP32 hardware wiring and MQTT integration
+- [frontend/README.md](frontend/README.md) - Frontend details
+- [GITHUB_SETUP.md](GITHUB_SETUP.md) - Git workflow
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Branching and commit conventions
 
 ## License
 
-MIT License - feel free to use this project!
-
----
+MIT License.
 
 ## Team
 
 | Name | Role |
 |------|------|
-| **Charles Vincent P. Terrenal** | Project Lead, Full Stack Developer, Hardware Assembly & Integration |
-| **Anne Margareth B. Medina** | Frontend Lead, UI Development & Design |
-| **Marielle Lois P. Bahuyo** | Full Stack Developer, Frontend & Backend Development |
-| **Wilbert Lancelot S. Aguilar** | UI/UX Designer, Hardware Assembly |
-
----
-
-## Questions?
-
-Check the individual README files in `frontend/` and `backend/` for detailed setup instructions.
-
-**Happy coding!**
+| Charles Vincent P. Terrenal | Project Lead, Full Stack Developer, Hardware Assembly and Integration |
+| Anne Margareth B. Medina | Frontend Lead, UI Development and Design |
+| Marielle Lois P. Bahuyo | Full Stack Developer, Frontend and Backend Development |
+| Wilbert Lancelot S. Aguilar | UI/UX Designer, Hardware Assembly |
