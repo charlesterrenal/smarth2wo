@@ -15,6 +15,11 @@ from supabase import create_client, Client
 from paymongo_service import create_checkout_session, handle_webhook, CreatePaymentRequest
 from mqtt_service import init_mqtt, publish_dispense, disconnect as mqtt_disconnect
 from email_service import init_email_service, send_transaction_alert, send_water_level_alert, send_maintenance_due_alert, send_anomaly_alert
+from ml.inference import MaintenancePredictor, AnomalyDetector
+
+# Initialize ML Predictors
+maintenance_predictor = MaintenancePredictor()
+anomaly_detector = AnomalyDetector()
 
 
 @asynccontextmanager
@@ -217,7 +222,17 @@ def health_check():
 @app.post("/api/maintenance/predict")
 async def predict_maintenance_endpoint(sensor_data: SensorData):
     try:
-        prediction = predict_maintenance(sensor_data)
+        # Try ML prediction first
+        ml_res = None
+        if maintenance_predictor.is_loaded:
+            ml_res = maintenance_predictor.predict(sensor_data)
+            
+        if ml_res is not None:
+            prediction = MaintenancePrediction(**ml_res)
+            print(f"ML SUCCESS: Predicted maintenance remaining: {prediction.days_remaining} days (severity: {prediction.severity})")
+        else:
+            prediction = predict_maintenance(sensor_data)
+            print("ML FALLBACK: Using rule-based maintenance prediction.")
         if supabase:
             supabase.table("sensor_status").update({
                 "water_level_pct": int(sensor_data.water_level_pct) if sensor_data.water_level_pct is not None else 67,
@@ -278,7 +293,17 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
 @app.post("/api/anomalies/detect")
 async def detect_anomalies_endpoint(sensor_data: SensorData):
     try:
-        anomalies = detect_anomalies(sensor_data)
+        # Try ML anomaly detection first
+        ml_res = None
+        if anomaly_detector.is_loaded:
+            ml_res = anomaly_detector.predict(sensor_data)
+            
+        if ml_res is not None:
+            anomalies = [Anomaly(**a) for a in ml_res]
+            print(f"ML SUCCESS: Detected {len(anomalies)} anomalies using model.")
+        else:
+            anomalies = detect_anomalies(sensor_data)
+            print("ML FALLBACK: Using rule-based anomaly detection.")
         if supabase:
             supabase.table("sensor_status").update({
                 "water_level_pct": int(sensor_data.water_level_pct) if sensor_data.water_level_pct is not None else 67,
