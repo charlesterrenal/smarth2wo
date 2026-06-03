@@ -2,6 +2,20 @@
 
 Welcome to the Machine Learning implementation for SmartH2WO! We are transitioning our predictive maintenance and anomaly detection from hard-coded rules to trained scikit-learn models.
 
+## Architectural Decisions (Why we chose this route)
+Before jumping in, it's important to understand *why* we structured the ML pipeline this way instead of a more "traditional" heavy ML approach:
+
+1. **Lightweight scikit-learn inside FastAPI (No separate ML Server):** 
+   - **Logistics:** Our team is small, and setting up a separate model-serving infrastructure (like TensorFlow Serving or a separate Flask microservice) adds unnecessary deployment and maintenance overhead. 
+   - **Compute:** Scikit-learn models are extremely lightweight. They don't require GPUs to train or infer. We can serialize them as `.joblib` files and load them directly into our existing FastAPI server without eating up RAM.
+   - **Complexity:** Deep learning (like LSTMs) is overkill for tabular, 1-minute cadence sensor data. Random Forests and Isolation Forests train in seconds, are highly explainable, and fit perfectly within our tight timeline.
+
+2. **Parallel Development (Synthetic Data):**
+   - **Group Circumstances:** The physical hardware (ESP32, flow sensors, ultrasonic) is still being assembled and calibrated. We cannot afford to halt ML development while waiting for months of real historical data to accumulate.
+   - By building a robust synthetic data generator (Phase 2), the ML developers are completely unblocked and can build the training and inference pipeline right now. Once the hardware is live, we simply swap the CSV for real Supabase data and retrain.
+
+---
+
 ## Current State & Branch
 **Branch:** `feature/ml-predictive-maintenance`
 **(Do your work on this branch and test locally before merging to main)**
