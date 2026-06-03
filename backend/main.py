@@ -225,6 +225,19 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
                 "updated_at": datetime.now().isoformat()
             }).eq("id", 1).execute()
             
+            # Record historical sensor data for ML and analytics
+            try:
+                supabase.table("sensor_history").insert({
+                    "water_level_pct": sensor_data.water_level_pct,
+                    "temperature": sensor_data.temperature,
+                    "flow_rate": sensor_data.flow_rate,
+                    "pressure": sensor_data.pressure,
+                    "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }).execute()
+            except Exception as hist_err:
+                print(f"Failed to record sensor history: {hist_err}")
+                
             # Only log if it's not the regular maintenance cycle, or if it hasn't been logged today
             should_log = True
             if prediction.reason == "Regular maintenance cycle":
@@ -273,6 +286,19 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
                 "updated_at": datetime.now().isoformat()
             }).eq("id", 1).execute()
             
+            # Record historical sensor data for ML and analytics
+            try:
+                supabase.table("sensor_history").insert({
+                    "water_level_pct": sensor_data.water_level_pct,
+                    "temperature": sensor_data.temperature,
+                    "flow_rate": sensor_data.flow_rate,
+                    "pressure": sensor_data.pressure,
+                    "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }).execute()
+            except Exception as hist_err:
+                print(f"Failed to record sensor history: {hist_err}")
+                
             if anomalies:
                 for anomaly in anomalies:
                     supabase.table("logs").insert({

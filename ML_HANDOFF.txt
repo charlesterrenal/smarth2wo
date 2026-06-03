@@ -1,0 +1,66 @@
+# SmartH2WO Machine Learning Handoff
+
+Welcome to the Machine Learning implementation for SmartH2WO! We are transitioning our predictive maintenance and anomaly detection from hard-coded rules to trained scikit-learn models.
+
+## Current State & Branch
+**Branch:** `feature/ml-predictive-maintenance`
+**(Do your work on this branch and test locally before merging to main)**
+
+### What has been completed so far:
+1. **Phase 1: Sensor History Logging (Supabase)**
+   - Created `backend/supabase_sensor_history.sql`. **ACTION REQUIRED:** You need to run this SQL script in your Supabase SQL Editor to create the `sensor_history` table.
+   - Updated `backend/main.py` to automatically insert a row into `sensor_history` whenever the API endpoints `/api/maintenance/predict` and `/api/anomalies/detect` are called.
+
+2. **Phase 2: Synthetic Data Generation**
+   - Since we don't have historical hardware data yet, we created a script to simulate 30 days of minute-by-minute sensor readings.
+   - **ACTION REQUIRED:** 
+     1. Open a terminal in the `backend` folder.
+     2. Activate your virtual environment (`venv\Scripts\activate`).
+     3. Ensure ML dependencies are installed: `pip install -r requirements-ml.txt`.
+     4. Run the generator: `python -m ml.generate_training_data`
+     5. This will generate `backend/ml/data/training_data.csv` containing ~43,200 rows of synthetic data.
+
+---
+
+## Your Tasks (What's Left to Do)
+
+Your job is to complete **Phase 3 (Training)** and **Phase 4 (Inference/Integration)**.
+
+### Task 1: Build the Model Training Pipeline (Phase 3)
+We need to train two sets of models using scikit-learn.
+
+1. **Create `backend/ml/train_models.py`**
+   - Read the generated `backend/ml/data/training_data.csv`.
+   - **Model A (Maintenance Predictor):** Train a `RandomForestRegressor` to predict `maintenance_days_remaining`, and a `RandomForestClassifier` to predict `maintenance_severity`. 
+   - **Model B (Anomaly Detector):** Train an `IsolationForest` (or similar) to detect if an anomaly occurred, and a `RandomForestClassifier` to classify the `anomaly_type`.
+   - The features you should use: `water_level_pct`, `temperature`, `flow_rate`, `pressure`.
+   - Save the trained models as `.joblib` files in `backend/ml/models/` (e.g., `maintenance_model.joblib` and `anomaly_model.joblib`).
+
+2. **Create `backend/ml/feature_engineering.py` (Optional but recommended)**
+   - Extract a shared function to process the raw `SensorData` into the correct feature vector expected by the models.
+
+### Task 2: Integrate Models into FastAPI (Phase 4)
+We need to swap out the rule-based logic in `backend/main.py` with our new models, while keeping a fallback mechanism.
+
+1. **Create `backend/ml/inference.py`**
+   - Write wrapper classes (e.g. `MaintenancePredictor`, `AnomalyDetector`) that load the `.joblib` files when initialized and expose `.predict()` methods.
+   - Ensure they handle missing model files gracefully.
+
+2. **Update `backend/main.py`**
+   - Load the models at startup (inside the `lifespan` context manager or at global scope).
+   - In `predict_maintenance_endpoint`: Pass the incoming `sensor_data` to your ML model. If the model is loaded, return the ML prediction. If the model isn't loaded (e.g. `.joblib` missing), **fallback to the existing rule-based logic** so the system never breaks.
+   - In `detect_anomalies_endpoint`: Do the exact same thing for anomaly detection.
+
+### Task 3: Verification
+1. Start the FastAPI server (`python main.py`).
+2. Run `python mock_test.py` in another terminal.
+3. Verify that the endpoints respond with ML-generated predictions instead of rule-based ones. (You should see new rows popping up in your Supabase `sensor_history` table as well).
+
+---
+
+## Helpful Context
+- **Sensor Cadence:** We are expecting 1 reading per minute from the ESP32.
+- **Sensors Used:** ZJ-S201 (flow), ultrasonic (water level). The payload also includes temperature and pressure.
+- **Frontend changes are explicitly SIDELINED for now.** Keep all changes strictly to the backend. The API contracts (JSON payloads) for maintenance and anomalies must NOT change, as the dashboard relies on the exact existing format.
+
+Good luck! Let Charles know if you run into any blockers.
