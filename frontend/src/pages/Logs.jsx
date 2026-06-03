@@ -107,7 +107,7 @@ export default function Logs() {
       </div>
 
       {/* Table */}
-      <div style={{ background: 'var(--color-surface)', borderRadius: '0px', border: '1px solid var(--color-border)', overflowX: 'auto', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)' }}>
+      <div style={{ background: 'var(--color-surface)', borderRadius: '16px', border: '1px solid var(--color-border)', overflowX: 'auto', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead style={{ background: '#f1f5f9' }}>
             <tr>

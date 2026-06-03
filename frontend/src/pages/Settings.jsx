@@ -59,10 +59,10 @@ export default function Settings() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
 
         {/* Power Control */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '0px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)' }}>
+        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
           <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em' }}>System Power</p>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: power ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)', borderRadius: '0px', border: `2px solid ${power ? '#22c55e' : '#ef4444'}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: power ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: `2px solid ${power ? '#22c55e' : '#ef4444'}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '24px' }}>{power ? '⚡' : '🔌'}</span>
               <div>
@@ -103,7 +103,7 @@ export default function Settings() {
         </div>
 
         {/* Scheduler */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '0px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)' }}>
+        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
           <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em' }}>Scheduler</p>
 
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>

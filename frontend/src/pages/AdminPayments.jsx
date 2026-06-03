@@ -131,7 +131,7 @@ export default function AdminPayments() {
         <div style={{
           background: 'var(--color-surface)',
           border: '1.5px solid var(--color-border)',
-          borderRadius: '0px',
+          borderRadius: '16px',
           padding: '20px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -154,7 +154,7 @@ export default function AdminPayments() {
                   background: isCreating ? 'var(--color-text-muted)' : 'var(--color-blue)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '0px',
+                  borderRadius: '12px',
                   padding: '16px 12px',
                   fontSize: '15px',
                   fontWeight: 600,
@@ -170,7 +170,7 @@ export default function AdminPayments() {
                 onMouseLeave={(e) => (e.target.style.background = 'var(--color-blue)')}
               >
                 <span>{option.volume_ml === 1000 ? '1 Liter' : `${option.volume_ml}ml`}</span>
-                <span style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '6px 12px', borderRadius: '0px', fontWeight: 700 }}>
+                <span style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '6px 12px', borderRadius: '12px', fontWeight: 700 }}>
                   P{option.price_pesos}
                 </span>
               </button>
@@ -194,7 +194,7 @@ export default function AdminPayments() {
         <div style={{
           background: 'var(--color-surface)',
           border: '1.5px solid var(--color-border)',
-          borderRadius: '0px',
+          borderRadius: '16px',
           padding: '20px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -242,7 +242,7 @@ export default function AdminPayments() {
               background: isCheckingStatus ? 'var(--color-text-muted)' : 'var(--color-green)',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '0px',
+              borderRadius: '12px',
               padding: '12px 12px',
               fontSize: '14px',
               fontWeight: 600,
@@ -276,7 +276,7 @@ export default function AdminPayments() {
           <div style={{
             background: 'var(--color-surface)',
             border: '1.5px solid var(--color-border)',
-            borderRadius: '0px',
+            borderRadius: '12px',
             padding: '20px',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -332,7 +332,7 @@ export default function AdminPayments() {
         <div style={{
           background: 'var(--color-surface)',
           border: '1.5px solid var(--color-border)',
-          borderRadius: '0px',
+          borderRadius: '16px',
           padding: '20px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -358,7 +358,7 @@ export default function AdminPayments() {
               background: (isSimulating || !activeCheckout) ? 'var(--color-text-muted)' : 'var(--color-purple)',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '0px',
+              borderRadius: '12px',
               padding: '12px 12px',
               fontSize: '14px',
               fontWeight: 600,
@@ -389,7 +389,7 @@ export default function AdminPayments() {
         <div style={{
           background: 'var(--color-surface)',
           border: '1.5px solid var(--color-border)',
-          borderRadius: '0px',
+          borderRadius: '16px',
           padding: '20px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -459,7 +459,7 @@ export default function AdminPayments() {
         <div style={{
           background: 'var(--color-surface)',
           border: '1.5px solid var(--color-border)',
-          borderRadius: '0px',
+          borderRadius: '16px',
           padding: '20px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
         }}>
