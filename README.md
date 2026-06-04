@@ -61,6 +61,10 @@ smarth2wo/
     supabase_schema.sql
     package.json
     README.md
+  landing/
+    src/
+    index.html
+    package.json
   SETUP.md                     # Complete setup guide (start here)
   QUICKSTART.md                # Quick reference for daily development
   GITHUB_SETUP.md              # Git workflow

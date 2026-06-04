@@ -157,6 +157,10 @@ smarth2wo/
 │   ├── src/lib/           API utilities, Supabase client
 │   └── package.json
 │
+├── landing/               React + Vite (Static Marketing Page)
+│   ├── src/sections/      Landing page sections
+│   └── package.json
+│
 ├── backend/               FastAPI + Python
 │   ├── main.py            All API endpoints
 │   ├── paymongo_service.py PayMongo integration
