@@ -74,3 +74,39 @@ The models are integrated inside the FastAPI routes in `backend/main.py`.
    python -m ml.train_models
    ```
    This will output the validation scores and update the serialized `.joblib` files inside `backend/ml/models/`.
+
+---
+
+## 🧪 How to Verify ML Integration Locally
+
+To verify that the API endpoints are correctly using the machine learning models instead of rule-based fallbacks:
+
+1. **Start the Local Backend Server:**
+   In your first terminal, activate the environment and run:
+   ```bash
+   cd backend
+   .\venv\Scripts\Activate.ps1
+   python -m uvicorn main:app --host 127.0.0.1 --port 8000
+   ```
+   Confirm that the startup logs show:
+   ```text
+   ML SUCCESS: MaintenancePredictor model loaded from ...
+   ML SUCCESS: AnomalyDetector model loaded from ...
+   ```
+
+2. **Run the Scenario Verification Script:**
+   In your second terminal, activate the environment and run:
+   ```bash
+   cd backend
+   .\venv\Scripts\Activate.ps1
+   python mock_test.py
+   ```
+
+3. **Verify Inference Logs:**
+   - The mock script will print `Maintenance Response: 200` and `Anomaly Response: 200`.
+   - The backend server terminal will log model-generated predictions:
+     ```text
+     ML SUCCESS: Predicted maintenance remaining: X days (severity: Y)
+     ML SUCCESS: Detected Z anomalies using model.
+     ```
+
