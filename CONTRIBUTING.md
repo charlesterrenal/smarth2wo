@@ -1,6 +1,6 @@
 # Contributing to SmartH2wo
 
-Thanks for contributing. This document covers the branching model and commit conventions used across the project. For the full git/GitHub workflow, see [GITHUB_SETUP.md](GITHUB_SETUP.md).
+Thanks for contributing. This document covers the branching model and commit conventions used across the project. For the full team Git workflow, see [GIT_WORKFLOW.md](GIT_WORKFLOW.md), and for initial setup instructions, see [GITHUB_SETUP.md](GITHUB_SETUP.md).
 
 ## Workflow
 
