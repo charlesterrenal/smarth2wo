@@ -12,7 +12,7 @@ Before jumping in, it's important to understand *why* we structured the ML pipel
 
 2. **Parallel Development (Synthetic Data):**
    - **Group Circumstances:** The physical hardware (ESP32, flow sensors, ultrasonic) is still being assembled and calibrated. We cannot afford to halt ML development while waiting for months of real historical data to accumulate.
-   - By building a robust synthetic data generator (Phase 2), the ML developers are completely unblocked and can build the training and inference pipeline right now. Once the hardware is live, we simply swap the CSV for real Supabase data and retrain.
+   - By building a robust synthetic data generator (Phase 2), the ML developers are completely unblocked and can build the training and inference pipeline right now. Due to time constraints, the model will exclusively be trained on this CSV dataset, and live hardware will strictly be used for real-time inference.
 
 ---
 
