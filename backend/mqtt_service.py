@@ -38,10 +38,10 @@ def init_mqtt():
         mqtt_client.on_message = on_message
         mqtt_client.on_disconnect = on_disconnect
         
-        mqtt_client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
+        mqtt_client.connect_async(MQTT_BROKER, MQTT_PORT, keepalive=60)
         mqtt_client.loop_start()
         
-        print(f"MQTT initialized - Broker: {MQTT_BROKER}:{MQTT_PORT}")
+        print(f"MQTT initialized asynchronously - Broker: {MQTT_BROKER}:{MQTT_PORT}")
         return True
     except Exception as e:
         print(f"MQTT connection failed: {e}")

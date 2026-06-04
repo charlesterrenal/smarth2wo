@@ -18,9 +18,9 @@ This guide outlines the critical next steps for your thesis project to transitio
 
 ### 3. Train Models using the AI4I Dataset
 Due to time constraints for collecting real-world failure data, the model will be strictly trained on the AI4I Predictive Maintenance CSV dataset. The live ESP32 hardware will only be used for *inference* (real-time predictions).
-- [ ] Ensure you are in the `backend` directory.
-- [ ] Run `python -m ml.train_models` to process the CSV dataset and generate the trained model files.
-- [ ] Verify that the `.joblib` model files are created in your backend folder. Your backend API will load these pre-trained models to evaluate the incoming live ESP32 sensor data.
+- [x] Ensure you are in the `backend` directory.
+- [x] Run `python -m ml.train_models` to process the CSV dataset and generate the trained model files.
+- [x] Verify that the `.joblib` model files are created in your backend folder. Your backend API will load these pre-trained models to evaluate the incoming live ESP32 sensor data.
 
 ### 4. Deploy Backend to Production
 - [ ] Deploy the FastAPI backend code to hosting services (e.g., Render, AWS EC2, or Heroku).
