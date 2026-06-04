@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, ArrowLeftRight, CreditCard, BarChart2, ClipboardList, Settings, Sun, Moon, Menu, X, LogOut } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
+import logo from '../assets/smarth2wo_logo.png'
 
 const navItems = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard'   },
@@ -43,8 +44,8 @@ export default function Sidebar() {
           onClick={() => setIsOpen(!isOpen)}
           style={{
             position: 'fixed',
-            top: '16px',
-            left: '16px',
+            top: '12px',
+            left: '12px',
             zIndex: 101,
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
@@ -77,11 +78,19 @@ export default function Sidebar() {
       }}>
 
         {/* Logo */}
-        <div style={{ marginBottom: '24px', paddingLeft: '8px' }}>
-          <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-blue)' }}>
-            Smart<span style={{ color: 'var(--color-green)' }}>H₂</span>
-            <span style={{ color: 'var(--color-blue)' }}>O</span>
-          </span>
+        <div style={{ marginBottom: '24px', padding: '0 8px', display: 'flex', justifyContent: 'center' }}>
+          <img 
+            src={logo} 
+            alt="SmartH2WO Logo" 
+            style={{ 
+              width: '100%', 
+              maxWidth: '220px',
+              height: 'auto', 
+              objectFit: 'contain', 
+              display: 'block',
+              transform: 'scale(1.15)'
+            }} 
+          />
         </div>
 
         {/* Nav links */}
@@ -168,8 +177,8 @@ export default function Sidebar() {
               fontSize: '14px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#dc2626'
-              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)'
+              e.currentTarget.style.color = 'var(--color-danger)'
+              e.currentTarget.style.background = 'var(--color-danger-light)'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = 'var(--color-text-muted)'

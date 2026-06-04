@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import PageHeader from '../components/PageHeader'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockSchedule } from '../lib/mockData'
 
@@ -54,20 +53,19 @@ export default function Settings() {
       maxWidth: '1600px',
       margin: '0 auto'
     }}>
-      <PageHeader title="SETTINGS" />
-
+      
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
 
         {/* Power Control */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em' }}>System Power</p>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em', color: 'var(--color-text)' }}>System Power</p>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: power ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: `2px solid ${power ? '#22c55e' : '#ef4444'}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: power ? 'var(--color-green-light)' : 'var(--color-danger-light)', borderRadius: '12px', border: `2px solid ${power ? 'var(--color-green)' : 'var(--color-danger)'}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '24px' }}>{power ? '⚡' : '🔌'}</span>
               <div>
-                <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px' }}>Dispenser Power</p>
-                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px', color: power ? 'var(--color-green-dark)' : 'var(--color-danger-dark)' }}>Dispenser Power</p>
+                <p style={{ fontSize: '12px', color: power ? '#065f46' : '#991b1b' }}>
                   {power ? 'System is ON' : 'System is OFF'}
                 </p>
               </div>
@@ -78,7 +76,7 @@ export default function Settings() {
                 width: '50px',
                 height: '28px',
                 borderRadius: '14px',
-                background: power ? '#22c55e' : '#d1d5db',
+                background: power ? 'var(--color-green)' : '#d1d5db',
                 border: 'none',
                 cursor: 'pointer',
                 position: 'relative',
@@ -103,8 +101,8 @@ export default function Settings() {
         </div>
 
         {/* Scheduler */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em' }}>Scheduler</p>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em', color: 'var(--color-text)' }}>Scheduler</p>
 
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
@@ -117,8 +115,8 @@ export default function Settings() {
             <tbody>
               {schedule.map((row, i) => (
                 <tr key={row.day} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: row.active ? '#22c55e' : '#ef4444', display: 'inline-block' }} />
+                  <td style={{ padding: '12px 0', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text)' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: row.active ? 'var(--color-green)' : 'var(--color-danger)', display: 'inline-block' }} />
                     {row.day}
                   </td>
                   <td style={{ padding: '12px 8px 12px 0' }}>
@@ -154,7 +152,7 @@ export default function Settings() {
                       onClick={() => toggle(i)}
                       style={{
                         width: '40px', height: '22px', borderRadius: '11px',
-                        background: row.active ? '#378ADD' : '#d1d5db',
+                        background: row.active ? 'var(--color-blue)' : '#d1d5db',
                         border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
                       }}
                     >
@@ -175,7 +173,7 @@ export default function Settings() {
             onClick={handleSave}
             style={{
               marginTop: '20px', padding: '10px 24px', borderRadius: '8px',
-              background: '#378ADD', color: 'white', border: 'none',
+              background: 'var(--color-blue)', color: 'white', border: 'none',
               fontSize: '14px', fontWeight: 500, cursor: 'pointer',
             }}
           >

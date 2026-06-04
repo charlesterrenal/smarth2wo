@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import PageHeader from '../components/PageHeader'
+import { Droplet, ArrowLeftRight, DollarSign, Wrench } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase } from '../lib/supabase'
 import { getMaintenancePrediction, getAnomalies } from '../lib/maintenanceApi'
@@ -84,21 +84,19 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
       maxWidth: '1600px',
       margin: '0 auto'
     }}>
-      <PageHeader title="DASHBOARD" />
-
       {/* Anomalies Alert Banner */}
       {anomalies.length > 0 && (
         <div style={{
-          background: '#fee2e2',
-          border: '1px solid #fca5a5',
-          borderRadius: '16px',
+          background: 'var(--color-danger-light)',
+          border: '1px solid var(--color-danger)',
+          borderRadius: 'var(--radius-inner)',
           padding: '16px 24px',
           marginBottom: '24px',
           boxShadow: '0 8px 32px rgba(2,6,23,0.06)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <span style={{ fontSize: '24px' }}>⚠️</span>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: '#991b1b' }}>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-danger-dark)' }}>
               {anomalies.length} System Anomal{anomalies.length > 1 ? 'ies' : 'y'} Detected
             </span>
           </div>
@@ -106,13 +104,13 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
             {anomalies.map((anomaly, idx) => (
               <div key={idx} style={{
                 fontSize: '13px',
-                color: '#991b1b',
+                color: 'var(--color-danger-dark)',
                 padding: '12px',
                 background: 'rgba(220, 38, 38, 0.05)',
                 borderLeft: `4px solid ${
-                  anomaly.severity === 'critical' ? '#dc2626' :
-                  anomaly.severity === 'high' ? '#f97316' :
-                  '#eab308'
+                  anomaly.severity === 'critical' ? 'var(--color-danger-dark)' :
+                  anomaly.severity === 'high' ? 'var(--color-warning)' :
+                  'var(--color-yellow)'
                 }`,
                 borderRadius: '12px',
               }}>
@@ -132,66 +130,50 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
           gap: '16px'
         }}>
           {/* Water Level */}
-          <StatCard title="Water Level" bgColor="#0066CC">
-            <span style={{ fontSize: '2.75rem', fontWeight: 800, color: '#ffffff' }}>
-              {sensorStatus?.power_on ? `${sensorStatus.water_level_pct}%` : '—'}
-            </span>
-            <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '8px' }}>
-              {sensorStatus?.power_on ? '✓ Sensor active' : '⚠ Not connected'}
-            </p>
-          </StatCard>
+          <StatCard 
+            title="Water Level" 
+            accent="var(--color-blue)"
+            icon={<Droplet size={20} />}
+            value={sensorStatus?.power_on ? `${sensorStatus.water_level_pct}%` : '—'}
+            caption="Volume remaining"
+            subtitle={sensorStatus?.power_on ? '✓ Sensor active' : '⚠ Not connected'}
+          />
 
           {/* Transactions */}
-          <StatCard title="Transactions" bgColor="#7B3FF2">
-            <span style={{ fontSize: '2.75rem', fontWeight: 800, color: '#ffffff' }}>
-              {transactions.length}
-            </span>
-            <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '8px' }}>
-              Total transactions
-            </p>
-          </StatCard>
+          <StatCard 
+            title="Transactions" 
+            accent="var(--color-purple)"
+            icon={<ArrowLeftRight size={20} />}
+            value={transactions.length}
+            caption="Total transactions"
+            subtitle="All completed orders"
+          />
 
           {/* Revenue */}
-          <StatCard title="Revenue" bgColor="#00B341">
-            <span style={{ fontSize: '2.75rem', fontWeight: 800, color: '#ffffff' }}>
-              ₱{(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 1000).toFixed(1)}K
-            </span>
-            <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '8px' }}>
-              Total sales
-            </p>
-          </StatCard>
+          <StatCard 
+            title="Revenue" 
+            accent="var(--color-green)"
+            icon={<DollarSign size={20} />}
+            value={`₱${(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 1000).toFixed(1)}K`}
+            caption="Total sales"
+            subtitle="Gross income"
+          />
 
           {/* Maintenance */}
           <StatCard 
             title="Maintenance" 
-            bgColor={
-              !maintenancePrediction ? '#E5E7EB' :
-              maintenancePrediction.severity === 'critical' ? '#DC2626' :
-              maintenancePrediction.severity === 'high' ? '#F97316' :
-              maintenancePrediction.severity === 'medium' ? '#FFB81C' :
-              '#00B341'
+            accent={
+              !maintenancePrediction ? 'var(--color-text-muted)' :
+              maintenancePrediction.severity === 'critical' ? 'var(--color-danger)' :
+              maintenancePrediction.severity === 'high' ? 'var(--color-warning)' :
+              maintenancePrediction.severity === 'medium' ? 'var(--color-yellow)' :
+              'var(--color-warning)'
             }
-          >
-            {maintenancePrediction ? (
-                <>
-                <span style={{
-                  fontSize: '2.75rem',
-                  fontWeight: 800,
-                  color: '#ffffff'
-                }}>
-                  {maintenancePrediction.days_remaining}
-                </span>
-                <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '8px' }}>
-                  {maintenancePrediction.reason}
-                </p>
-              </>
-            ) : (
-                <>
-                <span style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-text-muted)' }}>No Data</span>
-                <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '8px' }}>API unavailable</p>
-              </>
-            )}
-          </StatCard>
+            icon={<Wrench size={20} />}
+            value={maintenancePrediction ? maintenancePrediction.days_remaining : '—'}
+            caption={maintenancePrediction ? "Days remaining" : "No Data"}
+            subtitle={maintenancePrediction ? maintenancePrediction.reason : 'API unavailable'}
+          />
         </div>
       </div>
 
@@ -207,17 +189,18 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
           <div style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-card)',
             padding: '24px',
-            boxShadow: '0 8px 32px rgba(2,6,23,0.06)',
+            boxShadow: 'var(--shadow-card)',
           }}>
             <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)' }}>Revenue — Last 7 Days</p>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={revenueData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+              <BarChart data={revenueData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} />
                 <YAxis hide />
                 <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '12px', background: 'var(--color-surface)' }}
+                  cursor={{ fill: 'var(--table-row-hover)' }}
+                  contentStyle={{ borderRadius: 'var(--radius-inner)', border: '1px solid var(--color-border)', fontSize: '12px', background: 'var(--color-surface)', color: 'var(--color-text)' }}
                   formatter={(v) => [`₱${v}`, 'Revenue']}
                 />
                 <Bar dataKey="revenue" fill="var(--color-green)" radius={[6, 6, 0, 0]} barSize={28} maxBarSize={36} />
@@ -229,9 +212,9 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
           <div style={{
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-card)',
             padding: '24px',
-            boxShadow: '0 8px 32px rgba(2,6,23,0.06)',
+            boxShadow: 'var(--shadow-card)',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px'

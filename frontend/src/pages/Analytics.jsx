@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import PageHeader from '../components/PageHeader'
+import { Droplet, Activity, Clock, BarChart2, Users } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockTransactions } from '../lib/mockData'
@@ -63,9 +63,9 @@ export default function Analytics() {
   const vol1000 = transactions.filter(t => t.volume_ml === 1000).length
   const total   = transactions.length || 1
   const volumeDistribution = [
-    { name: '100mL',  value: Math.round((vol100  / total) * 100), color: '#0066CC' },
-    { name: '500mL',  value: Math.round((vol500  / total) * 100), color: '#FFB81C' },
-    { name: '1 Liter',value: Math.round((vol1000 / total) * 100), color: '#7B3FF2' },
+    { name: '100mL',  value: Math.round((vol100  / total) * 100), color: 'var(--color-blue)' },
+    { name: '500mL',  value: Math.round((vol500  / total) * 100), color: 'var(--color-yellow)' },
+    { name: '1 Liter',value: Math.round((vol1000 / total) * 100), color: 'var(--color-purple)' },
   ]
 
   const mostUsed = volumeDistribution.sort((a, b) => b.value - a.value)[0]?.name ?? '—'
@@ -87,52 +87,64 @@ export default function Analytics() {
       maxWidth: '1600px',
       margin: '0 auto'
     }}>
-      <PageHeader title="ANALYTICS" />
-
       {/* Top stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-        <StatCard title="Total Water Dispensed" bgColor="#0066CC">
-          <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#ffffff' }}>💧 {totalLiters} <span style={{ fontSize: '14px' }}>Liters</span></span>
-        </StatCard>
-        <StatCard title="Avg Daily Consumption" bgColor="#00B341">
-          <span style={{ fontSize: '2.25rem', fontWeight: 800, color: '#ffffff' }}>{avgDaily} <span style={{ fontSize: '14px' }}>Liters/day</span></span>
-        </StatCard>
-        <StatCard title="Peak Usage Time" bgColor="#FFB81C">
-          <span style={{ fontSize: '22px', fontWeight: 700, color: '#1a202c' }}>—</span>
-          <p style={{ fontSize: '13px', color: 'rgba(26, 32, 44, 0.7)' }}>⚠ No data available</p>
-        </StatCard>
-        <StatCard title="Most Used Volume" bgColor="#E5E7EB">
-          <span style={{ fontSize: '28px', fontWeight: 700, color: 'var(--color-text)' }}>—</span>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>⚠ No data available</p>
-        </StatCard>
+        <StatCard 
+          title="Total Water Dispensed" 
+          accent="var(--color-blue)"
+          value={`${totalLiters}L`}
+          icon={<Droplet size={20} />}
+          caption="Lifetime volume"
+        />
+        <StatCard 
+          title="Avg Daily Consumption" 
+          accent="var(--color-green)"
+          value={`${avgDaily}L`}
+          icon={<Activity size={20} />}
+          caption="Per day average"
+        />
+        <StatCard 
+          title="Peak Usage Time" 
+          accent="var(--color-yellow)"
+          value="—"
+          icon={<Clock size={20} />}
+          caption="No data available"
+        />
+        <StatCard 
+          title="Most Used Volume" 
+          accent="var(--color-text-muted)"
+          value="—"
+          icon={<BarChart2 size={20} />}
+          caption="No data available"
+        />
       </div>
 
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '16px' }}>
 
         {/* Consumption over time */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '20px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', letterSpacing: '0.02em' }}>Water consumption over time</p>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', letterSpacing: '0.02em', color: 'var(--color-text)' }}>Water consumption over time</p>
           <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={consumptionData} margin={{ left: -20 }}>
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+            <LineChart data={consumptionData} margin={{ left: 0, right: 10, top: 10 }}>
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} />
               <YAxis hide />
-              <Tooltip formatter={(v) => [`${v}mL`, 'Consumed']} contentStyle={{ borderRadius: '8px', fontSize: '12px' }} />
-              <Line type="monotone" dataKey="ml" stroke="#0066CC" strokeWidth={2} dot={false} />
+              <Tooltip cursor={false} formatter={(v) => [`${v}mL`, 'Consumed']} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '12px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
+              <Line type="monotone" dataKey="ml" stroke="var(--color-blue)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Revenue trend */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '20px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.02em' }}>Revenue trend</p>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.02em', color: 'var(--color-text)' }}>Revenue trend</p>
           <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>Last week</p>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={revenueData} margin={{ left: -20 }}>
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+            <BarChart data={revenueData} margin={{ left: 0, right: 10, top: 10 }}>
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} />
               <YAxis hide />
-              <Tooltip formatter={(v) => [`₱${v}`, 'Revenue']} contentStyle={{ borderRadius: '8px', fontSize: '12px' }} />
-              <Bar dataKey="revenue" fill="#00B341" radius={[6, 6, 0, 0]} barSize={26} maxBarSize={36} />
+              <Tooltip cursor={{ fill: 'var(--table-row-hover)' }} formatter={(v) => [`₱${v}`, 'Revenue']} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '12px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
+              <Bar dataKey="revenue" fill="var(--color-green)" radius={[6, 6, 0, 0]} barSize={26} maxBarSize={36} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -142,40 +154,46 @@ export default function Analytics() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
 
         {/* Donut chart */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '20px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', letterSpacing: '0.02em' }}>Volume distribution</p>
-          <ResponsiveContainer width="100%" height={180}>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', letterSpacing: '0.02em', color: 'var(--color-text)' }}>Volume distribution</p>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={volumeDistribution} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={2}>
+              <Pie data={volumeDistribution} dataKey="value" cx="50%" cy="45%" innerRadius={50} outerRadius={80} paddingAngle={2}>
                 {volumeDistribution.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
               </Pie>
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
-              <Tooltip formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: '8px', fontSize: '12px' }} />
+              <Legend 
+                iconType="circle" 
+                iconSize={8} 
+                wrapperStyle={{ fontSize: '12px' }} 
+                formatter={(value) => <span style={{ color: 'var(--color-text-secondary)' }}>{value}</span>}
+              />
+              <Tooltip cursor={false} formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '12px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
 
         {/* Total users */}
-        <StatCard title="Total Users — Today" bgColor="#7B3FF2">
-          <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <span style={{ fontSize: '48px' }}>👥</span>
-            <p style={{ fontSize: '36px', fontWeight: 700, color: '#ffffff' }}>{todayUsers}</p>
-          </div>
-        </StatCard>
+        <StatCard 
+          title="Total Users — Today" 
+          accent="var(--color-purple)"
+          value={todayUsers}
+          icon={<Users size={20} />}
+          caption="Active today"
+        />
 
         {/* Users volume summary */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '20px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '14px', fontWeight: 600 }}>Users volume summary — Today</p>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>Users volume summary — Today</p>
           {[
-            { label: '100mL', users: todayVol100, total: `${todayVolume100Total.toFixed(2)}L`, color: '#0066CC' },
-            { label: '500mL', users: todayVol500, total: `${todayVolume500Total.toFixed(2)}L`, color: '#FFB81C' },
-            { label: '1 Liter', users: todayVol1000, total: `${todayVolume1000Total.toFixed(2)}L`, color: '#7B3FF2' },
+            { label: '100mL', users: todayVol100, total: `${todayVolume100Total.toFixed(2)}L`, color: 'var(--color-blue)' },
+            { label: '500mL', users: todayVol500, total: `${todayVolume500Total.toFixed(2)}L`, color: 'var(--color-yellow)' },
+            { label: '1 Liter', users: todayVol1000, total: `${todayVolume1000Total.toFixed(2)}L`, color: 'var(--color-purple)' },
           ].map(({ label, users, total, color }) => (
-            <div key={label} style={{ background: color, borderRadius: '12px', padding: '10px 14px', color: color === '#FFB81C' ? '#1a202c' : 'white', transition: 'all 0.2s ease', cursor: 'pointer', boxShadow: '0 6px 16px rgba(2,6,23,0.04)' }}>
+            <div key={label} style={{ background: color, borderRadius: 'var(--radius-inner)', padding: '12px 16px', color: color === 'var(--color-yellow)' ? '#1a202c' : 'white', transition: 'all 0.2s ease', cursor: 'pointer', boxShadow: '0 6px 16px rgba(15, 23, 42, 0.04)' }}>
               <p style={{ fontSize: '13px', fontWeight: 600 }}>{label}</p>
-              <p style={{ fontSize: '12px', opacity: 0.85 }}>{users} total users · {total} total volume</p>
+              <p style={{ fontSize: '12px', opacity: 0.9 }}>{users} total users · {total} total volume</p>
             </div>
           ))}
         </div>

@@ -7,15 +7,31 @@
   /* Semantic colors */
   --color-blue: #2563EB;
   --color-blue-dark: #1D4ED8;
-  --color-green: #16A34A;
-  --color-green-dark: #0F766E;
+  --color-green: #10B981;
+  --color-green-dark: #059669;
   --color-green-light: #D1FAE5;
   --color-yellow: #F59E0B;
   --color-yellow-dark: #D97706;
   --color-yellow-light: #FEF3C7;
   --color-pink: #DB2777;
-  --color-purple: #8B5CF6;
+  --color-purple: #7B3FF2;
   --color-purple-dark: #6D28D9;
+  --color-danger: #EF4444;
+  --color-danger-dark: #DC2626;
+  --color-danger-light: #FEE2E2;
+  --color-warning: #F97316;
+  --color-warning-dark: #EA580C;
+  --color-warning-light: #FFEDD5;
+  --color-info: #3B82F6;
+  --color-teal: #14B8A6;
+
+  /* Global UI Tokens */
+  --radius-card: 24px;
+  --radius-inner: 16px;
+  --shadow-card: 0 24px 70px rgba(15, 23, 42, 0.12);
+  --shadow-hover: 0 24px 70px rgba(15, 23, 42, 0.18);
+  --shadow-premium: 0 18px 50px rgba(15, 23, 42, 0.12);
+  --shadow-premium-hover: 0 20px 60px rgba(15, 23, 42, 0.16);
 
   /* Light mode palette */
   --color-bg: #F8FAFC;
@@ -49,6 +65,11 @@
   --color-text-secondary: #CBD5E1;
   --color-text-muted: #94A3B8;
   --color-border: #172033;
+  
+  --shadow-card: 0 24px 70px rgba(0, 0, 0, 0.4);
+  --shadow-hover: 0 24px 70px rgba(0, 0, 0, 0.6);
+  --shadow-premium: 0 18px 50px rgba(0, 0, 0, 0.4);
+  --shadow-premium-hover: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -176,5 +197,30 @@ input:focus {
   
   :root {
     --sidebar-width: 0px;
+  }
+}
+
+/* Page Header & Container Responsive Overrides */
+.page-header {
+  padding: 24px 40px;
+}
+
+.page-header-title {
+  font-size: 28px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    /* Push header right to make room for hamburger menu (which is left: 12px) */
+    padding: 0 20px 0 64px !important; 
+    height: 64px !important;
+  }
+  
+  .page-header-title {
+    font-size: 20px !important;
+  }
+
+  .page-container {
+    padding: 16px !important;
   }
 }

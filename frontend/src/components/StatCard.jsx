@@ -1,51 +1,89 @@
-export default function StatCard({ title, value, icon, borderColor, bgColor, children }) {
-  // If borderColor is provided (old style), convert to new style
-  const color = bgColor || borderColor || 'var(--color-blue)'
-  
-  // Determine if dark background (use white text)
-  const isDarkBg = bgColor && !bgColor.includes('var(--color')
-  const isLightBg = bgColor === '#F3F4F6' || bgColor === '#E5E7EB' || bgColor === '#FFFFFF'
-  
-  const textColor = isDarkBg && !isLightBg ? '#ffffff' : 'var(--color-text)'
-  const mutedColor = isDarkBg && !isLightBg ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-text-muted)'
-  
-  // Extract RGB values for hover effect
-  const isVarColor = color.includes('var(--color')
-  
+import React from 'react'
+import { useTheme } from '../context/ThemeContext'
+
+export default function StatCard({ title, caption, subtitle, value, icon, accent, lightBg, children }) {
+  const { isDark } = useTheme()
+  const isLight = !isDark
+  const titleColor = isLight ? '#111827' : '#F8FAFC'
+  const valueColor = isLight ? '#111827' : '#FFFFFF'
+  const captionColor = isLight ? '#374151' : '#CBD5E1'
+  const subtitleColor = isLight ? '#374151' : '#CBD5E1'
+  const badgeBackground = isLight ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.12)'
+  const pillBackground = isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.1)'
+
+  const gradientLight = lightBg 
+    ? `linear-gradient(135deg, ${lightBg}, color-mix(in srgb, ${accent} 20%, transparent))`
+    : (accent ? `linear-gradient(135deg, color-mix(in srgb, ${accent} 22%, transparent), color-mix(in srgb, ${accent} 80%, transparent))` : 'var(--color-surface)')
+    
+  const gradientDark = accent 
+    ? `linear-gradient(135deg, color-mix(in srgb, ${accent} 22%, transparent), color-mix(in srgb, ${accent} 80%, transparent))`
+    : 'var(--color-surface)'
+
   return (
     <div style={{
-      background: color.includes('var(--color') ? 'var(--color-surface)' : color,
-      border: color.includes('var(--color') ? `1.5px solid ${color}` : `1.5px solid transparent`,
-      borderRadius: '16px',
-      padding: '24px',
+      background: isLight ? gradientLight : gradientDark,
+      borderRadius: 'var(--radius-card)',
+      padding: '26px',
+      minHeight: '280px',
+      boxShadow: 'var(--shadow-premium)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px',
-      transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s',
-      cursor: 'pointer',
-      transform: 'translateY(0)',
-      boxShadow: '0 6px 18px rgba(2,6,23,0.06)',
+      justifyContent: 'space-between',
+      transition: 'all 0.2s ease',
+      cursor: 'default',
+      overflow: 'hidden',
     }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.transform = 'translateY(-6px)'
-      e.currentTarget.style.boxShadow = '0 18px 40px rgba(2,6,23,0.12)'
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.transform = 'translateY(0)'
-      e.currentTarget.style.boxShadow = '0 6px 18px rgba(2,6,23,0.06)'
-    }}>
-      {title && (
-        <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.06em', color: textColor, textTransform: 'uppercase', marginBottom: '4px' }}>
-          {title}
-        </span>
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateY(-4px)'
+        e.currentTarget.style.boxShadow = 'var(--shadow-premium-hover)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = 'var(--shadow-premium)'
+      }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+        <div>
+          <p style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: titleColor }}>{title}</p>
+        </div>
+        {icon && (
+          <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: badgeBackground, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, boxShadow: '0 10px 20px rgba(0,0,0,0.08)' }}>
+            {React.isValidElement(icon) ? React.cloneElement(icon, { size: 24 }) : icon}
+          </div>
+        )}
+      </div>
+      
+      {icon && (
+        <div style={{ marginTop: '18px', display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: '68px', height: '68px', borderRadius: '999px', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 16px 30px rgba(15, 23, 42, 0.16)' }}>
+            {React.isValidElement(icon) ? React.cloneElement(icon, { size: 32 }) : icon}
+          </div>
+        </div>
       )}
-      {value && (
-        <span style={{ fontSize: '2.75rem', lineHeight: 1, fontWeight: 800, color: textColor }}>
-          {value}
-        </span>
+
+      <div style={{ marginTop: '24px' }}>
+        {value !== undefined && (
+          <p style={{ margin: 0, fontSize: '3.5rem', lineHeight: 1, fontWeight: 800, color: valueColor }}>{value}</p>
+        )}
+        {caption && (
+          <p style={{ margin: '10px 0 0', fontSize: '16px', fontWeight: 600, color: captionColor }}>{caption}</p>
+        )}
+        {children && !value && (
+          <div style={{ marginTop: '16px' }}>{children}</div>
+        )}
+      </div>
+
+      {(subtitle || icon) && (
+        <div style={{ marginTop: '22px', padding: '16px', background: pillBackground, borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {icon && (
+            <div style={{ width: '42px', height: '42px', borderRadius: '16px', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, boxShadow: '0 10px 20px rgba(15, 23, 42, 0.08)' }}>
+              {React.isValidElement(icon) ? React.cloneElement(icon, { size: 22 }) : icon}
+            </div>
+          )}
+          {subtitle && (
+            <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: subtitleColor }}>{subtitle}</p>
+          )}
+        </div>
       )}
-      {icon && <div style={{ marginTop: '6px' }}>{icon}</div>}
-      {children && <div style={{ color: textColor }}>{children}</div>}
     </div>
   )
 }
