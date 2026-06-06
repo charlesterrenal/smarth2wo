@@ -179,18 +179,24 @@
   }
 
   @keyframes caustic-drift {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translate(0, 0) scale(1);
     }
+
     50% {
       transform: translate(-3%, 4%) scale(1.05);
     }
   }
 
   @keyframes caustic-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 0.55;
     }
+
     50% {
       opacity: 1;
     }
@@ -205,9 +211,11 @@
     0% {
       transform: translate3d(0, 0, 0);
     }
+
     50% {
       transform: translate3d(var(--tx), -60vh, 0);
     }
+
     100% {
       transform: translate3d(0, -120vh, 0);
     }
@@ -216,26 +224,30 @@
   .wave {
     animation: move-forever linear infinite;
   }
-  
+
   .wave-1 {
     animation-duration: 16s;
-    fill: rgba(56, 189, 248, 0.2); /* light blue translucent */
+    fill: rgba(56, 189, 248, 0.2);
+    /* light blue translucent */
   }
-  
+
   .wave-2 {
     animation-duration: 12s;
-    fill: rgba(45, 212, 191, 0.3); /* teal translucent */
+    fill: rgba(45, 212, 191, 0.3);
+    /* teal translucent */
   }
-  
+
   .wave-3 {
     animation-duration: 8s;
-    fill: var(--bg-page); /* solid to seamlessly transition to the next section */
+    fill: var(--bg-page);
+    /* solid to seamlessly transition to the next section */
   }
 
   @keyframes move-forever {
     0% {
       transform: translate3d(-90px, 0, 0);
     }
+
     100% {
       transform: translate3d(85px, 0, 0);
     }

@@ -32,11 +32,16 @@ export default function App() {
     <div className="min-h-screen">
       <ScrollProgress />
       <Navbar activeSection={activeSection} />
-      
+
       <main>
         {/* We give hero an id='top' implicitly handled by navbar scrollTo */}
         <Hero />
         <Features />
+        <div className="h-[24rem] md:h-[48rem] flex items-start justify-center px-6 pt-8 md:pt-12">
+          <h2 className="sec-title text-center">
+            SmartH2wo Water Dispenser
+          </h2>
+        </div>
         <HowItWorks />
         <Team />
       </main>

@@ -19,7 +19,7 @@ export function Hero() {
       {/* Animated Water Caustics Effects */}
       <div className="caustic-1 absolute inset-0 pointer-events-none" />
       <div className="caustic-2 absolute inset-0 pointer-events-none" />
-      
+
       {/* Rising Bubbles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         {bubbles.map(b => (
@@ -40,44 +40,44 @@ export function Hero() {
       </div>
 
       <div className="relative px-6 max-w-[1200px] mx-auto z-10">
-      
-      <div 
-        ref={ref}
-        className="fade-in max-w-[800px] mx-auto text-center flex flex-col items-center"
-      >
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-900/30 text-blue-300 font-medium text-sm mb-8 border border-blue-800/50 backdrop-blur-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400"></span>
-          </span>
-          Smart Water Dispenser System
+
+        <div
+          ref={ref}
+          className="fade-in max-w-[800px] mx-auto text-center flex flex-col items-center"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-900/30 text-blue-300 font-medium text-sm mb-8 border border-blue-800/50 backdrop-blur-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400"></span>
+            </span>
+            Smart Water Dispenser System
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.1] mb-6 tracking-tight drop-shadow-sm">
+            Smart water management for the <span className="gradient-text">modern age</span>
+          </h1>
+
+          <p className="text-lg md:text-xl text-blue-100/80 mb-10 max-w-[600px] mx-auto leading-relaxed">
+            Monitor quality, manage payments, and predict maintenance for your water dispensers all from a single, powerful dashboard.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto mb-20">
+            <a href="#features" className="btn-primary py-4 px-8 text-base">
+              Learn More
+            </a>
+            <a href="/dashboard" className="btn-ghost py-4 px-8 text-base text-white border-white/30 hover:bg-white/10 hover:border-white/50">
+              Go to Dashboard &rarr;
+            </a>
+          </div>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.1] mb-6 tracking-tight drop-shadow-sm">
-          Smart water management for the <span className="gradient-text">modern age</span>
-        </h1>
-
-        <p className="text-lg md:text-xl text-blue-100/80 mb-10 max-w-[600px] mx-auto leading-relaxed">
-          Monitor quality, manage payments, and predict maintenance for your water dispensers all from a single, powerful dashboard.
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto mb-20">
-          <a href="#features" className="btn-primary py-4 px-8 text-base">
-            Learn More
-          </a>
-          <a href="/dashboard" className="btn-ghost py-4 px-8 text-base text-white border-white/30 hover:bg-white/10 hover:border-white/50">
-            Go to Dashboard &rarr;
-          </a>
+        {/* Stats Strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-[1000px] mx-auto pb-12">
+          <StatCard icon={<Droplets />} label="Liters Dispensed" value="2.4M+" />
+          <StatCard icon={<Activity />} label="System Uptime" value="99.9%" />
+          <StatCard icon={<CreditCard />} label="Transactions" value="150k+" />
+          <StatCard icon={<MapPin />} label="Active Stations" value="42" />
         </div>
-      </div>
-
-      {/* Stats Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-[1000px] mx-auto pb-12">
-        <StatCard icon={<Droplets />} label="Liters Dispensed" value="2.4M+" />
-        <StatCard icon={<Activity />} label="System Uptime" value="99.9%" />
-        <StatCard icon={<CreditCard />} label="Transactions" value="150k+" />
-        <StatCard icon={<MapPin />} label="Active Stations" value="42" />
-      </div>
       </div>
 
       {/* Animated Wave Divider */}

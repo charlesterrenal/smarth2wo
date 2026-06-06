@@ -7,9 +7,9 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
 
           <div className="col-span-1 md:col-span-2">
-            <a href="#" className="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white mb-4">
-              <Droplet className="text-brand-blue" fill="currentColor" size={28} />
-              SmartH2wo
+            <a href="#" className="grid items-center mb-6 w-max transform scale-[2] md:scale-[2.5] origin-left">
+              <img src="/Text%20Logo%20SmartH2wo.png" alt="SmartH2wo" className="col-start-1 row-start-1 h-10 md:h-12 w-auto object-contain object-left transition-opacity duration-200 opacity-100 dark:opacity-0" />
+              <img src="/Light%20Text%20Logo.png" alt="SmartH2wo" className="col-start-1 row-start-1 h-10 md:h-12 w-auto object-contain object-left transition-opacity duration-200 opacity-0 dark:opacity-100" />
             </a>
             <p className="text-slate-500 dark:text-slate-400 max-w-[400px] leading-relaxed">
               Modernizing automated water dispensing systems with real-time monitoring, predictive maintenance, and seamless payments.

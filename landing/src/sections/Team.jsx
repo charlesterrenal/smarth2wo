@@ -54,8 +54,8 @@ function TeamCard({ member, delay }) {
   const ref = useFadeIn()
 
   return (
-    <div 
-      ref={ref} 
+    <div
+      ref={ref}
       className="fade-in card flex flex-col items-center text-center p-8 group"
       style={{ transitionDelay: `${delay}ms` }}
     >
@@ -64,7 +64,7 @@ function TeamCard({ member, delay }) {
       </div>
       <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{member.name}</h3>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{member.role}</p>
-      
+
       <div className="flex items-center gap-3 mt-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         <a href="#" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
           <Globe size={18} />

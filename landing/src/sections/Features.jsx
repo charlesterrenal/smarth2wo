@@ -58,8 +58,8 @@ function FeatureRow({ feature, isReversed }) {
   const ref = useFadeIn()
 
   return (
-    <div 
-      ref={ref} 
+    <div
+      ref={ref}
       className={`fade-in flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} items-center gap-12 lg:gap-24`}
     >
       {/* Visual Placeholder */}

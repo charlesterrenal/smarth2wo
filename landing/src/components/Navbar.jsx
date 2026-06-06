@@ -41,12 +41,16 @@ export function Navbar({ activeSection }) {
         <a
           href="#"
           onClick={(e) => { e.preventDefault(); scrollTo('top') }}
-          className={`flex items-center gap-2 text-xl font-bold transition-colors ${
-            isScrolled ? 'text-slate-900 dark:text-white' : 'text-white'
-          }`}
+          className="grid items-center transform scale-[2] md:scale-[2.5] origin-left"
         >
-          <Droplet className={isScrolled ? 'text-brand-blue' : 'text-blue-400'} fill="currentColor" size={24} />
-          SmartH2wo
+          {!isScrolled ? (
+            <img src="/Light%20Text%20Logo.png" alt="SmartH2wo" className="col-start-1 row-start-1 h-10 md:h-12 w-auto object-contain object-left" />
+          ) : (
+            <>
+              <img src="/Text%20Logo%20SmartH2wo.png" alt="SmartH2wo" className="col-start-1 row-start-1 h-10 md:h-12 w-auto object-contain object-left transition-opacity duration-200 opacity-100 dark:opacity-0" />
+              <img src="/Light%20Text%20Logo.png" alt="SmartH2wo" className="col-start-1 row-start-1 h-10 md:h-12 w-auto object-contain object-left transition-opacity duration-200 opacity-0 dark:opacity-100" />
+            </>
+          )}
         </a>
 
         {/* Desktop Nav */}
@@ -54,7 +58,7 @@ export function Navbar({ activeSection }) {
           <div className="flex items-center gap-6">
             {NAV_ITEMS.map((item) => {
               const isActive = activeSection === item.id;
-              
+
               let colorClass = '';
               if (isScrolled) {
                 colorClass = isActive ? 'text-brand-blue dark:text-brand-cyan' : 'text-slate-600 hover:text-brand-blue dark:text-slate-300';
