@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Droplet, ArrowLeftRight, DollarSign, Wrench, Leaf, AlertTriangle, Info } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import AlertCard from '../components/AlertCard'
@@ -87,6 +87,14 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
   const savedPower = localStorage.getItem('mockSystemPower')
   const isOperational = savedPower !== null ? savedPower === 'true' : (sensorStatus ? sensorStatus.power_on : true)
 
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const consumptionData = days.map((day, index) => ({
+    day,
+    ml: transactions
+      .filter(t => new Date(t.created_at).getDay() === index)
+      .reduce((s, t) => s + t.volume_ml, 0)
+  }))
+
   return (
     <div className="page-container" style={{ 
       padding: '20px',
@@ -162,6 +170,40 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
               caption={maintenancePrediction ? "Days remaining" : "No Data"}
               subtitle={maintenancePrediction ? maintenancePrediction.reason : 'API unavailable'}
             />
+          </div>
+
+          {/* Water Consumption Chart */}
+          <div style={{ 
+            marginTop: '24px', 
+            background: 'var(--color-surface)', 
+            borderRadius: 'var(--radius-card)', 
+            padding: '24px', 
+            border: '1px solid var(--color-border)', 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.03)' 
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, marginBottom: '24px', color: 'var(--color-text)', letterSpacing: '0.02em' }}>
+              Water Consumption Over Time
+            </h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={consumptionData} margin={{ left: 0, right: 10, top: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorMl" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-blue)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--color-blue)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
+                <XAxis dataKey="day" tick={{ fontSize: 13, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} tickMargin={10} />
+                <YAxis hide />
+                <Tooltip 
+                  cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '3 3' }} 
+                  formatter={(v) => [`${v}mL`, 'Consumed']} 
+                  contentStyle={{ borderRadius: '12px', fontSize: '14px', fontWeight: '500', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
+                  itemStyle={{ color: 'var(--color-blue)', fontWeight: '700' }}
+                />
+                <Area type="monotone" dataKey="ml" stroke="var(--color-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorMl)" activeDot={{ r: 6, fill: 'var(--color-blue)', stroke: 'var(--color-surface)', strokeWidth: 2 }} animationDuration={1500} animationEasing="ease-in-out" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
