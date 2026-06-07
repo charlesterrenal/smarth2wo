@@ -75,7 +75,7 @@ class SensorData(BaseModel):
     temperature: Optional[float] = None
     flow_rate: Optional[float] = None
     pressure: Optional[float] = None
-    power_on: Optional[bool] = True
+    power_on: Optional[bool] = None
 
 class MaintenancePrediction(BaseModel):
     days_remaining: int
@@ -137,7 +137,7 @@ def predict_maintenance(sensor_data: SensorData) -> MaintenancePrediction:
 def detect_anomalies(sensor_data: SensorData) -> List[Anomaly]:
     anomalies = []
     
-    if not sensor_data.power_on:
+    if sensor_data.power_on is False:
         anomalies.append(Anomaly(
             type="Power Status",
             message="System is powered off",
@@ -234,11 +234,13 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
             prediction = predict_maintenance(sensor_data)
             print("ML FALLBACK: Using rule-based maintenance prediction.")
         if supabase:
-            supabase.table("sensor_status").update({
-                "water_level_pct": int(sensor_data.water_level_pct) if sensor_data.water_level_pct is not None else 67,
-                "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
-                "updated_at": datetime.now().isoformat()
-            }).eq("id", 1).execute()
+            update_data = {"updated_at": datetime.now().isoformat()}
+            if sensor_data.water_level_pct is not None:
+                update_data["water_level_pct"] = int(sensor_data.water_level_pct)
+            if sensor_data.power_on is not None:
+                update_data["power_on"] = sensor_data.power_on
+                
+            supabase.table("sensor_status").update(update_data).eq("id", 1).execute()
             
             # Record historical sensor data for ML and analytics
             try:
@@ -305,11 +307,13 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
             anomalies = detect_anomalies(sensor_data)
             print("ML FALLBACK: Using rule-based anomaly detection.")
         if supabase:
-            supabase.table("sensor_status").update({
-                "water_level_pct": int(sensor_data.water_level_pct) if sensor_data.water_level_pct is not None else 67,
-                "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
-                "updated_at": datetime.now().isoformat()
-            }).eq("id", 1).execute()
+            update_data = {"updated_at": datetime.now().isoformat()}
+            if sensor_data.water_level_pct is not None:
+                update_data["water_level_pct"] = int(sensor_data.water_level_pct)
+            if sensor_data.power_on is not None:
+                update_data["power_on"] = sensor_data.power_on
+                
+            supabase.table("sensor_status").update(update_data).eq("id", 1).execute()
             
             # Record historical sensor data for ML and analytics
             try:
@@ -332,8 +336,9 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
                         "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
                     }).execute()
                     
-                    # Send email alert for anomalies
-                    send_anomaly_alert(anomaly.type, anomaly.message, anomaly.severity)
+                    # Send email alert for high/critical anomalies
+                    if anomaly.severity in ["critical", "high"]:
+                        send_anomaly_alert(anomaly.type, anomaly.message, anomaly.severity)
         return anomalies
     except Exception as e:
         print(f"Database Error in Anomaly Endpoint: {e}")
