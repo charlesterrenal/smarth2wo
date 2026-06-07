@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Menu, X, Droplet } from 'lucide-react'
+import { Menu, X, Droplet, User } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
 
 const NAV_ITEMS = [
@@ -41,7 +41,7 @@ export function Navbar({ activeSection }) {
         <a
           href="#"
           onClick={(e) => { e.preventDefault(); scrollTo('top') }}
-          className="grid items-center transform scale-[2] md:scale-[2.5] origin-left"
+          className="grid items-center transform scale-[3] md:scale-[3.5] origin-left"
         >
           {!isScrolled ? (
             <img src="/Light%20Text%20Logo.png" alt="SmartH2wo" className="col-start-1 row-start-1 h-10 md:h-12 w-auto object-contain object-left" />
@@ -87,9 +87,10 @@ export function Navbar({ activeSection }) {
             <ThemeToggle />
             <a
               href="/dashboard"
-              className="text-sm font-semibold bg-brand-blue text-white px-5 py-2.5 rounded-full hover:bg-blue-600 transition-colors"
+              className="flex items-center justify-center w-10 h-10 rounded-full border border-slate-700/50 dark:border-slate-800 bg-brand-blue text-white hover:bg-blue-600 transition-colors"
+              aria-label="Go to dashboard"
             >
-              Dashboard &rarr;
+              <User size={18} />
             </a>
           </div>
         </div>

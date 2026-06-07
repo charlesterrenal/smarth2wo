@@ -64,14 +64,26 @@ function FeatureRow({ feature, isReversed }) {
     >
       {/* Visual Placeholder */}
       <div className="w-full md:w-1/2">
-        <div className="aspect-[4/3] rounded-3xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 flex flex-col items-center justify-center p-8 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className={`p-4 rounded-2xl ${feature.bg} ${feature.color} mb-4 shadow-sm`}>
-            {feature.icon}
+        <div className="aspect-[4/3] rounded-3xl p-[2px] relative overflow-hidden group transition-all duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer shadow-[0_6px_18px_rgba(2,6,23,0.06)] hover:-translate-y-[6px] hover:shadow-[0_18px_40px_rgba(55,138,221,0.2)] bg-slate-100 dark:bg-slate-800/50">
+          
+          {/* Default Border (visible when not hovering) */}
+          <div className="absolute inset-0 rounded-3xl border border-slate-200 dark:border-slate-700/50 group-hover:opacity-0 transition-opacity duration-500 z-10 pointer-events-none" />
+
+          {/* Spinning Neon Gradients (visible on hover) */}
+          <div className="absolute inset-[-100%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#00000000_50%,#378ADD_100%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" />
+          <div className="absolute inset-[-100%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_270deg_at_50%_50%,#00000000_50%,#1D9E75_100%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" />
+          
+          {/* Inner Content Area */}
+          <div className="relative h-full w-full rounded-[calc(1.5rem-2px)] bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-brand-blue/5 to-brand-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" />
+            
+            <div className={`relative z-10 p-4 rounded-2xl ${feature.bg} ${feature.color} mb-4 shadow-sm transition-transform duration-500 group-hover:scale-110`}>
+              {feature.icon}
+            </div>
+            <p className="relative z-10 font-mono text-sm text-slate-400 dark:text-slate-500 font-medium">
+              [ Screenshot / Demo Placeholder ]
+            </p>
           </div>
-          <p className="font-mono text-sm text-slate-400 dark:text-slate-500 font-medium">
-            [ Screenshot / Demo Placeholder ]
-          </p>
         </div>
       </div>
 

@@ -62,28 +62,16 @@ export function Hero() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto mb-20">
-            <a href="#features" className="btn-primary py-4 px-8 text-base">
+            <a href="#features" className="btn-ghost py-4 px-8 text-base text-white border-white hover:bg-brand-cyan hover:border-brand-cyan transition-colors">
               Learn More
             </a>
-            <a href="/dashboard" className="btn-ghost py-4 px-8 text-base text-white border-white/30 hover:bg-white/10 hover:border-white/50">
-              Go to Dashboard &rarr;
-            </a>
           </div>
-        </div>
-
-        {/* Stats Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-[1000px] mx-auto pb-12">
-          <StatCard icon={<Droplets />} label="Liters Dispensed" value="2.4M+" />
-          <StatCard icon={<Activity />} label="System Uptime" value="99.9%" />
-          <StatCard icon={<CreditCard />} label="Transactions" value="150k+" />
-          <StatCard icon={<MapPin />} label="Active Stations" value="42" />
-        </div>
-      </div>
+        </div>      </div>
 
       {/* Animated Wave Divider */}
       <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-[0] z-20">
         <svg
-          className="relative block w-full h-[60px] md:h-[100px]"
+          className="relative block w-full h-[120px] md:h-[180px]"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 24 150 28"
           preserveAspectRatio="none"
@@ -106,15 +94,3 @@ export function Hero() {
   )
 }
 
-function StatCard({ icon, label, value }) {
-  const ref = useFadeIn()
-  return (
-    <div ref={ref} className="fade-in card flex flex-col items-center text-center p-6 bg-slate-900/40 border-white/10 backdrop-blur-md">
-      <div className="text-blue-400 mb-3 bg-blue-500/10 p-3 rounded-2xl">
-        {icon}
-      </div>
-      <div className="text-3xl font-bold text-white mb-1 drop-shadow-sm">{value}</div>
-      <div className="text-sm font-medium text-blue-200/70">{label}</div>
-    </div>
-  )
-}
