@@ -128,14 +128,14 @@ class AnomalyDetector:
             
         try:
             # Check power status first (separate categorical rule, not in numeric features)
-            power_on = True
+            power_on = None
             if isinstance(sensor_data, dict):
-                power_on = sensor_data.get("power_on", True)
+                power_on = sensor_data.get("power_on")
             else:
-                power_on = getattr(sensor_data, "power_on", True)
+                power_on = getattr(sensor_data, "power_on", None)
                 
             anomalies = []
-            if not power_on:
+            if power_on is False:
                 anomalies.append({
                     "type": "Power Status",
                     "message": "System is powered off",

@@ -32,7 +32,7 @@ export async function getMaintenancePrediction() {
   }
 }
 
-export async function getAnomalies() {
+export async function getAnomalies(power_on = true) {
   try {
     const response = await fetch(`${API_BASE_URL}/api/anomalies/detect`, {
       method: 'POST',
@@ -40,10 +40,11 @@ export async function getAnomalies() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        water_level: 75,
+        water_level_pct: 75,
         temperature: 22,
         pressure: 2.5,
         flow_rate: 45,
+        power_on: power_on
       })
     })
 

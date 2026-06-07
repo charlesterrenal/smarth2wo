@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../context/ThemeContext'
-import { Search, Users, Repeat, DollarSign, ChevronDown, ShoppingBag } from 'lucide-react'
+import { Search, Users, Repeat, DollarSign, ChevronDown, ShoppingBag, CreditCard } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockTransactions } from '../lib/mockData'
@@ -77,7 +77,14 @@ export default function Transaction() {
   const total500 = transactions.filter(t => t.volume_ml === 500).length
   const total1000 = transactions.filter(t => t.volume_ml === 1000).length
   const totalRevenue = transactions.reduce((s, t) => s + Number(t.price), 0)
-  const uniqueCustomers = new Set(transactions.map(t => t.customer)).size
+  
+  const aov = transactions.length > 0 ? (totalRevenue / transactions.length).toFixed(2) : '0.00'
+  const paymentCounts = transactions.reduce((acc, t) => {
+    acc[t.payment_method] = (acc[t.payment_method] || 0) + 1
+    return acc
+  }, {})
+  const preferredPayment = Object.keys(paymentCounts).sort((a, b) => paymentCounts[b] - paymentCounts[a])[0] || 'N/A'
+  const preferredPaymentCount = paymentCounts[preferredPayment] || 0
 
   return (
     <div className="page-container" style={{
@@ -88,26 +95,26 @@ export default function Transaction() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px', marginBottom: '24px' }}>
         <StatCard
-          title="Total Customers"
-          caption="Users"
-          subtitle="Unique customers"
-          value={uniqueCustomers}
-          icon={<Users size={20} />}
+          title="Preferred Payment"
+          caption="Most used"
+          subtitle={`${preferredPaymentCount} transactions`}
+          value={<span>{formatPaymentMethod(preferredPayment)}</span>}
+          icon={<CreditCard size={20} />}
           accent="var(--color-purple)"
         />
         <StatCard
           title="Transactions"
-          caption="Total volume"
+          caption="Total orders"
           subtitle="Completed orders"
           value={transactions.length}
           icon={<Repeat size={20} />}
           accent="var(--color-blue)"
         />
         <StatCard
-          title="Total Revenue"
-          caption="Gross sales"
-          subtitle="Sales this period"
-          value={`₱${totalRevenue.toFixed(0)}`}
+          title="Avg Order Value"
+          caption="Per transaction"
+          subtitle="Average spend"
+          value={`₱${aov}`}
           icon={<DollarSign size={20} />}
           accent="var(--color-green)"
         />
@@ -254,7 +261,7 @@ export default function Transaction() {
                   <td style={{ padding: '18px 16px', color: 'var(--color-text)', fontSize: '14px' }}>{t.customer}</td>
                   <td style={{ padding: '18px 16px', color: 'var(--color-text-secondary)', fontSize: '14px' }}>{t.volume_ml >= 1000 ? `${t.volume_ml / 1000}L` : `${t.volume_ml}mL`}</td>
                   <td style={{ padding: '18px 16px', color: 'var(--color-text)', fontWeight: 700, fontSize: '14px' }}>₱{t.price.toFixed(2)}</td>
-                  <td style={{ padding: '18px 16px', color: 'var(--color-text-secondary)', textTransform: 'capitalize', fontSize: '14px' }}>{t.payment_method}</td>
+                  <td style={{ padding: '18px 16px', color: 'var(--color-text-secondary)', fontSize: '14px' }}>{formatPaymentMethod(t.payment_method)}</td>
                   <td style={{ padding: '18px 16px', color: 'var(--color-text-muted)', fontSize: '14px' }}>{formatTime(t.created_at)}</td>
                 </tr>
               ))}
@@ -268,6 +275,15 @@ export default function Transaction() {
 
 function formatTime(date) {
   return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+}
+
+function formatPaymentMethod(method) {
+  if (!method || method === 'N/A') return 'N/A';
+  const m = method.toLowerCase();
+  if (m === 'qr') return 'QR';
+  if (m === 'rfid') return 'RFID';
+  if (m === 'gcash') return 'GCash';
+  return m.charAt(0).toUpperCase() + m.slice(1);
 }
 
 

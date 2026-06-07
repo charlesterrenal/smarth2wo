@@ -6,6 +6,7 @@ export default function Settings() {
   const [schedule, setSchedule] = useState([])
   const [loading, setLoading] = useState(true)
   const [power, setPower] = useState(true)
+  const [confirmPowerAction, setConfirmPowerAction] = useState(null)
 
   useEffect(() => {
     // Read from localStorage for mock mode
@@ -26,8 +27,13 @@ export default function Settings() {
     ]).then(([scheduleRes, sensorRes]) => {
       setSchedule(scheduleRes.data ?? [])
       if (sensorRes.data) {
-        setPower(sensorRes.data.power_on)
-        localStorage.setItem('mockSystemPower', String(sensorRes.data.power_on))
+        const savedPower = localStorage.getItem('mockSystemPower')
+        if (savedPower !== null) {
+          setPower(savedPower === 'true')
+        } else {
+          setPower(sensorRes.data.power_on)
+          localStorage.setItem('mockSystemPower', String(sensorRes.data.power_on))
+        }
       }
       setLoading(false)
     })
@@ -94,14 +100,7 @@ export default function Settings() {
 
           {/* Large Premium Toggle */}
           <button
-            onClick={async () => {
-              const newPower = !power
-              setPower(newPower)
-              localStorage.setItem('mockSystemPower', String(newPower))
-              if (isSupabaseConfigured) {
-                await supabase.from('sensor_status').update({ power_on: newPower }).eq('id', 1)
-              }
-            }}
+            onClick={() => setConfirmPowerAction(!power)}
             style={{
               width: '80px',
               height: '44px',
@@ -233,6 +232,67 @@ export default function Settings() {
           </table>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmPowerAction !== null && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            background: 'var(--color-surface)', borderRadius: '24px', padding: '32px',
+            width: '90%', maxWidth: '400px', boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
+            border: '1px solid var(--color-border)', textAlign: 'center'
+          }}>
+            <div style={{ 
+              width: '64px', height: '64px', borderRadius: '50%', margin: '0 auto 20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: confirmPowerAction ? 'rgba(16,185,129,0.1)' : 'rgba(220,38,38,0.1)'
+            }}>
+              <span style={{ fontSize: '32px' }}>{confirmPowerAction ? '⚡' : '🔌'}</span>
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 12px 0', color: 'var(--color-text)' }}>
+              {confirmPowerAction ? 'Turn Dispenser ON?' : 'Turn Dispenser OFF?'}
+            </h3>
+            <p style={{ fontSize: '15px', color: 'var(--color-text-muted)', margin: '0 0 32px 0', lineHeight: 1.5 }}>
+              {confirmPowerAction 
+                ? 'The system will boot up and resume normal water dispensing operations.'
+                : 'The system will be powered down and users will not be able to dispense water.'}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <button 
+                onClick={() => setConfirmPowerAction(null)}
+                style={{
+                  padding: '12px', borderRadius: '12px', border: '1px solid var(--color-border)',
+                  background: 'transparent', color: 'var(--color-text)', fontWeight: 600, cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >Cancel</button>
+              <button 
+                onClick={async () => {
+                  const newPower = confirmPowerAction
+                  setConfirmPowerAction(null)
+                  setPower(newPower)
+                  localStorage.setItem('mockSystemPower', String(newPower))
+                  if (isSupabaseConfigured) {
+                    await supabase.from('sensor_status').update({ power_on: newPower }).eq('id', 1)
+                  }
+                }}
+                style={{
+                  padding: '12px', borderRadius: '12px', border: 'none',
+                  background: confirmPowerAction ? 'var(--color-green)' : 'var(--color-danger)', 
+                  color: 'white', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: confirmPowerAction ? '0 8px 16px rgba(16,185,129,0.2)' : '0 8px 16px rgba(220,38,38,0.2)'
+                }}
+              >Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
