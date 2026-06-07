@@ -6,19 +6,19 @@ export default function AlertCard({ title, icon, priority, message, accentCol, t
 
   return (
     <div style={{
-      background: '#FFFFFF',
+      background: 'var(--color-surface)',
       borderRadius: '16px',
       padding: '12px',
-      boxShadow: '0 4px 15px rgba(0,0,0,0.04)',
-      border: '1px solid #F1F5F9',
+      boxShadow: 'var(--shadow-card)',
+      border: '1px solid var(--color-border)',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px',
       transition: 'all 0.2s ease',
       cursor: 'default'
     }}
-    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.08)'; }}
-    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.04)'; }}
+    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = 'var(--shadow-hover)'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
     >
       {/* Top row: Title and Icon */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -29,7 +29,7 @@ export default function AlertCard({ title, icon, priority, message, accentCol, t
             background: accentCol, 
             boxShadow: `0 0 6px ${accentCol}` 
           }} />
-          <span style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text)' }}>
             {title}
           </span>
         </div>
@@ -48,21 +48,21 @@ export default function AlertCard({ title, icon, priority, message, accentCol, t
 
       {/* Middle row: Priority Value */}
       <div style={{ marginTop: '2px' }}>
-        <div style={{ fontSize: '20px', fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+        <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-text)', lineHeight: 1 }}>
           {priority}
         </div>
-        <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', marginTop: '2px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', marginTop: '2px' }}>
           Priority Level
         </div>
       </div>
 
       {/* Divider */}
-      <div style={{ height: '1px', background: '#F1F5F9', margin: '8px 0' }} />
+      <div style={{ height: '1px', background: 'var(--color-border)', margin: '8px 0' }} />
 
       {/* Bottom row: Details (Message) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '2px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '2px' }}>
             STATUS MESSAGE
           </div>
           <div style={{ fontSize: '12px', fontWeight: 700, color: accentCol }}>
@@ -71,10 +71,10 @@ export default function AlertCard({ title, icon, priority, message, accentCol, t
         </div>
         {time && (
           <div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '2px' }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '2px' }}>
               TIME
             </div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text)' }}>
               {time}
             </div>
           </div>
