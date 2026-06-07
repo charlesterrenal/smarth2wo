@@ -5,6 +5,7 @@ export default function PageHeader({ title }) {
       background: 'var(--color-surface)',
       display: 'flex',
       alignItems: 'center',
+      justifyContent: 'center',
       boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
       zIndex: 10,
     }}>
@@ -14,6 +15,7 @@ export default function PageHeader({ title }) {
         color: 'var(--color-text)',
         textTransform: 'uppercase',
         margin: 0,
+        lineHeight: 1,
       }}>
         {title}
       </h1>

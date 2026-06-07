@@ -34,7 +34,7 @@ export default function StatCard({ title, caption, subtitle, value, icon, accent
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
         <div>
-          <p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: titleColor }}>{title}</p>
+          <p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: titleColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</p>
         </div>
         {icon && (
           <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: badgeBackground, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, boxShadow: '0 8px 16px rgba(0,0,0,0.08)' }}>

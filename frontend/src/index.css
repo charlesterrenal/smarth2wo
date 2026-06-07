@@ -83,8 +83,14 @@ html, body, #root {
   height: 100%;
 }
 
+@font-face {
+  font-family: 'PesoFallback';
+  src: local('Inter'), local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('Arial'), local('sans-serif');
+  unicode-range: U+20B1;
+}
+
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'PesoFallback', 'DM Sans', sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
   min-height: 100vh;
@@ -211,9 +217,9 @@ input:focus {
 
 @media (max-width: 768px) {
   .page-header {
-    /* Push header right to make room for hamburger menu (which is left: 12px) */
-    padding: 0 20px 0 64px !important; 
-    height: 64px !important;
+    /* Push header right to make room for hamburger menu, symmetric padding to keep text centered */
+    padding: 0 72px 0 72px !important; 
+    height: 72px !important;
   }
   
   .page-header-title {

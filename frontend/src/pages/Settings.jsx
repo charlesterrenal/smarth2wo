@@ -4,23 +4,33 @@ import { mockSchedule } from '../lib/mockData'
 
 export default function Settings() {
   const [schedule, setSchedule] = useState([])
-  const [loading, setLoading]   = useState(true)
+  const [loading, setLoading] = useState(true)
   const [power, setPower] = useState(true)
 
   useEffect(() => {
+    // Read from localStorage for mock mode
+    const savedPower = localStorage.getItem('mockSystemPower')
+    if (savedPower !== null) {
+      setPower(savedPower === 'true')
+    }
+
     if (!isSupabaseConfigured) {
       setSchedule(mockSchedule)
       setLoading(false)
       return
     }
-    supabase
-      .from('schedule')
-      .select('*')
-      .order('id')
-      .then(({ data }) => {
-        setSchedule(data ?? [])
-        setLoading(false)
-      })
+
+    Promise.all([
+      supabase.from('schedule').select('*').order('id'),
+      supabase.from('sensor_status').select('*').eq('id', 1).single()
+    ]).then(([scheduleRes, sensorRes]) => {
+      setSchedule(scheduleRes.data ?? [])
+      if (sensorRes.data) {
+        setPower(sensorRes.data.power_on)
+        localStorage.setItem('mockSystemPower', String(sensorRes.data.power_on))
+      }
+      setLoading(false)
+    })
   }, [])
 
   if (loading) return <div style={{ padding: '32px' }}>Loading...</div>
@@ -53,15 +63,15 @@ export default function Settings() {
       maxWidth: '1600px',
       margin: '0 auto'
     }}>
-      
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1000px', margin: '0 auto' }}>
 
         {/* Master Power Banner */}
-        <div style={{ 
-          background: power ? 'linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%)' : 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg) 100%)', 
-          borderRadius: '24px', 
-          padding: '32px 40px', 
-          border: power ? 'none' : '1px solid var(--color-border)', 
+        <div style={{
+          background: power ? 'linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%)' : 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg) 100%)',
+          borderRadius: '24px',
+          padding: '32px 40px',
+          border: power ? 'none' : '1px solid var(--color-border)',
           boxShadow: power ? '0 20px 40px rgba(16, 185, 129, 0.2)' : 'var(--shadow-premium)',
           display: 'flex',
           justifyContent: 'space-between',
@@ -73,18 +83,25 @@ export default function Settings() {
               System Power
             </h2>
             <p style={{ fontSize: '15px', color: power ? 'rgba(255,255,255,0.9)' : 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ 
-                width: '10px', height: '10px', borderRadius: '50%', 
+              <span style={{
+                width: '10px', height: '10px', borderRadius: '50%',
                 background: power ? '#A7F3D0' : 'var(--color-danger)',
                 boxShadow: power ? '0 0 10px #A7F3D0' : '0 0 10px var(--color-danger)'
               }} />
               {power ? 'Dispenser is currently ONLINE and active.' : 'Dispenser is offline. Turn on to resume normal operations.'}
             </p>
           </div>
-          
+
           {/* Large Premium Toggle */}
           <button
-            onClick={() => setPower(!power)}
+            onClick={async () => {
+              const newPower = !power
+              setPower(newPower)
+              localStorage.setItem('mockSystemPower', String(newPower))
+              if (isSupabaseConfigured) {
+                await supabase.from('sensor_status').update({ power_on: newPower }).eq('id', 1)
+              }
+            }}
             style={{
               width: '80px',
               height: '44px',

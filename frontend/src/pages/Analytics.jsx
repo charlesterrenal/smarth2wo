@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, Sector } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts'
 import { Droplet, Activity, Clock, BarChart2, Users } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -125,13 +125,25 @@ export default function Analytics() {
         {/* Consumption over time */}
         <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
           <p style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', letterSpacing: '0.02em', color: 'var(--color-text)' }}>Water consumption over time</p>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={consumptionData} margin={{ left: 0, right: 10, top: 10 }}>
-              <XAxis dataKey="day" tick={{ fontSize: 14, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} />
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={consumptionData} margin={{ left: 0, right: 10, top: 10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorMl" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-blue)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="var(--color-blue)" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
+              <XAxis dataKey="day" tick={{ fontSize: 13, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} tickMargin={10} />
               <YAxis hide />
-              <Tooltip cursor={false} formatter={(v) => [`${v}mL`, 'Consumed']} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '14px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
-              <Line type="monotone" dataKey="ml" stroke="var(--color-blue)" strokeWidth={3} dot={false} />
-            </LineChart>
+              <Tooltip 
+                cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '3 3' }} 
+                formatter={(v) => [`${v}mL`, 'Consumed']} 
+                contentStyle={{ borderRadius: '12px', fontSize: '14px', fontWeight: '500', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
+                itemStyle={{ color: 'var(--color-blue)', fontWeight: '700' }}
+              />
+              <Area type="monotone" dataKey="ml" stroke="var(--color-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorMl)" activeDot={{ r: 6, fill: 'var(--color-blue)', stroke: 'var(--color-surface)', strokeWidth: 2 }} animationDuration={1500} animationEasing="ease-in-out" />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
@@ -183,14 +195,7 @@ export default function Analytics() {
           </ResponsiveContainer>
         </div>
 
-        {/* Total users */}
-        <StatCard 
-          title="Total Users — Today" 
-          accent="var(--color-purple)"
-          value={todayUsers}
-          icon={<Users size={20} />}
-          caption="Active today"
-        />
+
 
         {/* Users volume summary */}
         <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: 'var(--shadow-card)' }}>

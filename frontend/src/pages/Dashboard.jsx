@@ -221,22 +221,45 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
           }}>
             <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.02em' }}>Quick Stats</p>
             
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0, 102, 204, 0.05)', borderRadius: '12px' }}>
+            <div 
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0, 102, 204, 0.05)', borderRadius: '12px', transition: 'all 0.2s ease', cursor: 'default' }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 102, 204, 0.12)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
               <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Avg. Daily Revenue</span>
               <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-blue)' }}>
                 ₱{(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 7).toFixed(0)}
               </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0, 166, 81, 0.05)', borderRadius: '12px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>System Status</span>
-              <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-green)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', background: 'var(--color-green)', borderRadius: '50%' }} />
-                Operational
-              </span>
-            </div>
+            {(() => {
+              // Get power status from localStorage as fallback for mock mode, otherwise use Supabase sensor data
+              const savedPower = localStorage.getItem('mockSystemPower')
+              const isOperational = sensorStatus ? sensorStatus.power_on : (savedPower !== null ? savedPower === 'true' : true);
+              const color = isOperational ? 'var(--color-green)' : 'var(--color-danger)';
+              const bgColor = isOperational ? 'rgba(0, 166, 81, 0.05)' : 'rgba(220, 38, 38, 0.05)';
+              const text = isOperational ? 'Operational' : 'Not Operational';
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(123, 63, 242, 0.05)', borderRadius: '12px' }}>
+              return (
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: bgColor, borderRadius: '12px', transition: 'all 0.2s ease', cursor: 'default' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = `0 6px 16px ${isOperational ? 'rgba(0, 166, 81, 0.12)' : 'rgba(220, 38, 38, 0.12)'}`; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>System Status</span>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '8px', height: '8px', background: color, borderRadius: '50%' }} />
+                    {text}
+                  </span>
+                </div>
+              )
+            })()}
+
+            <div 
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(123, 63, 242, 0.05)', borderRadius: '12px', transition: 'all 0.2s ease', cursor: 'default' }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(123, 63, 242, 0.12)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
               <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Active Users</span>
               <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-purple)' }}>
                 {new Set(transactions.map(t => t.customer)).size}

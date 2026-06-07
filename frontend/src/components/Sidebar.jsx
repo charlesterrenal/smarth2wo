@@ -4,6 +4,7 @@ import { LayoutDashboard, ArrowLeftRight, CreditCard, BarChart2, ClipboardList, 
 import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import logo from '../assets/smarth2wo_logo.png'
+import logoDark from '../assets/smarth2wo_logo_dark.png'
 
 const navItems = [
   { to: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard'   },
@@ -44,8 +45,8 @@ export default function Sidebar() {
           onClick={() => setIsOpen(!isOpen)}
           style={{
             position: 'fixed',
-            top: '12px',
-            left: '12px',
+            top: '15px',
+            left: '16px',
             zIndex: 101,
             background: 'var(--color-surface)',
             border: '1px solid var(--color-border)',
@@ -80,15 +81,14 @@ export default function Sidebar() {
         {/* Logo */}
         <div style={{ marginBottom: '24px', padding: '0 8px', display: 'flex', justifyContent: 'center' }}>
           <img 
-            src={logo} 
+            src={isDark ? logoDark : logo} 
             alt="SmartH2WO Logo" 
             style={{ 
               width: '100%', 
               maxWidth: '220px',
-              height: 'auto', 
+              height: '32px', 
               objectFit: 'contain', 
-              display: 'block',
-              transform: 'scale(1.15)'
+              display: 'block'
             }} 
           />
         </div>

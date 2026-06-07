@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useTheme } from '../context/ThemeContext'
 import logo from '../assets/smarth2wo_logo.png'
+import logoDark from '../assets/smarth2wo_logo_dark.png'
 
 export default function Login() {
+  const { isDark } = useTheme()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -66,7 +69,7 @@ export default function Login() {
         boxShadow: 'var(--shadow-card)'
       }}>
         <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-          <img src={logo} alt="SmartH2WO Logo" style={{ height: '48px', width: 'auto', marginBottom: '12px', objectFit: 'contain' }} />
+          <img src={isDark ? logoDark : logo} alt="SmartH2WO Logo" style={{ height: '36px', width: '100%', maxWidth: '250px', marginBottom: '12px', objectFit: 'contain' }} />
           <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
             Admin Dashboard
           </p>
