@@ -295,12 +295,15 @@ function TotalSalesCard({ transactions, revenue }) {
         e.currentTarget.style.transform = 'translateY(0)'
         e.currentTarget.style.boxShadow = 'var(--shadow-premium)'
       }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--color-text-secondary)' }}>Total Sales</p>
-          <p style={{ margin: '10px 0 0', fontSize: '28px', fontWeight: 800, color: 'var(--color-text)' }}>{transactions} Transactions</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--color-text)' }}>Total Sales</p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '3.5rem', lineHeight: 1, fontWeight: 800, color: 'var(--color-text)' }}>{transactions}</span>
+            <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text-muted)' }}>Transactions</span>
+          </div>
         </div>
-        <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(37, 99, 235, 0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
+        <div style={{ width: '48px', height: '48px', flexShrink: 0, borderRadius: '16px', background: 'rgba(37, 99, 235, 0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
           <ShoppingBag size={22} />
         </div>
       </div>

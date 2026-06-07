@@ -224,3 +224,80 @@ input:focus {
     padding: 16px !important;
   }
 }
+
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes stat-card-border-spin {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+/* Premium StatCard Hover Effect */
+.stat-card {
+  position: relative;
+  border-radius: var(--radius-card);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: default;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-card);
+  padding: 2px; /* border thickness */
+  
+  /* Tracing light gradient */
+  background: conic-gradient(
+    from var(--border-angle),
+    color-mix(in srgb, var(--card-accent) 15%, transparent) 0%,
+    color-mix(in srgb, var(--card-accent) 15%, transparent) 60%,
+    var(--card-accent) 100%
+  );
+  
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.stat-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 32px 80px -12px color-mix(in srgb, var(--card-accent) 25%, transparent), var(--shadow-premium-hover);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+  animation: stat-card-border-spin 3s linear infinite;
+}
+
+:root.dark-mode .stat-card:hover {
+  box-shadow: 0 32px 80px -12px color-mix(in srgb, var(--card-accent) 15%, transparent), var(--shadow-premium-hover);
+}
+
+/* Recharts Smooth Pie Hover */
+.recharts-pie-sector path {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+  transform-origin: 50% 45%;
+  transform-box: fill-box; /* usually view-box works better for SVG if origin is relative to svg */
+}
+
+/* Actually, transform-origin for SVG paths works best with exact px coords if we do it inline, but let's try 50% 45% with view-box */
+svg.recharts-surface .recharts-pie-sector path {
+  transform-origin: 50% 45%;
+  transform-box: view-box;
+}
+
+.recharts-pie-sector path:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0px 8px 16px rgba(0, 0, 0, 0.15));
+  outline: none;
+}
