@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Droplet, ArrowLeftRight, DollarSign, Wrench, Leaf } from 'lucide-react'
+import { Droplet, ArrowLeftRight, DollarSign, Wrench, Leaf, AlertTriangle } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase } from '../lib/supabase'
 import { getMaintenancePrediction, getAnomalies } from '../lib/maintenanceApi'
@@ -87,34 +87,66 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
       {/* Anomalies Alert Banner */}
       {anomalies.length > 0 && (
         <div style={{
-          background: 'var(--color-danger-light)',
-          border: '1px solid var(--color-danger)',
-          borderRadius: 'var(--radius-inner)',
-          padding: '16px 24px',
+          background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.98))',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          borderRadius: 'var(--radius-card)',
+          padding: '24px',
           marginBottom: '24px',
-          boxShadow: '0 8px 32px rgba(2,6,23,0.06)',
+          boxShadow: '0 12px 40px rgba(220, 38, 38, 0.3)',
+          color: 'white',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '24px' }}>⚠️</span>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-danger-dark)' }}>
-              {anomalies.length} System Anomal{anomalies.length > 1 ? 'ies' : 'y'} Detected
-            </span>
+          {/* subtle glow effect */}
+          <div style={{ position: 'absolute', top: '-50%', right: '-10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%)', borderRadius: '50%' }} />
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', position: 'relative', zIndex: 1 }}>
+            <div style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              <AlertTriangle size={28} color="white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, letterSpacing: '0.02em', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                {anomalies.length} System Anomal{anomalies.length > 1 ? 'ies' : 'y'} Detected
+              </h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'rgba(255,255,255,0.9)' }}>Immediate attention is required to prevent hardware damage.</p>
+            </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', position: 'relative', zIndex: 1 }}>
             {anomalies.map((anomaly, idx) => (
               <div key={idx} style={{
-                fontSize: '13px',
-                color: 'var(--color-danger-dark)',
-                padding: '12px',
-                background: 'rgba(220, 38, 38, 0.05)',
+                fontSize: '14px',
+                color: 'white',
+                padding: '16px',
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
                 borderLeft: `4px solid ${
-                  anomaly.severity === 'critical' ? 'var(--color-danger-dark)' :
-                  anomaly.severity === 'high' ? 'var(--color-warning)' :
-                  'var(--color-yellow)'
+                  anomaly.severity === 'critical' ? '#ff4d4d' :
+                  anomaly.severity === 'high' ? '#ff9933' :
+                  '#ffcc00'
                 }`,
                 borderRadius: '12px',
-              }}>
-                <strong>{anomaly.type}</strong> — {anomaly.message}
+                backdropFilter: 'blur(8px)',
+                transition: 'all 0.2s ease',
+                cursor: 'default',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <strong style={{ fontSize: '15px', letterSpacing: '0.03em' }}>{anomaly.type}</strong>
+                  <span style={{ 
+                    fontSize: '11px', 
+                    padding: '4px 8px', 
+                    borderRadius: '20px', 
+                    background: 'rgba(255,255,255,0.15)',
+                    textTransform: 'uppercase',
+                    fontWeight: 700,
+                    letterSpacing: '0.05em'
+                  }}>{anomaly.severity}</span>
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>
+                  {anomaly.message}
+                </div>
               </div>
             ))}
           </div>
