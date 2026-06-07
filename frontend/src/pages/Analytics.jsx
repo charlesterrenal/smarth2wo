@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts'
 import { Droplet, Activity, Clock, BarChart2, Users, Leaf } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -291,33 +291,6 @@ export default function Analytics() {
           ))}
         </div>
       </div>
-
-      {/* Sensor History Trends */}
-      <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>SYSTEM HEALTH & ML TRENDS</h3>
-        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
-          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)' }}>Temperature & Water Level History</p>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={historyData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} tickMargin={10} />
-              
-              <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
-              
-              <Tooltip 
-                cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '3 3' }} 
-                contentStyle={{ borderRadius: '12px', fontSize: '14px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
-              />
-              <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
-              
-              <Line yAxisId="left" type="monotone" name="Temperature (°C)" dataKey="temp" stroke="var(--color-danger)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
-              <Line yAxisId="right" type="monotone" name="Water Level (%)" dataKey="level" stroke="var(--color-blue)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
     </div>
   )
 }
