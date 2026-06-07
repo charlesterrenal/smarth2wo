@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Droplet, ArrowLeftRight, DollarSign, Wrench, Leaf, AlertTriangle, Info } from 'lucide-react'
 import StatCard from '../components/StatCard'
+import AlertCard from '../components/AlertCard'
 import { supabase } from '../lib/supabase'
 import { getMaintenancePrediction, getAnomalies } from '../lib/maintenanceApi'
 
@@ -129,24 +130,21 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
               subtitle="500mL equivalents"
             />
 
-            {/* Total Revenue */}
+            {/* Revenue */}
             <StatCard 
-              title="Total Revenue" 
+              title="Revenue" 
               accent="var(--color-green)"
-              icon={<DollarSign size={20} />}
+              icon={<DollarSign />}
               value={`₱${(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 1000).toFixed(1)}K`}
-              caption="Gross income"
-              subtitle="All time sales"
-            />
-
-            {/* Avg Daily Revenue */}
-            <StatCard 
-              title="Avg Daily Rev" 
-              accent="var(--color-teal)"
-              icon={<DollarSign size={20} />}
-              value={`₱${(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 7).toFixed(0)}`}
-              caption="Last 7 days"
-              subtitle="Consistent flow"
+              caption="Total gross income"
+              subtitle={
+                <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <DollarSign size={14} /> Avg Daily: ₱{(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 7).toFixed(0)}
+                  </span>
+                  <span style={{ fontSize: '11px', opacity: 0.8 }}>Last 7 days</span>
+                </span>
+              }
             />
 
             {/* Maintenance */}
@@ -168,35 +166,24 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
         </div>
 
         {/* Right: Anomalies Sidebar */}
-        <div style={{ flex: '1 1 300px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: '#f97316', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ flex: '0 0 180px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: '#f97316', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
             <AlertTriangle size={18} />
             SYSTEM ALERTS
           </h3>
           <div style={{ 
-            background: 'var(--color-surface)', 
-            border: '1px solid var(--color-border)', 
-            borderRadius: 'var(--radius-card)', 
-            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
             height: 'calc(100% - 38px)'
           }}>
             {/* System Status Card (Injected) */}
-            <StatCard 
-              title={
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isOperational ? 'var(--color-green)' : '#6b7280', boxShadow: `0 0 8px ${isOperational ? 'var(--color-green)' : '#6b7280'}` }} />
-                  System Status
-                </span>
-              }
-              accent="var(--color-text-secondary)"
-              icon={<Info size={20} />}
-              value={isOperational ? 'Operational' : 'Offline'}
-              caption="Current State"
-              subtitle={isOperational ? 'System running normally' : 'System is powered off'}
-              size="small"
+            <AlertCard 
+              title="System Status"
+              accentCol={isOperational ? 'var(--color-green)' : '#6b7280'}
+              icon={<Info />}
+              priority={isOperational ? 'Operational' : 'Offline'}
+              message={isOperational ? 'System running normally' : 'System is powered off'}
             />
 
             {anomalies.filter(a => a.type !== 'Power Status').map((anomaly, idx) => {
@@ -216,20 +203,13 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
                 }
 
                 return (
-                  <StatCard 
+                  <AlertCard 
                     key={idx}
-                    title={
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: accentCol, boxShadow: `0 0 8px ${accentCol}` }} />
-                        {anomaly.type}
-                      </span>
-                    }
-                    accent="var(--color-text-secondary)"
+                    title={anomaly.type}
+                    accentCol={accentCol}
                     icon={icon}
-                    value={anomaly.severity.charAt(0).toUpperCase() + anomaly.severity.slice(1)}
-                    caption="Priority Level"
-                    subtitle={anomaly.message}
-                    size="small"
+                    priority={anomaly.severity.charAt(0).toUpperCase() + anomaly.severity.slice(1)}
+                    message={anomaly.message}
                   />
                 )
               })}
