@@ -184,15 +184,14 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
             boxShadow: '0 4px 20px rgba(0,0,0,0.03)' 
           }}>
             <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, marginBottom: '24px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>
-              SYSTEM HEALTH & ML TRENDS
+              WATER LEVEL HISTORY
             </h3>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={historyData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
                 <XAxis dataKey="time" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} tickMargin={10} />
                 
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
                 
                 <Tooltip 
                   cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '3 3' }} 
@@ -200,8 +199,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
                 
-                <Line yAxisId="left" connectNulls={true} type="monotone" name="Temperature (°C)" dataKey="temp" stroke="var(--color-danger)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
-                <Line yAxisId="right" connectNulls={true} type="monotone" name="Water Level (%)" dataKey="level" stroke="var(--color-blue)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
+                <Line connectNulls={true} type="monotone" name="Water Level (%)" dataKey="level" stroke="var(--color-blue)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
               </LineChart>
             </ResponsiveContainer>
           </div>
