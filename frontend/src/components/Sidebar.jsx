@@ -3,14 +3,16 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, ArrowLeftRight, CreditCard, BarChart2, ClipboardList, Settings, Sun, Moon, Menu, X, LogOut } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
+import logo from '../assets/smarth2wo_logo.png'
+import logoDark from '../assets/smarth2wo_logo_dark.png'
 
 const navItems = [
-  { to: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard'   },
-  { to: '/transaction', icon: ArrowLeftRight,  label: 'Transaction'  },
-  { to: '/admin/payments', icon: CreditCard,  label: 'Admin Payments' },
-  { to: '/analytics',   icon: BarChart2,       label: 'Analytics'    },
-  { to: '/logs',        icon: ClipboardList,   label: 'Logs'         },
-  { to: '/settings',    icon: Settings,        label: 'Settings'     },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/transaction', icon: ArrowLeftRight, label: 'Transaction' },
+  { to: '/admin/payments', icon: CreditCard, label: 'Admin Payments' },
+  { to: '/analytics', icon: BarChart2, label: 'Analytics' },
+  { to: '/logs', icon: ClipboardList, label: 'Logs' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
 export default function Sidebar() {
@@ -18,6 +20,7 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [hoveredLink, setHoveredLink] = useState(null)
 
   useEffect(() => {
     const handleResize = () => {
@@ -25,7 +28,7 @@ export default function Sidebar() {
       setIsMobile(mobile)
       if (!mobile) setIsOpen(false)
     }
-    
+
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
@@ -43,7 +46,7 @@ export default function Sidebar() {
           onClick={() => setIsOpen(!isOpen)}
           style={{
             position: 'fixed',
-            top: '16px',
+            top: '15px',
             left: '16px',
             zIndex: 101,
             background: 'var(--color-surface)',
@@ -61,14 +64,14 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside style={{
-        width: isMobile ? '100%' : 'var(--sidebar-width)',
+        width: isMobile ? '280px' : 'var(--sidebar-width)',
         position: isMobile ? 'fixed' : 'fixed',
         top: 0, left: 0, bottom: 0,
         background: 'var(--color-sidebar)',
         borderRight: isMobile ? 'none' : '1px solid var(--color-border)',
         display: 'flex',
         flexDirection: 'column',
-        padding: '24px 16px',
+        padding: '16px 16px 24px',
         gap: '8px',
         zIndex: 100,
         transition: 'transform 0.3s ease',
@@ -77,11 +80,25 @@ export default function Sidebar() {
       }}>
 
         {/* Logo */}
-        <div style={{ marginBottom: '24px', paddingLeft: '8px' }}>
-          <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--color-blue)' }}>
-            Smart<span style={{ color: 'var(--color-green)' }}>H₂</span>
-            <span style={{ color: 'var(--color-blue)' }}>O</span>
-          </span>
+        <div style={{
+          marginBottom: '24px',
+          padding: isMobile ? '0 8px 0 48px' : '0 8px',
+          display: 'flex',
+          justifyContent: isMobile ? 'flex-start' : 'center',
+          alignItems: 'center',
+          minHeight: '40px'
+        }}>
+          <img
+            src={isDark ? logoDark : logo}
+            alt="SmartH2WO Logo"
+            style={{
+              width: '100%',
+              maxWidth: isMobile ? '160px' : '220px',
+              height: isMobile ? '24px' : '32px',
+              objectFit: 'contain',
+              display: 'block'
+            }}
+          />
         </div>
 
         {/* Nav links */}
@@ -90,22 +107,28 @@ export default function Sidebar() {
             <NavLink
               key={to}
               to={to}
+              className="sidebar-link"
+              onMouseEnter={() => setHoveredLink(to)}
+              onMouseLeave={() => setHoveredLink(null)}
               onClick={() => isMobile && setIsOpen(false)}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 12px',
-                borderRadius: '14px',
-                textDecoration: 'none',
-                fontSize: '14px',
-                fontWeight: isActive ? 600 : 500,
-                color: isActive ? 'var(--color-text)' : 'var(--color-text-secondary)',
-                background: isActive ? (isDark ? 'rgba(97,175,239,0.08)' : 'rgba(0,102,204,0.08)') : 'transparent',
-                borderLeft: isActive ? '4px solid var(--color-blue)' : '4px solid transparent',
-                boxShadow: isActive ? (isDark ? '0 8px 28px rgba(97,175,239,0.08)' : '0 8px 28px rgba(0,102,204,0.08)') : 'none',
-                transition: 'all 0.18s ease',
-              })}
+              style={({ isActive }) => {
+                const isHovered = hoveredLink === to && !isActive;
+                return {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 12px',
+                  borderRadius: '14px',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: isActive ? 600 : 500,
+                  color: isActive ? 'var(--color-text)' : (isHovered ? 'var(--color-text)' : 'var(--color-text-secondary)'),
+                  background: isActive ? (isDark ? 'rgba(97,175,239,0.08)' : 'rgba(0,102,204,0.08)') : (isHovered ? 'var(--table-row-hover)' : 'transparent'),
+                  borderLeft: isActive ? '4px solid var(--color-blue)' : '4px solid transparent',
+                  boxShadow: isActive ? (isDark ? '0 8px 28px rgba(97,175,239,0.08)' : '0 8px 28px rgba(0,102,204,0.08)') : 'none',
+                  transition: 'all 0.18s ease',
+                };
+              }}
             >
               <Icon size={18} />
               {label}
@@ -129,7 +152,7 @@ export default function Sidebar() {
               background: 'var(--color-surface)',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-                color: 'var(--color-text-secondary)',
+              color: 'var(--color-text-secondary)',
               fontSize: '14px',
             }}
             onMouseEnter={(e) => {
@@ -164,12 +187,12 @@ export default function Sidebar() {
               background: 'var(--color-surface)',
               cursor: 'pointer',
               transition: 'all 0.3s ease',
-                color: 'var(--color-text-secondary)',
+              color: 'var(--color-text-secondary)',
               fontSize: '14px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#dc2626'
-              e.currentTarget.style.background = 'rgba(220, 38, 38, 0.1)'
+              e.currentTarget.style.color = 'var(--color-danger)'
+              e.currentTarget.style.background = 'var(--color-danger-light)'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = 'var(--color-text-muted)'

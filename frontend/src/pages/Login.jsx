@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { useTheme } from '../context/ThemeContext'
+import logo from '../assets/smarth2wo_logo.png'
+import logoDark from '../assets/smarth2wo_logo_dark.png'
 
 export default function Login() {
+  const { isDark } = useTheme()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -58,16 +62,14 @@ export default function Login() {
       <div style={{
         background: 'var(--color-surface)',
         border: '1px solid var(--color-border)',
-        borderRadius: '8px',
+        borderRadius: 'var(--radius-card)',
         padding: '40px',
         maxWidth: '400px',
         width: '100%',
-        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.12)'
+        boxShadow: 'var(--shadow-card)'
       }}>
         <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', color: 'var(--color-text)' }}>
-            SmartH2WO
-          </h1>
+          <img src={isDark ? logoDark : logo} alt="SmartH2WO Logo" style={{ height: '36px', width: '100%', maxWidth: '250px', marginBottom: '12px', objectFit: 'contain' }} />
           <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
             Admin Dashboard
           </p>
@@ -156,12 +158,12 @@ export default function Login() {
 
           {error && (
             <div style={{
-              background: '#fee2e2',
-              border: '1px solid #fca5a5',
+              background: 'var(--color-danger-light)',
+              border: '1px solid var(--color-danger)',
               borderRadius: '6px',
               padding: '12px',
               fontSize: '13px',
-              color: '#991b1b'
+              color: 'var(--color-danger-dark)'
             }}>
               {error}
             </div>
@@ -182,7 +184,7 @@ export default function Login() {
               transition: 'all 0.2s ease',
               opacity: loading ? 0.7 : 1
             }}
-            onMouseEnter={(e) => !loading && (e.target.style.background = '#0047B2')}
+            onMouseEnter={(e) => !loading && (e.target.style.background = 'var(--color-blue-dark)')}
             onMouseLeave={(e) => (e.target.style.background = 'var(--color-blue)')}
           >
             {loading ? 'Signing in...' : 'Sign In'}
@@ -191,12 +193,12 @@ export default function Login() {
 
         {!isSupabaseConfigured && (
           <div style={{
-            background: '#fff8e6',
-            border: '1px solid #ffd666',
+            background: 'var(--color-warning-light)',
+            border: '1px solid var(--color-warning)',
             borderRadius: '6px',
             padding: '12px',
             fontSize: '13px',
-            color: '#614700',
+            color: 'var(--color-warning-dark)',
             marginTop: '8px',
           }}>
             Supabase is not configured. Add credentials to <code>frontend/.env</code>, or open the app in demo mode (dashboard loads automatically).
