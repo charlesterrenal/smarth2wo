@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { Droplet, ArrowLeftRight, DollarSign, Wrench, Leaf, AlertTriangle, Info } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import AlertCard from '../components/AlertCard'
@@ -187,7 +187,13 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
               WATER LEVEL HISTORY
             </h3>
             <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={historyData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
+              <AreaChart data={historyData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorLevel" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-blue)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--color-blue)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
                 <XAxis dataKey="time" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} tickMargin={10} />
                 
@@ -199,8 +205,8 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
                 
-                <Line connectNulls={true} type="monotone" name="Water Level (%)" dataKey="level" stroke="var(--color-blue)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
-              </LineChart>
+                <Area connectNulls={true} type="monotone" name="Water Level (%)" dataKey="level" stroke="var(--color-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorLevel)" activeDot={{ r: 6 }} animationDuration={1500} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
