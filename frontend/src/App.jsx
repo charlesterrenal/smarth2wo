@@ -50,7 +50,7 @@ function AppContent() {
         flex: 1,
         overflow: 'auto',
         width: '100%',
-        paddingTop: '24px',
+        paddingTop: 0,
       }}>
         <Routes key={location.pathname}>
           <Route path="/"            element={<Navigate to="/dashboard" replace />} />

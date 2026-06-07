@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Droplet, ArrowLeftRight, DollarSign, Wrench } from 'lucide-react'
+import { Droplet, ArrowLeftRight, DollarSign, Wrench, Leaf } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase } from '../lib/supabase'
 import { getMaintenancePrediction, getAnomalies } from '../lib/maintenanceApi'
@@ -123,7 +123,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
 
       {/* Key Metrics Section */}
       <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>KEY METRICS</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>KEY METRICS</h3>
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -139,14 +139,14 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
             subtitle={sensorStatus?.power_on ? '✓ Sensor active' : '⚠ Not connected'}
           />
 
-          {/* Transactions */}
+          {/* Bottles Saved */}
           <StatCard 
-            title="Transactions" 
+            title="Bottles Saved" 
             accent="var(--color-purple)"
-            icon={<ArrowLeftRight size={20} />}
-            value={transactions.length}
-            caption="Total transactions"
-            subtitle="All completed orders"
+            icon={<Leaf size={20} />}
+            value={Math.floor(transactions.reduce((sum, t) => sum + t.volume_ml, 0) / 500)}
+            caption="Plastic bottles saved"
+            subtitle="500mL equivalents"
           />
 
           {/* Revenue */}
@@ -179,7 +179,7 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
 
       {/* Charts Section */}
       <div style={{ marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>REVENUE ANALYTICS</h3>
+        <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>REVENUE ANALYTICS</h3>
         <div style={{ 
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',

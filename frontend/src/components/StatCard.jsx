@@ -11,11 +11,11 @@ export default function StatCard({ title, caption, subtitle, value, icon, accent
   const badgeBackground = isLight ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.12)'
   const pillBackground = isLight ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.1)'
 
-  const gradientLight = lightBg 
+  const gradientLight = lightBg
     ? `linear-gradient(135deg, ${lightBg}, color-mix(in srgb, ${accent} 20%, transparent))`
     : (accent ? `linear-gradient(135deg, color-mix(in srgb, ${accent} 22%, transparent), color-mix(in srgb, ${accent} 80%, transparent))` : 'var(--color-surface)')
-    
-  const gradientDark = accent 
+
+  const gradientDark = accent
     ? `linear-gradient(135deg, color-mix(in srgb, ${accent} 22%, transparent), color-mix(in srgb, ${accent} 80%, transparent))`
     : 'var(--color-surface)'
 
@@ -42,7 +42,7 @@ export default function StatCard({ title, caption, subtitle, value, icon, accent
           </div>
         )}
       </div>
-      
+
       {icon && (
         <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center' }}>
           <div style={{ width: '44px', height: '44px', borderRadius: '999px', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 8px 20px rgba(15, 23, 42, 0.16)' }}>
@@ -53,7 +53,7 @@ export default function StatCard({ title, caption, subtitle, value, icon, accent
 
       <div style={{ marginTop: '16px' }}>
         {value !== undefined && (
-          <p style={{ margin: 0, fontSize: '2rem', lineHeight: 1, fontWeight: 800, color: valueColor }}>{value}</p>
+          <p style={{ margin: 0, fontSize: (typeof value === 'string' && value.length > 10) ? '1.25rem' : '2rem', lineHeight: 1.1, fontWeight: 800, color: valueColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
         )}
         {caption && (
           <p style={{ margin: '6px 0 0', fontSize: '13px', fontWeight: 600, color: captionColor }}>{caption}</p>

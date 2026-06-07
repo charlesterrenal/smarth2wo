@@ -82,10 +82,10 @@ export default function Logs() {
           placeholder="Search logs..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)', outline: 'none' }}
+          style={{ flex: 1, padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)', outline: 'none', transition: 'all 0.3s ease' }}
         />
         <select value={filter} onChange={e => setFilter(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)' }}>
+          style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)', outline: 'none', transition: 'all 0.3s ease' }}>
           <option>All</option>
           <option>success</option>
           <option>scheduled</option>
@@ -93,12 +93,12 @@ export default function Logs() {
           <option>warning</option>
         </select>
         <select value={sort} onChange={e => setSort(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)' }}>
+          style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)', outline: 'none', transition: 'all 0.3s ease' }}>
           <option>Newest First</option>
           <option>Oldest First</option>
         </select>
         <button onClick={handleExport}
-          style={{ padding: '9px 16px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)', cursor: 'pointer', fontWeight: 500 }}>
+          style={{ padding: '9px 16px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', background: 'var(--color-surface)', color: 'var(--color-text)', cursor: 'pointer', fontWeight: 500, transition: 'all 0.3s ease' }}>
           ⬇ Download CSV
         </button>
       </div>

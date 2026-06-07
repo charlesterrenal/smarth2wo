@@ -1,38 +1,48 @@
 import { useState, useEffect } from 'react'
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts'
-import { Droplet, Activity, Clock, BarChart2, Users } from 'lucide-react'
+import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts'
+import { Droplet, Activity, Clock, BarChart2, Users, Leaf } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockTransactions } from '../lib/mockData'
 
 export default function Analytics() {
   const [transactions, setTransactions] = useState([])
+  const [sensorHistory, setSensorHistory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    const fetchTransactions = async () => {
+    const fetchData = async () => {
       try {
         if (!isSupabaseConfigured) {
           setTransactions(mockTransactions)
+          // Create some mock sensor history for demo
+          const mockHistory = Array.from({ length: 24 }).map((_, i) => ({
+            created_at: new Date(Date.now() - (24 - i) * 60 * 60 * 1000).toISOString(),
+            temperature: 25 + Math.random() * 5,
+            water_level_pct: Math.max(10, 100 - (i * 2))
+          }))
+          setSensorHistory(mockHistory)
           return
         }
-        const { data, error: queryError } = await supabase
-          .from('transactions')
-          .select('*')
-          .order('created_at', { ascending: false })
+        
+        const [{ data: txData, error: queryError }, { data: shData, error: shError }] = await Promise.all([
+          supabase.from('transactions').select('*').order('created_at', { ascending: false }),
+          supabase.from('sensor_history').select('*').order('created_at', { ascending: true }).limit(50)
+        ])
 
         if (queryError) throw queryError
-        setTransactions(data ?? [])
+        setTransactions(txData ?? [])
+        if (shData) setSensorHistory(shData)
       } catch (err) {
-        console.error('Error fetching transactions:', err.message)
+        console.error('Error fetching analytics data:', err.message)
         setError(err.message)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchTransactions()
+    fetchData()
   }, [])
 
   if (loading) return <div style={{ padding: '32px' }}>Loading...</div>
@@ -42,6 +52,40 @@ export default function Analytics() {
   const totalLiters = transactions.reduce((s, t) => s + t.volume_ml, 0) / 1000
   const uniqueDays  = [...new Set(transactions.map(t => t.created_at?.slice(0, 10)))].length
   const avgDaily    = uniqueDays > 0 ? (totalLiters / uniqueDays).toFixed(1) : 0
+
+  const bottlesSaved = Math.floor((totalLiters * 1000) / 500)
+
+  // Peak Usage Time calculation
+  let peakUsageString = "—"
+  let peakCaption = "No data available"
+  if (transactions.length > 0) {
+    const hourCounts = {}
+    transactions.forEach(t => {
+      if (t.created_at) {
+        const hour = new Date(t.created_at).getHours()
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1
+      }
+    })
+    
+    let peakHour = null
+    let maxCount = -1
+    for (const [h, count] of Object.entries(hourCounts)) {
+      if (count > maxCount) {
+        maxCount = count
+        peakHour = parseInt(h)
+      }
+    }
+    
+    if (peakHour !== null) {
+      const formatHour = (h) => {
+        const ampm = h >= 12 ? 'PM' : 'AM'
+        const hr12 = h % 12 || 12
+        return `${hr12}:00 ${ampm}`
+      }
+      peakUsageString = `${formatHour(peakHour)} - ${formatHour(peakHour + 1)}`
+      peakCaption = `${maxCount} transactions`
+    }
+  }
 
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const consumptionData = days.map((day, index) => ({
@@ -70,6 +114,13 @@ export default function Analytics() {
 
   const mostUsed = volumeDistribution.sort((a, b) => b.value - a.value)[0]?.name ?? '—'
 
+  // Format sensor history for Recharts
+  const historyData = sensorHistory.map(entry => ({
+    time: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    temp: entry.temperature,
+    level: entry.water_level_pct
+  }))
+
   // Today's data
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
   const todayTransactions = transactions.filter(t => new Date(t.created_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) === today)
@@ -88,7 +139,7 @@ export default function Analytics() {
       margin: '0 auto'
     }}>
       {/* Top stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <StatCard 
           title="Total Water Dispensed" 
           accent="var(--color-blue)"
@@ -97,8 +148,15 @@ export default function Analytics() {
           caption="Lifetime volume"
         />
         <StatCard 
-          title="Avg Daily Consumption" 
+          title="Bottles Saved" 
           accent="var(--color-green)"
+          value={bottlesSaved}
+          icon={<Leaf size={20} />}
+          caption="500mL equivalents"
+        />
+        <StatCard 
+          title="Avg Daily Consumption" 
+          accent="var(--color-purple)"
           value={`${avgDaily}L`}
           icon={<Activity size={20} />}
           caption="Per day average"
@@ -106,16 +164,16 @@ export default function Analytics() {
         <StatCard 
           title="Peak Usage Time" 
           accent="var(--color-yellow)"
-          value="—"
+          value={peakUsageString}
           icon={<Clock size={20} />}
-          caption="No data available"
+          caption={peakCaption}
         />
         <StatCard 
           title="Most Used Volume" 
           accent="var(--color-text-muted)"
-          value="—"
+          value={mostUsed}
           icon={<BarChart2 size={20} />}
-          caption="No data available"
+          caption="Preferred size"
         />
       </div>
 
@@ -163,20 +221,20 @@ export default function Analytics() {
       </div>
 
       {/* Volume distribution + users summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '24px' }}>
 
         {/* Donut chart */}
         <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
           <p style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.02em', color: 'var(--color-text)' }}>Volume distribution</p>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={230}>
             <PieChart>
               <Pie 
                 data={volumeDistribution} 
                 dataKey="value" 
-                cx="50%" 
-                cy="45%" 
-                innerRadius={50} 
-                outerRadius={80} 
+                cx="45%" 
+                cy="50%" 
+                innerRadius={65} 
+                outerRadius={100} 
                 paddingAngle={2}
                 style={{ cursor: 'pointer', outline: 'none' }}
               >
@@ -185,17 +243,18 @@ export default function Analytics() {
                 ))}
               </Pie>
               <Legend 
+                layout="vertical"
+                verticalAlign="middle"
+                align="right"
                 iconType="circle" 
-                iconSize={10} 
-                wrapperStyle={{ fontSize: '14px', paddingTop: '10px' }} 
-                formatter={(value) => <span style={{ color: 'var(--color-text-secondary)', fontWeight: 500 }}>{value}</span>}
+                iconSize={12} 
+                wrapperStyle={{ fontSize: '15px', paddingLeft: '0', paddingRight: '20px', lineHeight: '28px' }} 
+                formatter={(value) => <span style={{ color: 'var(--color-text)', fontWeight: 600, marginLeft: '4px' }}>{value}</span>}
               />
               <Tooltip cursor={false} formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '14px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
-
-
 
         {/* Users volume summary */}
         <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: 'var(--shadow-card)' }}>
@@ -232,6 +291,33 @@ export default function Analytics() {
           ))}
         </div>
       </div>
+
+      {/* Sensor History Trends */}
+      <div style={{ marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>SYSTEM HEALTH & ML TRENDS</h3>
+        <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-text)' }}>Temperature & Water Level History</p>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={historyData} margin={{ left: -20, right: 10, top: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
+              <XAxis dataKey="time" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} tickMargin={10} />
+              
+              <YAxis yAxisId="left" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} />
+              
+              <Tooltip 
+                cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '3 3' }} 
+                contentStyle={{ borderRadius: '12px', fontSize: '14px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
+              />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
+              
+              <Line yAxisId="left" type="monotone" name="Temperature (°C)" dataKey="temp" stroke="var(--color-danger)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
+              <Line yAxisId="right" type="monotone" name="Water Level (%)" dataKey="level" stroke="var(--color-blue)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} animationDuration={1500} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
     </div>
   )
 }

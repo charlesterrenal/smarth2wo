@@ -64,13 +64,13 @@ export default function Settings() {
       margin: '0 auto'
     }}>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1000px', margin: '0 auto' }}>
 
         {/* Master Power Banner */}
         <div style={{
           background: power ? 'linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%)' : 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg) 100%)',
           borderRadius: '24px',
-          padding: '32px 40px',
+          padding: '12px 32px',
           border: power ? 'none' : '1px solid var(--color-border)',
           boxShadow: power ? '0 20px 40px rgba(16, 185, 129, 0.2)' : 'var(--shadow-premium)',
           display: 'flex',
@@ -79,7 +79,7 @@ export default function Settings() {
           transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}>
           <div>
-            <h2 style={{ fontSize: '28px', fontWeight: 800, color: power ? '#ffffff' : 'var(--color-text)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: power ? '#ffffff' : 'var(--color-text)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
               System Power
             </h2>
             <p style={{ fontSize: '15px', color: power ? 'rgba(255,255,255,0.9)' : 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -138,10 +138,10 @@ export default function Settings() {
         </div>
 
         {/* Scheduler */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '32px 40px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
+        <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px 40px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
           <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}>Automated Scheduler</h3>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}>Automated Scheduler</h3>
               <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>Configure daily operating hours for the dispenser</p>
             </div>
             <button
