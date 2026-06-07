@@ -253,19 +253,17 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
             except Exception as hist_err:
                 print(f"Failed to record sensor history: {hist_err}")
                 
-            # Only log if it's not the regular maintenance cycle, or if it hasn't been logged today
+            # Debounce maintenance logs: Only log if the exact same reason hasn't been logged today
             should_log = True
-            if prediction.reason == "Regular maintenance cycle":
-                # Check if already logged today
-                try:
-                    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-                    existing = supabase.table("logs").select("id").ilike(
-                        "event", "%Regular maintenance cycle%"
-                    ).gte("created_at", today_start).limit(1).execute()
-                    should_log = len(existing.data) == 0
-                except Exception as check_err:
-                    print(f"Daily log check error (non-critical): {check_err}")
-                    should_log = True
+            try:
+                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                existing = supabase.table("logs").select("id").ilike(
+                    "event", f"%{prediction.reason}%"
+                ).gte("created_at", today_start).limit(1).execute()
+                should_log = len(existing.data) == 0
+            except Exception as check_err:
+                print(f"Daily log check error (non-critical): {check_err}")
+                should_log = True
             
             if should_log:
                 supabase.table("logs").insert({
@@ -326,32 +324,36 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
                 
             if anomalies:
                 for anomaly in anomalies:
-                    supabase.table("logs").insert({
-                        "event": f"ANOMALY TRIGGERED - Type: {anomaly.type} | Msg: {anomaly.message}",
-                        "status": "warning",
-                        "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
-                    }).execute()
-                    
-                    # Send email alert for anomalies
-                    send_anomaly_alert(anomaly.type, anomaly.message, anomaly.severity)
+                    # Cooldown logic: Check if this specific anomaly was already logged in the last hour
+                    try:
+                        one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+                        existing_log = supabase.table("logs").select("id").ilike(
+                            "event", f"%{anomaly.type}%"
+                        ).gte("created_at", one_hour_ago).limit(1).execute()
+                        
+                        already_logged_recently = len(existing_log.data) > 0
+                    except Exception as check_err:
+                        print(f"Daily log check error (non-critical): {check_err}")
+                        already_logged_recently = False
+
+                    # Only insert the log and send the email if we haven't seen it recently
+                    if not already_logged_recently:
+                        supabase.table("logs").insert({
+                            "event": f"ANOMALY TRIGGERED - Type: {anomaly.type} | Msg: {anomaly.message}",
+                            "status": "warning",
+                            "volume_ml": int(sensor_data.flow_rate * 1000) if sensor_data.flow_rate else 0
+                        }).execute()
+                        
+                        # Send email alert for anomalies
+                        send_anomaly_alert(anomaly.type, anomaly.message, anomaly.severity)
+                    else:
+                        print(f"Anomaly {anomaly.type} suppressed (already logged recently).")
         return anomalies
     except Exception as e:
         print(f"Database Error in Anomaly Endpoint: {e}")
         return detect_anomalies(sensor_data)
 
-# FIXED AND STABLE SUMMARY ENDPOINT TO FORCE RED/CRITICAL STATE
-@app.get("/api/status/summary")
-def get_status_summary():
-    return {
-        "status": "critical",                  # Pinilit nating maging critical para mag-PULA ang dashboard
-        "days_remaining": 0,                   # Ginawa nating 0 araw para mag-alert
-        "reason": "System Overheating & High Pressure Alert!",
-        "uptime_hours": 156,
-        "last_maintenance": (datetime.now() - timedelta(days=15)).isoformat(),
-        "next_maintenance": (datetime.now() + timedelta(days=15)).isoformat(),
-        "total_transactions": 0,
-        "total_revenue": 0,
-    }
+
 
 # ============ Payment Routes (PayMongo QR Code) ============
 
