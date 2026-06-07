@@ -185,8 +185,13 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
           }}>
             {/* System Status Card (Injected) */}
             <StatCard 
-              title="System Status" 
-              accent={isOperational ? 'var(--color-green)' : '#6b7280'}
+              title={
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isOperational ? 'var(--color-green)' : '#6b7280', boxShadow: `0 0 8px ${isOperational ? 'var(--color-green)' : '#6b7280'}` }} />
+                  System Status
+                </span>
+              }
+              accent="var(--color-text-secondary)"
               icon={<Info size={20} />}
               value={isOperational ? 'Operational' : 'Offline'}
               caption="Current State"
@@ -213,8 +218,13 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
                 return (
                   <StatCard 
                     key={idx}
-                    title={anomaly.type} 
-                    accent={accentCol}
+                    title={
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: accentCol, boxShadow: `0 0 8px ${accentCol}` }} />
+                        {anomaly.type}
+                      </span>
+                    }
+                    accent="var(--color-text-secondary)"
                     icon={icon}
                     value={anomaly.severity.charAt(0).toUpperCase() + anomaly.severity.slice(1)}
                     caption="Priority Level"
