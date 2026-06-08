@@ -116,10 +116,11 @@
     margin-bottom: 16px;
   }
 
-  .eyebrow::before {
+  .eyebrow::before,
+  .eyebrow::after {
     content: '';
     display: block;
-    width: 24px;
+    flex: 0 0 24px;
     height: 2px;
     background: #378ADD;
     border-radius: 2px;
