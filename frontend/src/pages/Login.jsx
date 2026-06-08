@@ -151,7 +151,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@example.com"
+              placeholder="admin@smarth2wo.com"
               required
               style={{
                 width: '100%',
@@ -265,7 +265,7 @@ export default function Login() {
             color: 'var(--color-warning-dark)',
             marginTop: '8px',
           }}>
-            Supabase is not configured. Add credentials to <code>frontend/.env</code>, or open the app in demo mode (dashboard loads automatically).
+            Supabase is not configured. Use the generic credentials below to bypass login.
           </div>
         )}
 
@@ -275,7 +275,7 @@ export default function Login() {
           color: 'var(--color-text-muted)',
           marginTop: '20px'
         }}>
-          Use your Supabase admin account to log in
+          Use <strong>admin@smarth2wo.com</strong> / <strong>admin123</strong> to login as demo
         </p>
       </div>
     </div>
