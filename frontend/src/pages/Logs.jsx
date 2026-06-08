@@ -105,7 +105,7 @@ export default function Logs() {
 
       {/* Table */}
       <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border)', overflowX: 'auto', boxShadow: 'var(--shadow-card)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+        <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead style={{ background: 'var(--surface-card-strong)' }}>
             <tr>
               {['Date', 'Time', 'Event', 'Volume', 'Payment', 'Status'].map(h => (

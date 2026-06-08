@@ -76,10 +76,12 @@ export default function Settings() {
         <div style={{
           background: power ? 'linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%)' : 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg) 100%)',
           borderRadius: '24px',
-          padding: '12px 32px',
+          padding: '16px 20px',
           border: power ? 'none' : '1px solid var(--color-border)',
           boxShadow: power ? '0 20px 40px rgba(16, 185, 129, 0.2)' : 'var(--shadow-premium)',
           display: 'flex',
+          flexWrap: 'wrap',
+          gap: '16px',
           justifyContent: 'space-between',
           alignItems: 'center',
           transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
@@ -137,8 +139,8 @@ export default function Settings() {
         </div>
 
         {/* Scheduler */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px 40px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
-          <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
+          <div style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}>Automated Scheduler</h3>
               <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>Configure daily operating hours for the dispenser</p>
@@ -159,7 +161,8 @@ export default function Settings() {
             </button>
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: '460px', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
                 {['Day', 'Start Time', 'End Time', 'Status'].map(h => (
@@ -230,6 +233,7 @@ export default function Settings() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
 
