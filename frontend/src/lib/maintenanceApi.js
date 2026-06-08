@@ -3,19 +3,21 @@
 
 const API_BASE_URL = 'http://localhost:8000'
 
-export async function getMaintenancePrediction() {
+export async function getMaintenancePrediction(sensorData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/maintenance/predict`, {
+    const payload = {
+      water_level_pct: 80,
+      flow_rate: 2.5,
+      power_on: true,
+      ...(sensorData || {})
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/maintenance/predict?simulate=true`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        water_level: 75,
-        filter_age_days: 45,
-        daily_usage_liters: 12.5,
-        error_count: 2,
-      })
+      body: JSON.stringify(payload)
     })
 
     if (!response.ok) throw new Error('Failed to fetch maintenance prediction')
@@ -25,26 +27,28 @@ export async function getMaintenancePrediction() {
     // Return demo prediction if backend is unavailable
     return {
       status: 'OK',
-      next_maintenance_days: 14,
+      days_remaining: 14,
       confidence: 0.87,
       reason: 'Filter age approaching service interval'
     }
   }
 }
 
-export async function getAnomalies() {
+export async function getAnomalies(sensorData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/anomalies/detect`, {
+    const payload = {
+      water_level_pct: 80,
+      flow_rate: 2.5,
+      power_on: true,
+      ...(sensorData || {})
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/anomalies/detect?simulate=true`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        water_level: 75,
-        temperature: 22,
-        pressure: 2.5,
-        flow_rate: 45,
-      })
+      body: JSON.stringify(payload)
     })
 
     if (!response.ok) throw new Error('Failed to fetch anomalies')

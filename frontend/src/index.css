@@ -7,15 +7,31 @@
   /* Semantic colors */
   --color-blue: #2563EB;
   --color-blue-dark: #1D4ED8;
-  --color-green: #16A34A;
-  --color-green-dark: #0F766E;
+  --color-green: #10B981;
+  --color-green-dark: #059669;
   --color-green-light: #D1FAE5;
   --color-yellow: #F59E0B;
   --color-yellow-dark: #D97706;
   --color-yellow-light: #FEF3C7;
   --color-pink: #DB2777;
-  --color-purple: #8B5CF6;
+  --color-purple: #7B3FF2;
   --color-purple-dark: #6D28D9;
+  --color-danger: #EF4444;
+  --color-danger-dark: #DC2626;
+  --color-danger-light: #FEE2E2;
+  --color-warning: #F97316;
+  --color-warning-dark: #EA580C;
+  --color-warning-light: #FFEDD5;
+  --color-info: #3B82F6;
+  --color-teal: #14B8A6;
+
+  /* Global UI Tokens */
+  --radius-card: 24px;
+  --radius-inner: 16px;
+  --shadow-card: 0 24px 70px rgba(15, 23, 42, 0.12);
+  --shadow-hover: 0 24px 70px rgba(15, 23, 42, 0.18);
+  --shadow-premium: 0 18px 50px rgba(15, 23, 42, 0.12);
+  --shadow-premium-hover: 0 20px 60px rgba(15, 23, 42, 0.16);
 
   /* Light mode palette */
   --color-bg: #F8FAFC;
@@ -49,6 +65,11 @@
   --color-text-secondary: #CBD5E1;
   --color-text-muted: #94A3B8;
   --color-border: #172033;
+  
+  --shadow-card: 0 24px 70px rgba(0, 0, 0, 0.4);
+  --shadow-hover: 0 24px 70px rgba(0, 0, 0, 0.6);
+  --shadow-premium: 0 18px 50px rgba(0, 0, 0, 0.4);
+  --shadow-premium-hover: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -62,8 +83,14 @@ html, body, #root {
   height: 100%;
 }
 
+@font-face {
+  font-family: 'PesoFallback';
+  src: local('Inter'), local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('Arial'), local('sans-serif');
+  unicode-range: U+20B1;
+}
+
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'PesoFallback', 'DM Sans', sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
   min-height: 100vh;
@@ -177,4 +204,106 @@ input:focus {
   :root {
     --sidebar-width: 0px;
   }
+}
+
+/* Page Header & Container Responsive Overrides */
+.page-header {
+  padding: 24px 40px;
+}
+
+.page-header-title {
+  font-size: 28px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    /* Push header right to make room for hamburger menu, symmetric padding to keep text centered */
+    padding: 0 72px 0 72px !important; 
+    height: 72px !important;
+  }
+  
+  .page-header-title {
+    font-size: 20px !important;
+  }
+
+  .page-container {
+    padding: 16px !important;
+  }
+}
+
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes stat-card-border-spin {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+/* Premium StatCard Hover Effect */
+.stat-card {
+  position: relative;
+  border-radius: var(--radius-card);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: default;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-card);
+  padding: 2px; /* border thickness */
+  
+  /* Tracing light gradient */
+  background: conic-gradient(
+    from var(--border-angle),
+    color-mix(in srgb, var(--card-accent) 15%, transparent) 0%,
+    color-mix(in srgb, var(--card-accent) 15%, transparent) 60%,
+    var(--card-accent) 100%
+  );
+  
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.stat-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 32px 80px -12px color-mix(in srgb, var(--card-accent) 25%, transparent), var(--shadow-premium-hover);
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+  animation: stat-card-border-spin 3s linear infinite;
+}
+
+:root.dark-mode .stat-card:hover {
+  box-shadow: 0 32px 80px -12px color-mix(in srgb, var(--card-accent) 15%, transparent), var(--shadow-premium-hover);
+}
+
+/* Recharts Smooth Pie Hover */
+.recharts-pie-sector path {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
+  transform-origin: 50% 45%;
+  transform-box: fill-box; /* usually view-box works better for SVG if origin is relative to svg */
+}
+
+/* Actually, transform-origin for SVG paths works best with exact px coords if we do it inline, but let's try 50% 45% with view-box */
+svg.recharts-surface .recharts-pie-sector path {
+  transform-origin: 50% 45%;
+  transform-box: view-box;
+}
+
+.recharts-pie-sector path:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0px 8px 16px rgba(0, 0, 0, 0.15));
+  outline: none;
 }

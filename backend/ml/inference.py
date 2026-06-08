@@ -59,9 +59,7 @@ class MaintenancePredictor:
             # 5. Generate human-readable reason based on feature deviations
             X_arr = X.values if hasattr(X, "values") else X
             water_level = X_arr[0][0]
-            temp = X_arr[0][1]
-            flow = X_arr[0][2]
-            pressure = X_arr[0][3]
+            flow = X_arr[0][1]
             
             reasons = []
             if water_level < 20:
@@ -69,14 +67,8 @@ class MaintenancePredictor:
             elif water_level < 40:
                 reasons.append("declining water level")
                 
-            if temp > 45:
-                reasons.append("high system temperature")
-                
             if flow < 0.5:
                 reasons.append("low flow rate (potential filter clogging)")
-                
-            if pressure > 80:
-                reasons.append("high operating pressure")
                 
             if reasons:
                 reason = "ML Prediction - Sensor deviations detected: " + ", ".join(reasons)
@@ -128,14 +120,14 @@ class AnomalyDetector:
             
         try:
             # Check power status first (separate categorical rule, not in numeric features)
-            power_on = True
+            power_on = None
             if isinstance(sensor_data, dict):
-                power_on = sensor_data.get("power_on", True)
+                power_on = sensor_data.get("power_on")
             else:
-                power_on = getattr(sensor_data, "power_on", True)
+                power_on = getattr(sensor_data, "power_on", None)
                 
             anomalies = []
-            if not power_on:
+            if power_on is False:
                 anomalies.append({
                     "type": "Power Status",
                     "message": "System is powered off",

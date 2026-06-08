@@ -16,20 +16,11 @@ This guide outlines the critical next steps for your thesis project to transitio
 - [ ] Verify that the ESP32 successfully calls the backend endpoints (`/api/maintenance/predict` and `/api/anomalies/detect`) on a regular cadence (e.g., once per minute).
 - [ ] Verify that incoming sensor payloads are being correctly inserted into the Supabase `sensor_history` table.
 
-### 3. Transition ML Training from CSV to Supabase Database
-Once you have accumulated a couple of weeks to a month of real-world sensor logs in the `sensor_history` table, you should retrain your models on real data instead of simulated CSV data:
-- [ ] Open `backend/ml/train_models.py`.
-- [ ] Replace the CSV-loading block:
-  ```python
-  df = pd.read_csv(csv_path)
-  ```
-  with a database query fetching all history from Supabase:
-  ```python
-  # Example code snippet to query Supabase
-  response = supabase.table("sensor_history").select("*").order("created_at", desc=False).execute()
-  df = pd.DataFrame(response.data)
-  ```
-- [ ] Run `python -m ml.train_models` to retrain and save the models (`.joblib` files) based on the live operational signatures of your dispenser.
+### 3. Train Models using the AI4I Dataset
+Due to time constraints for collecting real-world failure data, the model will be strictly trained on the AI4I Predictive Maintenance CSV dataset. The live ESP32 hardware will only be used for *inference* (real-time predictions).
+- [x] Ensure you are in the `backend` directory.
+- [x] Run `python -m ml.train_models` to process the CSV dataset and generate the trained model files.
+- [x] Verify that the `.joblib` model files are created in your backend folder. Your backend API will load these pre-trained models to evaluate the incoming live ESP32 sensor data.
 
 ### 4. Deploy Backend to Production
 - [ ] Deploy the FastAPI backend code to hosting services (e.g., Render, AWS EC2, or Heroku).

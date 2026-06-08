@@ -5,16 +5,14 @@ import time
 ANOMALY_URL = "http://127.0.0.1:8000/api/anomalies/detect"
 MAINTENANCE_URL = "http://127.0.0.1:8000/api/maintenance/predict"
 
-def send_mock_data(water, temp, flow, press, description):
+def send_mock_data(water, flow, description):
     payload = {
         "water_level_pct": water,
-        "temperature": temp,
         "flow_rate": flow,
-        "pressure": press,
         "power_on": True
     }
     print(f"\n[Sending: {description}]")
-    print(f" -> Temp: {temp}°C | Water: {water}% | Flow: {flow} L/min | Pressure: {press} PSI")
+    print(f" -> Water: {water}% | Flow: {flow} L/min")
     
     try:
         res_maint = requests.post(MAINTENANCE_URL, json=payload)
@@ -37,33 +35,25 @@ def run_scenario(choice):
     if choice == "A":
         send_mock_data(
             water=75.0, 
-            temp=55.0, 
             flow=1.8, 
-            press=105.0, 
-            description="CRITICAL ALERT TEST (OVERHEATING & HIGH PRESSURE)"
+            description="CRITICAL ALERT TEST (FLOW DROP)"
         )
     elif choice == "B":
         send_mock_data(
             water=3.0,        # 3% na lang, kritikal!
-            temp=28.0,        # Normal na init
             flow=0.05,        # Halos walang tumutulong tubig
-            press=90.0,       # Mataas na pressure para sa kaunting tubig
             description="CRITICAL DRY RUN TEST (LOW WATER LEVEL ALERT)"
         )
     elif choice == "C":
         send_mock_data(
             water=90.0,       # Puno ang tank
-            temp=25.0,        # Normal temp
             flow=0.0,         # Walang agos kahit naka-on
-            press=5.0,        # Bagsak ang pressure (Leakage signature)
-            description="SYSTEM FAILURE TEST (LEAKAGE / NO FLOW DETECTION)"
+            description="SYSTEM FAILURE TEST (NO FLOW DETECTION)"
         )
     elif choice == "D":
         send_mock_data(
             water=85.0,       # 85% Water capacity
-            temp=24.5,        # Malamig at normal na makina
             flow=2.5,         # Swabeng agos ng tubig (2.5 L/min)
-            press=45.0,       # Normal operating pressure (45 PSI)
             description="SYSTEM RECOVERY TEST (BACK TO NORMAL OPERATION)"
         )
     else:

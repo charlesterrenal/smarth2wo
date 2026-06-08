@@ -1,76 +1,37 @@
-# SmartH2WO Machine Learning Documentation
+# SmartH2WO Machine Learning Module
 
-This directory contains the machine learning pipeline for SmartH2WO. We transition predictive maintenance and anomaly detection from hard-coded heuristics to trained scikit-learn models.
+This directory contains the machine learning pipeline for predictive maintenance and anomaly detection. We have transitioned from hard-coded heuristics to dynamic AI models capable of analyzing live IoT sensor data.
 
-## 📁 Directory Structure
+## Architecture & Features
 
-```text
-backend/ml/
-├── data/
-│   └── training_data.csv          # Simulated sensor history dataset
-├── models/
-│   ├── anomaly_model.joblib       # Serialized models for anomaly detection
-│   └── maintenance_model.joblib   # Serialized models for maintenance prediction
-├── __init__.py
-├── feature_engineering.py          # Unified data cleaning & imputation
-├── generate_training_data.py       # Synthetic data generation tool
-├── train_models.py                # Model training & validation script
-└── inference.py                   # Prediction wrappers and API loaders
-```
+The module uses lightweight `scikit-learn` algorithms (running entirely on CPU) combined into two predictors:
 
----
+1. **Maintenance Predictor:** Uses a `RandomForestRegressor` and `RandomForestClassifier` to estimate exact `days_remaining` until maintenance and categorize severity (`low`, `medium`, `high`, `critical`).
+2. **Anomaly Detector:** Uses an `IsolationForest` to spot sensor outliers in real-time, and a `RandomForestClassifier` to diagnose specific hardware faults (e.g., `Overheating`, `Pressure Alert`).
 
-## ⚙️ Architecture & Model Design
+Both models require 4 mandatory snapshot inputs from the ESP32: `water_level_pct`, `temperature`, `flow_rate`, and `pressure`.
 
-Rather than serving models on a separate server, the scikit-learn pipeline is hosted directly inside our existing FastAPI service. This is highly compute-efficient and keeps maintenance overhead low.
+## Generating Data & Training
 
-### 1. Feature Engineering & Preprocessing
-* **Features Used:** `water_level_pct`, `temperature`, `flow_rate`, `pressure`.
-* **Imputation Strategy:** Any missing (`None` / `NaN`) fields in incoming real-time requests are automatically imputed using the **median values** calculated from the training dataset.
+Due to physical time constraints, the models are trained on synthetic data based on the AI4I Predictive Maintenance dataset format, algorithmically simulating a 30-day hardware lifecycle.
 
-### 2. Models Trained
-* **Model A: Maintenance Predictor**
-  * **Days Remaining Regressor (`RandomForestRegressor`):** Predicts the number of remaining days before maintenance is required.
-  * **Severity Classifier (`RandomForestClassifier`):** Classifies maintenance urgency into `low`, `medium`, `high`, or `critical`.
-* **Model B: Anomaly Detector**
-  * **Isolation Forest (`IsolationForest`):** An unsupervised outlier detector calibrated using training contamination statistics to identify abnormal system states.
-  * **Anomaly Type Classifier (`RandomForestClassifier`):** A classifier that runs only when `IsolationForest` reports an anomaly, categorizing the issue into `overheating`, `low_water`, `high_pressure`, `low_flow`, or `sensor_fault`.
-
----
-
-## 📈 Model Performance Metrics
-
-The models were trained on 30 days of simulated 1-minute cadence sensor data (~43,200 samples) with a 20% test validation split:
-
-* **Maintenance Regressor:** $R^2 \approx 96.3\%$, Mean Squared Error (MSE) $\approx 0.12$.
-* **Maintenance Severity Classifier:** Accuracy $\approx 90.0\%$.
-* **Anomaly Unsupervised Detector (IsolationForest):** Accuracy $\approx 98.9\%$, Anomaly F1-Score $\approx 0.85$.
-* **Anomaly Type Classifier:** Accuracy $\approx 99.9\%$.
-
----
-
-## 🖥️ API Integration & Fallback Strategy
-
-The models are integrated inside the FastAPI routes in `backend/main.py`.
-
-* **Model Execution:** Endpoint calls `/api/maintenance/predict` and `/api/anomalies/detect` route inputs through the ML models when loaded.
-* **Heuristics Fallback:** If the `.joblib` files are missing or if prediction fails for any reason, the system **automatically falls back to the original rule-based logic**, ensuring 100% service uptime.
-
----
-
-## 🚀 How to Retrain the Models
-
-1. **Activate Environment:**
-   ```bash
-   cd backend
-   .\venv\Scripts\Activate.ps1
-   ```
-2. **(Optional) Regenerate Training Data:**
+1. **Generate Synthetic Data (~43k rows):**
    ```bash
    python -m ml.generate_training_data
    ```
-3. **Train & Save Models:**
+2. **Train the Models:**
    ```bash
    python -m ml.train_models
    ```
-   This will output the validation scores and update the serialized `.joblib` files inside `backend/ml/models/`.
+   This generates `maintenance_model.joblib` and `anomaly_model.joblib` in the `models/` directory.
+
+## Inference & Fallbacks
+
+The FastAPI server initializes `MaintenancePredictor` and `AnomalyDetector` globally at startup to cache the `.joblib` models in memory. 
+
+- **Endpoints:** The ESP32 hits `POST /api/maintenance/predict` and `POST /api/anomalies/detect` every minute.
+- **Fail-safe Fallback:** To guarantee 100% hardware uptime, if the `.joblib` files are missing or crash, the API seamlessly falls back to the old, hard-coded rule-based heuristics.
+
+## Limitations
+- **Stateless Analysis:** The models analyze an exact snapshot in time; they do not retain a time-series memory of past minutes.
+- **Synthetic Blindspots:** You may experience false alarms until the model is eventually fine-tuned on real hardware data.

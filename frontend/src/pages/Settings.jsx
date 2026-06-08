@@ -1,27 +1,42 @@
 import { useState, useEffect } from 'react'
-import PageHeader from '../components/PageHeader'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockSchedule } from '../lib/mockData'
 
 export default function Settings() {
   const [schedule, setSchedule] = useState([])
-  const [loading, setLoading]   = useState(true)
+  const [loading, setLoading] = useState(true)
   const [power, setPower] = useState(true)
+  const [confirmPowerAction, setConfirmPowerAction] = useState(null)
 
   useEffect(() => {
+    // Read from localStorage for mock mode
+    const savedPower = localStorage.getItem('mockSystemPower')
+    if (savedPower !== null) {
+      setPower(savedPower === 'true')
+    }
+
     if (!isSupabaseConfigured) {
       setSchedule(mockSchedule)
       setLoading(false)
       return
     }
-    supabase
-      .from('schedule')
-      .select('*')
-      .order('id')
-      .then(({ data }) => {
-        setSchedule(data ?? [])
-        setLoading(false)
-      })
+
+    Promise.all([
+      supabase.from('schedule').select('*').order('id'),
+      supabase.from('sensor_status').select('*').eq('id', 1).single()
+    ]).then(([scheduleRes, sensorRes]) => {
+      setSchedule(scheduleRes.data ?? [])
+      if (sensorRes.data) {
+        const savedPower = localStorage.getItem('mockSystemPower')
+        if (savedPower !== null) {
+          setPower(savedPower === 'true')
+        } else {
+          setPower(sensorRes.data.power_on)
+          localStorage.setItem('mockSystemPower', String(sensorRes.data.power_on))
+        }
+      }
+      setLoading(false)
+    })
   }, [])
 
   if (loading) return <div style={{ padding: '32px' }}>Loading...</div>
@@ -54,115 +69,160 @@ export default function Settings() {
       maxWidth: '1600px',
       margin: '0 auto'
     }}>
-      <PageHeader title="SETTINGS" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1000px', margin: '0 auto' }}>
 
-        {/* Power Control */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em' }}>System Power</p>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: power ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: `2px solid ${power ? '#22c55e' : '#ef4444'}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '24px' }}>{power ? '⚡' : '🔌'}</span>
-              <div>
-                <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px' }}>Dispenser Power</p>
-                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                  {power ? 'System is ON' : 'System is OFF'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setPower(!power)}
+        {/* Master Power Banner */}
+        <div style={{
+          background: power ? 'linear-gradient(135deg, var(--color-green-dark) 0%, var(--color-green) 100%)' : 'linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg) 100%)',
+          borderRadius: '24px',
+          padding: '12px 32px',
+          border: power ? 'none' : '1px solid var(--color-border)',
+          boxShadow: power ? '0 20px 40px rgba(16, 185, 129, 0.2)' : 'var(--shadow-premium)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: power ? '#ffffff' : 'var(--color-text)', marginBottom: '4px', letterSpacing: '-0.01em' }}>
+              System Power
+            </h2>
+            <p style={{ fontSize: '15px', color: power ? 'rgba(255,255,255,0.9)' : 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                width: '10px', height: '10px', borderRadius: '50%',
+                background: power ? '#A7F3D0' : 'var(--color-danger)',
+                boxShadow: power ? '0 0 10px #A7F3D0' : '0 0 10px var(--color-danger)'
+              }} />
+              {power ? 'Dispenser is currently ONLINE and active.' : 'Dispenser is offline. Turn on to resume normal operations.'}
+            </p>
+          </div>
+
+          {/* Large Premium Toggle */}
+          <button
+            onClick={() => setConfirmPowerAction(!power)}
+            style={{
+              width: '80px',
+              height: '44px',
+              borderRadius: '22px',
+              background: power ? '#ffffff' : '#e5e7eb',
+              border: power ? 'none' : '1px solid #d1d5db',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              boxShadow: power ? 'inset 0 2px 4px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            <span
               style={{
-                width: '50px',
-                height: '28px',
-                borderRadius: '14px',
-                background: power ? '#22c55e' : '#d1d5db',
-                border: 'none',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'background 0.3s ease',
+                position: 'absolute',
+                top: '4px',
+                left: power ? '40px' : '4px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: power ? 'var(--color-green)' : '#ffffff',
+                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: power ? '#ffffff' : 'var(--color-text-muted)',
+                fontSize: '18px'
               }}
             >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '4px',
-                  left: power ? '28px' : '4px',
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transition: 'left 0.3s ease',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                }}
-              />
-            </button>
-          </div>
+              {power ? '⚡' : '🔌'}
+            </span>
+          </button>
         </div>
 
         {/* Scheduler */}
-        <div style={{ background: 'var(--color-surface)', borderRadius: '16px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: '0 8px 32px rgba(2,6,23,0.06)' }}>
-          <p style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.05em' }}>Scheduler</p>
+        <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px 40px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
+          <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}>Automated Scheduler</h3>
+              <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>Configure daily operating hours for the dispenser</p>
+            </div>
+            <button
+              onClick={handleSave}
+              style={{
+                padding: '12px 24px', borderRadius: '12px',
+                background: 'var(--color-blue)', color: 'white', border: 'none',
+                fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                boxShadow: '0 8px 16px rgba(37, 99, 235, 0.2)',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 20px rgba(37, 99, 235, 0.3)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(37, 99, 235, 0.2)'; }}
+            >
+              Save Changes
+            </button>
+          </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                {['Day', 'Start', 'End', 'Toggle'].map(h => (
-                  <th key={h} style={{ padding: '8px 0', fontWeight: 500, color: 'var(--color-text-muted)', textAlign: 'left' }}>{h}</th>
+              <tr style={{ borderBottom: '2px solid var(--color-border)' }}>
+                {['Day', 'Start Time', 'End Time', 'Status'].map(h => (
+                  <th key={h} style={{ padding: '12px 0', fontWeight: 600, color: 'var(--color-text-muted)', textAlign: 'left', textTransform: 'uppercase', fontSize: '12px', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {schedule.map((row, i) => (
-                <tr key={row.day} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  <td style={{ padding: '12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: row.active ? '#22c55e' : '#ef4444', display: 'inline-block' }} />
+                <tr key={row.day} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s', background: row.active ? 'transparent' : 'rgba(0,0,0,0.02)' }}>
+                  <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: '12px', color: row.active ? 'var(--color-text)' : 'var(--color-text-muted)', fontWeight: row.active ? 600 : 400, fontSize: '15px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: row.active ? 'var(--color-green)' : 'var(--color-danger)', display: 'inline-block', boxShadow: row.active ? '0 0 8px rgba(16,185,129,0.4)' : 'none' }} />
                     {row.day}
                   </td>
-                  <td style={{ padding: '12px 8px 12px 0' }}>
+                  <td style={{ padding: '16px 12px 16px 0' }}>
                     <input
                       type="text"
                       value={row.start}
                       disabled={!row.active}
                       onChange={e => updateTime(i, 'start', e.target.value)}
                       style={{
-                        padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)',
-                        fontSize: '13px', width: '90px', 
+                        padding: '10px 14px', borderRadius: '8px', border: row.active ? '1px solid var(--color-border)' : '1px dashed var(--color-border)',
+                        fontSize: '14px', width: '110px', fontWeight: 500,
                         background: row.active ? 'var(--color-surface)' : 'var(--color-bg)',
                         color: row.active ? 'var(--color-text)' : 'var(--color-text-muted)',
+                        outline: 'none', transition: 'border-color 0.2s'
                       }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--color-blue)'}
+                      onBlur={(e) => e.target.style.borderColor = 'var(--color-border)'}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px 12px 0' }}>
+                  <td style={{ padding: '16px 12px 16px 0' }}>
                     <input
                       type="text"
                       value={row.end}
                       disabled={!row.active}
                       onChange={e => updateTime(i, 'end', e.target.value)}
                       style={{
-                        padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)',
-                        fontSize: '13px', width: '90px', 
+                        padding: '10px 14px', borderRadius: '8px', border: row.active ? '1px solid var(--color-border)' : '1px dashed var(--color-border)',
+                        fontSize: '14px', width: '110px', fontWeight: 500,
                         background: row.active ? 'var(--color-surface)' : 'var(--color-bg)',
                         color: row.active ? 'var(--color-text)' : 'var(--color-text-muted)',
+                        outline: 'none', transition: 'border-color 0.2s'
                       }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--color-blue)'}
+                      onBlur={(e) => e.target.style.borderColor = 'var(--color-border)'}
                     />
                   </td>
-                  <td style={{ padding: '12px 0' }}>
+                  <td style={{ padding: '16px 0' }}>
                     <button
                       onClick={() => toggle(i)}
                       style={{
-                        width: '40px', height: '22px', borderRadius: '11px',
-                        background: row.active ? '#378ADD' : '#d1d5db',
-                        border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s',
+                        width: '48px', height: '26px', borderRadius: '13px',
+                        background: row.active ? 'var(--color-blue)' : '#d1d5db',
+                        border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s',
                       }}
                     >
                       <span style={{
                         position: 'absolute', top: '3px',
-                        left: row.active ? '21px' : '3px',
-                        width: '16px', height: '16px', borderRadius: '50%',
-                        background: 'white', transition: 'left 0.2s',
+                        left: row.active ? '25px' : '3px',
+                        width: '20px', height: '20px', borderRadius: '50%',
+                        background: 'white', transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                       }} />
                     </button>
                   </td>
@@ -170,19 +230,69 @@ export default function Settings() {
               ))}
             </tbody>
           </table>
-
-          <button
-            onClick={handleSave}
-            style={{
-              marginTop: '20px', padding: '10px 24px', borderRadius: '8px',
-              background: '#378ADD', color: 'white', border: 'none',
-              fontSize: '14px', fontWeight: 500, cursor: 'pointer',
-            }}
-          >
-            Save Schedule
-          </button>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {confirmPowerAction !== null && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div style={{
+            background: 'var(--color-surface)', borderRadius: '24px', padding: '32px',
+            width: '90%', maxWidth: '400px', boxShadow: '0 24px 48px rgba(0,0,0,0.2)',
+            border: '1px solid var(--color-border)', textAlign: 'center'
+          }}>
+            <div style={{ 
+              width: '64px', height: '64px', borderRadius: '50%', margin: '0 auto 20px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: confirmPowerAction ? 'rgba(16,185,129,0.1)' : 'rgba(220,38,38,0.1)'
+            }}>
+              <span style={{ fontSize: '32px' }}>{confirmPowerAction ? '⚡' : '🔌'}</span>
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 12px 0', color: 'var(--color-text)' }}>
+              {confirmPowerAction ? 'Turn Dispenser ON?' : 'Turn Dispenser OFF?'}
+            </h3>
+            <p style={{ fontSize: '15px', color: 'var(--color-text-muted)', margin: '0 0 32px 0', lineHeight: 1.5 }}>
+              {confirmPowerAction 
+                ? 'The system will boot up and resume normal water dispensing operations.'
+                : 'The system will be powered down and users will not be able to dispense water.'}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <button 
+                onClick={() => setConfirmPowerAction(null)}
+                style={{
+                  padding: '12px', borderRadius: '12px', border: '1px solid var(--color-border)',
+                  background: 'transparent', color: 'var(--color-text)', fontWeight: 600, cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >Cancel</button>
+              <button 
+                onClick={async () => {
+                  const newPower = confirmPowerAction
+                  setConfirmPowerAction(null)
+                  setPower(newPower)
+                  localStorage.setItem('mockSystemPower', String(newPower))
+                  if (isSupabaseConfigured) {
+                    await supabase.from('sensor_status').update({ power_on: newPower }).eq('id', 1)
+                  }
+                }}
+                style={{
+                  padding: '12px', borderRadius: '12px', border: 'none',
+                  background: confirmPowerAction ? 'var(--color-green)' : 'var(--color-danger)', 
+                  color: 'white', fontWeight: 600, cursor: 'pointer',
+                  boxShadow: confirmPowerAction ? '0 8px 16px rgba(16,185,129,0.2)' : '0 8px 16px rgba(220,38,38,0.2)'
+                }}
+              >Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

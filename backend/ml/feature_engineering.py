@@ -3,14 +3,12 @@ import pandas as pd
 from typing import Union, Dict, Any
 
 # Feature names in the exact order they were used during training
-FEATURE_NAMES = ["water_level_pct", "temperature", "flow_rate", "pressure"]
+FEATURE_NAMES = ["water_level_pct", "flow_rate"]
 
 # Hardcoded absolute fallback values if model metadata is not loaded
 DEFAULT_FALLBACKS = {
     "water_level_pct": 80.0,
-    "temperature": 25.0,
-    "flow_rate": 2.5,
-    "pressure": 45.0
+    "flow_rate": 2.5
 }
 
 def preprocess_features(sensor_data: Union[Dict[str, Any], Any], impute_values: Dict[str, float] = None) -> pd.DataFrame:
@@ -22,8 +20,8 @@ def preprocess_features(sensor_data: Union[Dict[str, Any], Any], impute_values: 
         impute_values: A dictionary containing default values for imputation of missing values (NaN/None).
         
     Returns:
-        A pandas DataFrame of shape (1, 4) containing:
-        [water_level_pct, temperature, flow_rate, pressure]
+        A pandas DataFrame of shape (1, 2) containing:
+        [water_level_pct, flow_rate]
     """
     features = []
     

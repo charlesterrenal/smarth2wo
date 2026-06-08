@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
+import PageHeader from './components/PageHeader'
 import Dashboard from './pages/Dashboard'
 import Transaction from './pages/Transaction'
 import AdminPayments from './pages/AdminPayments'
@@ -35,10 +36,21 @@ function AppContent() {
       display: 'flex',
       flexDirection: 'column',
     }}>
+      <PageHeader 
+        title={
+          location.pathname.startsWith('/dashboard') ? 'DASHBOARD' :
+          location.pathname.startsWith('/transaction') ? 'TRANSACTION OVERVIEW' :
+          location.pathname.startsWith('/admin/payments') ? 'ADMIN PAYMENTS' :
+          location.pathname.startsWith('/analytics') ? 'ANALYTICS' :
+          location.pathname.startsWith('/logs') ? 'SYSTEM LOGS' :
+          location.pathname.startsWith('/settings') ? 'SETTINGS' : 'SMARTH2WO'
+        } 
+      />
       <div style={{
         flex: 1,
         overflow: 'auto',
         width: '100%',
+        paddingTop: 0,
       }}>
         <Routes key={location.pathname}>
           <Route path="/"            element={<Navigate to="/dashboard" replace />} />

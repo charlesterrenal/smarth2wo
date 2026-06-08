@@ -23,9 +23,7 @@ create table if not exists maintenance_logs (
 
   -- SensorData snapshot (all nullable — matches Optional[float] in Pydantic)
   water_level_pct   double precision,
-  temperature       double precision,
   flow_rate         double precision,
-  pressure          double precision,
   power_on          boolean default true,
 
   -- MaintenancePrediction output
@@ -55,9 +53,7 @@ create table if not exists anomaly_alerts (
 
   -- SensorData snapshot at detection time
   water_level_pct   double precision,
-  temperature       double precision,
   flow_rate         double precision,
-  pressure          double precision,
   power_on          boolean default true,
 
   -- Anomaly output (main.py maps Anomaly.timestamp -> detected_at)
