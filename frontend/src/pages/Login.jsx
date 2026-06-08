@@ -31,12 +31,6 @@ export default function Login() {
     setLoading(true)
 
     try {
-      // Generic credentials bypass
-      if (email === 'admin@smarth2wo.com' && password === 'admin123') {
-        navigate('/dashboard')
-        return
-      }
-
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
