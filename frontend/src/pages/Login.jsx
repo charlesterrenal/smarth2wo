@@ -5,6 +5,16 @@ import { useTheme } from '../context/ThemeContext'
 import logo from '../assets/smarth2wo_logo.png'
 import logoDark from '../assets/smarth2wo_logo_dark.png'
 
+const bubbles = Array.from({ length: 20 }).map((_, i) => ({
+  id: i,
+  size: Math.random() * 8 + 4,
+  left: Math.random() * 100,
+  duration: Math.random() * 8 + 6,
+  delay: Math.random() * -15,
+  opacity: Math.random() * 0.3 + 0.1,
+  tx: (Math.random() - 0.5) * 80
+}));
+
 export default function Login() {
   const { isDark } = useTheme()
   const navigate = useNavigate()
@@ -12,6 +22,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isHovered, setIsHovered] = useState(false)
+  const [isBtnHovered, setIsBtnHovered] = useState(false)
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -51,14 +63,59 @@ export default function Login() {
   }
 
   return (
-    <div className="page-container" style={{
+    <div className="page-container hero-ocean-bg relative overflow-hidden" style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'var(--color-bg)',
       padding: '20px'
     }}>
+      {/* Animated Water Caustics Effects */}
+      <div className="caustic-1 absolute inset-0 pointer-events-none" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+      <div className="caustic-2 absolute inset-0 pointer-events-none" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+
+      {/* Rising Bubbles */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+        {bubbles.map(b => (
+          <div
+            key={b.id}
+            className="bubble"
+            style={{
+              width: b.size,
+              height: b.size,
+              left: `${b.left}%`,
+              opacity: b.opacity,
+              '--tx': `${b.tx}px`,
+              animationDuration: `${b.duration}s`,
+              animationDelay: `${b.delay}s`
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Animated Wave Divider at bottom */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', overflow: 'hidden', lineHeight: 0, zIndex: 5 }}>
+        <svg
+          style={{ position: 'relative', display: 'block', width: '100%', height: '120px' }}
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 24 150 28"
+          preserveAspectRatio="none"
+          shapeRendering="auto"
+        >
+          <defs>
+            <path
+              id="gentle-wave"
+              d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z"
+            />
+          </defs>
+          <g className="waves">
+            <use href="#gentle-wave" x="48" y="0" className="wave wave-1" />
+            <use href="#gentle-wave" x="48" y="3" className="wave wave-2" />
+            <use href="#gentle-wave" x="48" y="5" className="wave wave-3" />
+          </g>
+        </svg>
+      </div>
+
       <div style={{
         background: 'var(--color-surface)',
         border: '1px solid var(--color-border)',
@@ -66,10 +123,12 @@ export default function Login() {
         padding: '40px',
         maxWidth: '400px',
         width: '100%',
-        boxShadow: 'var(--shadow-card)'
+        boxShadow: 'var(--shadow-card)',
+        position: 'relative',
+        zIndex: 10
       }}>
         <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-          <img src={isDark ? logoDark : logo} alt="SmartH2WO Logo" style={{ height: '36px', width: '100%', maxWidth: '250px', marginBottom: '12px', objectFit: 'contain' }} />
+          <img src={isDark ? logoDark : logo} alt="SmartH2WO Logo" style={{ display: 'block', margin: '0 auto 12px auto', height: '36px', width: '100%', maxWidth: '250px', objectFit: 'contain' }} />
           <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
             Admin Dashboard
           </p>
@@ -172,22 +231,27 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            style={{
-              background: 'var(--color-blue)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '12px 16px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              opacity: loading ? 0.7 : 1
+            className="btn-glow"
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const x = e.clientX - rect.left
+              const y = e.clientY - rect.top
+              e.currentTarget.style.setProperty('--mouse-x', `${x}px`)
+              e.currentTarget.style.setProperty('--mouse-y', `${y}px`)
             }}
-            onMouseEnter={(e) => !loading && (e.target.style.background = 'var(--color-blue-dark)')}
-            onMouseLeave={(e) => (e.target.style.background = 'var(--color-blue)')}
+            style={{
+              padding: '14px 16px',
+              fontSize: '15px',
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              marginTop: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              width: '100%'
+            }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            <span style={{ position: 'relative', zIndex: 10 }}>{loading ? 'Signing in...' : 'Sign In'}</span>
           </button>
         </form>
 
