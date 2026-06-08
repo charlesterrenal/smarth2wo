@@ -14,9 +14,7 @@ def generate_data(num_days=30, freq_minutes=1):
     
     # Initialize arrays
     water_level = np.zeros(total_rows)
-    temperature = np.zeros(total_rows)
     flow_rate = np.zeros(total_rows)
-    pressure = np.zeros(total_rows)
     power_on = np.ones(total_rows, dtype=bool)
     
     # Labels
@@ -38,9 +36,7 @@ def generate_data(num_days=30, freq_minutes=1):
         
         # Base values for normal operation
         base_water = 80.0
-        base_temp = 25.0
         base_flow = 2.5
-        base_pressure = 45.0
         
         for i in range(cycle_rows):
             idx = current_idx + i
@@ -53,15 +49,9 @@ def generate_data(num_days=30, freq_minutes=1):
             base_water -= random.uniform(0.01, 0.05) # Consume water
             water_level[idx] = base_water + random.normalvariate(0, 1)
             
-            temperature[idx] = base_temp + random.normalvariate(0, 1)
-            
             # Flow rate degrades over the cycle (filter clogging)
             current_base_flow = base_flow - (progress * 2.0) # Drops from 2.5 down to ~0.5
             flow_rate[idx] = current_base_flow + random.normalvariate(0, 0.1)
-            
-            # Pressure increases as filter clogs
-            current_base_pressure = base_pressure + (progress * 30.0) # Increases from 45 to ~75
-            pressure[idx] = current_base_pressure + random.normalvariate(0, 2)
             
             # Calculate Maintenance Labels
             days_left = max(1, int((1.0 - progress) * 7)) # Roughly 7 days max
@@ -77,25 +67,12 @@ def generate_data(num_days=30, freq_minutes=1):
                 maint_severity[idx] = "low"
             
             # 2. Inject Anomalies randomly
-            # Overheating (1% chance)
-            if random.random() < 0.01:
-                temperature[idx] = random.uniform(46.0, 60.0)
-                pressure[idx] += random.uniform(10.0, 20.0)
-                is_anomaly[idx] = True
-                anomaly_type[idx] = "overheating"
-            
             # Low water / dry run (1% chance)
-            elif random.random() < 0.01:
+            if random.random() < 0.01:
                 water_level[idx] = random.uniform(0.0, 15.0)
                 flow_rate[idx] = random.uniform(0.0, 0.1)
                 is_anomaly[idx] = True
                 anomaly_type[idx] = "low_water"
-                
-            # High pressure spike (1% chance)
-            elif random.random() < 0.01:
-                pressure[idx] = random.uniform(85.0, 120.0)
-                is_anomaly[idx] = True
-                anomaly_type[idx] = "high_pressure"
                 
             # Low flow despite good filter (1% chance)
             elif random.random() < 0.01 and progress < 0.5:
@@ -105,15 +82,11 @@ def generate_data(num_days=30, freq_minutes=1):
                 
             # Sensor fault / outlier (0.5% chance)
             elif random.random() < 0.005:
-                fault_type = random.choice(["water", "temp", "flow", "pressure"])
+                fault_type = random.choice(["water", "flow"])
                 if fault_type == "water":
                     water_level[idx] = random.choice([-50, 200, np.nan])
-                elif fault_type == "temp":
-                    temperature[idx] = random.choice([-10, 150, np.nan])
                 elif fault_type == "flow":
                     flow_rate[idx] = random.choice([-5, 50, np.nan])
-                elif fault_type == "pressure":
-                    pressure[idx] = random.choice([-20, 300, np.nan])
                 is_anomaly[idx] = True
                 anomaly_type[idx] = "sensor_fault"
 
@@ -124,9 +97,7 @@ def generate_data(num_days=30, freq_minutes=1):
     df = pd.DataFrame({
         "timestamp": timestamps,
         "water_level_pct": water_level,
-        "temperature": temperature,
         "flow_rate": flow_rate,
-        "pressure": pressure,
         "power_on": power_on,
         "maintenance_days_remaining": maint_days,
         "maintenance_severity": maint_severity,

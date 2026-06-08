@@ -71,8 +71,15 @@ async function fetchData() {
     const savedPower = localStorage.getItem('mockSystemPower')
     const isOperational = savedPower !== null ? savedPower === 'true' : (sensorData ? sensorData.power_on : true)
     
-    const prediction = await getMaintenancePrediction()
-    const anomalyList = await getAnomalies(isOperational)
+    let currentSensorData = sensorData ? { ...sensorData } : null;
+    if (currentSensorData) {
+      currentSensorData.power_on = isOperational;
+    } else if (savedPower !== null) {
+      currentSensorData = { power_on: isOperational };
+    }
+    
+    const prediction = await getMaintenancePrediction(currentSensorData)
+    const anomalyList = await getAnomalies(currentSensorData)
     
     setMaintenancePrediction(prediction)
     setAnomalies(anomalyList)
@@ -125,9 +132,9 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
               title="Water Level" 
               accent="var(--color-blue)"
               icon={<Droplet size={20} />}
-              value={sensorStatus?.power_on ? `${sensorStatus.water_level_pct}%` : '—'}
+              value={isOperational && sensorStatus ? `${sensorStatus.water_level_pct}%` : '—'}
               caption="Volume remaining"
-              subtitle={sensorStatus?.power_on ? '✓ Sensor active' : '⚠ Not connected'}
+              subtitle={isOperational ? '✓ Sensor active' : '⚠ Not connected'}
             />
 
             {/* Bottles Saved */}
@@ -161,16 +168,16 @@ if (error) return <div style={{ padding: '32px', color: 'red' }}>Error loading d
             <StatCard 
               title="Maintenance" 
               accent={
-                !maintenancePrediction ? 'var(--color-text-muted)' :
+                !isOperational || !maintenancePrediction ? 'var(--color-text-muted)' :
                 maintenancePrediction.severity === 'critical' ? 'var(--color-danger)' :
                 maintenancePrediction.severity === 'high' ? 'var(--color-warning)' :
                 maintenancePrediction.severity === 'medium' ? 'var(--color-yellow)' :
                 'var(--color-warning)'
               }
               icon={<Wrench size={20} />}
-              value={maintenancePrediction ? maintenancePrediction.days_remaining : '—'}
-              caption={maintenancePrediction ? "Days remaining" : "No Data"}
-              subtitle={maintenancePrediction ? maintenancePrediction.reason : 'API unavailable'}
+              value={isOperational && maintenancePrediction ? maintenancePrediction.days_remaining : '—'}
+              caption={isOperational && maintenancePrediction ? "Days remaining" : "System Offline"}
+              subtitle={isOperational ? (maintenancePrediction ? maintenancePrediction.reason : 'API unavailable') : 'Machine is powered off'}
             />
           </div>
 

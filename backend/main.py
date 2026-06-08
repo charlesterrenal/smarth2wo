@@ -72,9 +72,7 @@ app.add_middleware(
 
 class SensorData(BaseModel):
     water_level_pct: Optional[float] = None
-    temperature: Optional[float] = None
     flow_rate: Optional[float] = None
-    pressure: Optional[float] = None
     power_on: Optional[bool] = None
 
 class MaintenancePrediction(BaseModel):
@@ -109,23 +107,12 @@ def predict_maintenance(sensor_data: SensorData) -> MaintenancePrediction:
             severity = "medium"
             confidence = 0.80
     
-    if sensor_data.temperature is not None and sensor_data.temperature > 45:
-        days_remaining = min(days_remaining, 5)
-        reason = "High temperature detected - cooling system check needed"
-        severity = "high"
-        confidence = 0.90
     
     if sensor_data.flow_rate is not None and sensor_data.flow_rate < 0.5:
         days_remaining = min(days_remaining, 10)
         reason = "Low flow rate - filter may need cleaning"
         severity = "medium"
         confidence = 0.75
-    
-    if sensor_data.pressure is not None and sensor_data.pressure > 80:
-        days_remaining = min(days_remaining, 3)
-        reason = "High pressure - safety check required"
-        severity = "critical"
-        confidence = 0.92
     
     return MaintenancePrediction(
         days_remaining=max(1, days_remaining),
@@ -160,38 +147,7 @@ def detect_anomalies(sensor_data: SensorData) -> List[Anomaly]:
                 severity="critical",
                 timestamp=datetime.now().isoformat()
             ))
-    
-    if sensor_data.temperature is not None:
-        if sensor_data.temperature > 50:
-            anomalies.append(Anomaly(
-                type="Overheating",
-                message=f"System temperature critical: {sensor_data.temperature}°C",
-                severity="critical",
-                timestamp=datetime.now().isoformat()
-            ))
-        elif sensor_data.temperature > 45:
-            anomalies.append(Anomaly(
-                type="High Temperature",
-                message=f"System running hot: {sensor_data.temperature}°C",
-                severity="high",
-                timestamp=datetime.now().isoformat()
-            ))
-        elif sensor_data.temperature < 5:
-            anomalies.append(Anomaly(
-                type="Low Temperature",
-                message=f"System temperature low: {sensor_data.temperature}°C",
-                severity="medium",
-                timestamp=datetime.now().isoformat()
-            ))
-    
-    if sensor_data.pressure is not None and sensor_data.pressure > 100:
-        anomalies.append(Anomaly(
-            type="Pressure Alert",
-            message=f"Pressure too high: {sensor_data.pressure} PSI",
-            severity="critical",
-            timestamp=datetime.now().isoformat()
-        ))
-    
+
     if sensor_data.flow_rate is not None and sensor_data.flow_rate < 0.1:
         anomalies.append(Anomaly(
             type="Low Flow",
@@ -220,7 +176,7 @@ def health_check():
     }
 
 @app.post("/api/maintenance/predict")
-async def predict_maintenance_endpoint(sensor_data: SensorData):
+async def predict_maintenance_endpoint(sensor_data: SensorData, simulate: bool = False):
     try:
         # Try ML prediction first
         ml_res = None
@@ -233,28 +189,7 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
         else:
             prediction = predict_maintenance(sensor_data)
             print("ML FALLBACK: Using rule-based maintenance prediction.")
-        if supabase:
-            update_data = {"updated_at": datetime.now().isoformat()}
-            if sensor_data.water_level_pct is not None:
-                update_data["water_level_pct"] = int(sensor_data.water_level_pct)
-            if sensor_data.power_on is not None:
-                update_data["power_on"] = sensor_data.power_on
-                
-            supabase.table("sensor_status").update(update_data).eq("id", 1).execute()
-            
-            # Record historical sensor data for ML and analytics
-            try:
-                supabase.table("sensor_history").insert({
-                    "water_level_pct": sensor_data.water_level_pct,
-                    "temperature": sensor_data.temperature,
-                    "flow_rate": sensor_data.flow_rate,
-                    "pressure": sensor_data.pressure,
-                    "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
-                    "created_at": datetime.now(timezone.utc).isoformat()
-                }).execute()
-            except Exception as hist_err:
-                print(f"Failed to record sensor history: {hist_err}")
-                
+        if supabase and not simulate:
             # Debounce maintenance logs: Only log if the exact same reason hasn't been logged today
             should_log = True
             try:
@@ -291,7 +226,7 @@ async def predict_maintenance_endpoint(sensor_data: SensorData):
         return predict_maintenance(sensor_data)
 
 @app.post("/api/anomalies/detect")
-async def detect_anomalies_endpoint(sensor_data: SensorData):
+async def detect_anomalies_endpoint(sensor_data: SensorData, simulate: bool = False):
     try:
         # Try ML anomaly detection first
         ml_res = None
@@ -304,7 +239,25 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
         else:
             anomalies = detect_anomalies(sensor_data)
             print("ML FALLBACK: Using rule-based anomaly detection.")
-        if supabase:
+        if supabase and not simulate:
+            # Check previous state for Power ON/OFF transitions
+            try:
+                prev_status_res = supabase.table("sensor_status").select("power_on").eq("id", 1).execute()
+                if prev_status_res.data and sensor_data.power_on is not None:
+                    prev_power = prev_status_res.data[0].get("power_on")
+                    
+                    if prev_power is not None and prev_power != sensor_data.power_on:
+                        # State changed! Log the transition
+                        status_str = "ON" if sensor_data.power_on else "OFF"
+                        log_status = "success" if sensor_data.power_on else "error"
+                        supabase.table("logs").insert({
+                            "event": f"System Powered {status_str}",
+                            "status": log_status,
+                            "volume_ml": 0
+                        }).execute()
+            except Exception as e:
+                print(f"Failed to check previous power state: {e}")
+
             update_data = {"updated_at": datetime.now().isoformat()}
             if sensor_data.water_level_pct is not None:
                 update_data["water_level_pct"] = int(sensor_data.water_level_pct)
@@ -317,9 +270,7 @@ async def detect_anomalies_endpoint(sensor_data: SensorData):
             try:
                 supabase.table("sensor_history").insert({
                     "water_level_pct": sensor_data.water_level_pct,
-                    "temperature": sensor_data.temperature,
                     "flow_rate": sensor_data.flow_rate,
-                    "pressure": sensor_data.pressure,
                     "power_on": sensor_data.power_on if sensor_data.power_on is not None else True,
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }).execute()

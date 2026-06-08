@@ -7,9 +7,7 @@
 create table if not exists sensor_history (
   id              uuid primary key default gen_random_uuid(),
   water_level_pct double precision,
-  temperature     double precision,
   flow_rate       double precision,
-  pressure        double precision,
   power_on        boolean default true,
   created_at      timestamptz not null default now()
 );

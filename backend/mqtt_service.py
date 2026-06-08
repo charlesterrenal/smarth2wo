@@ -69,6 +69,20 @@ def on_message(client, userdata, msg):
             print(f"ESP32 Status: {payload}")
         elif msg.topic == TOPIC_SENSORS:
             print(f"Sensor Data: {payload}")
+            
+            # Forward data to the ML endpoints so it is processed, logged, and emails are sent
+            try:
+                import requests
+                port = os.getenv("BACKEND_PORT", "8000")
+                base_url = f"http://127.0.0.1:{port}"
+                
+                print("Forwarding sensor data to ML pipeline...")
+                # Note: We do NOT pass simulate=True here, because we want the DB logs and emails to fire!
+                requests.post(f"{base_url}/api/maintenance/predict", json=payload, timeout=5)
+                requests.post(f"{base_url}/api/anomalies/detect", json=payload, timeout=5)
+            except Exception as req_err:
+                print(f"Failed to forward MQTT data to ML API: {req_err}")
+                
     except json.JSONDecodeError:
         print(f"Could not decode MQTT message: {msg.payload}")
 
