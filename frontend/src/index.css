@@ -65,7 +65,7 @@
   --color-text-secondary: #CBD5E1;
   --color-text-muted: #94A3B8;
   --color-border: #172033;
-  
+
   --shadow-card: 0 24px 70px rgba(0, 0, 0, 0.4);
   --shadow-hover: 0 24px 70px rgba(0, 0, 0, 0.6);
   --shadow-premium: 0 18px 50px rgba(0, 0, 0, 0.4);
@@ -78,7 +78,9 @@
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   width: 100%;
   height: 100%;
 }
@@ -97,13 +99,29 @@ body {
 }
 
 /* Scrollbar styling */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--color-bg); }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
 
 /* Smooth transitions for interactive elements */
-button, a { transition: all 0.15s ease; }
+button,
+a {
+  transition: all 0.15s ease;
+}
 
 /* Page transition animations */
 @keyframes pageSlideIn {
@@ -111,6 +129,7 @@ button, a { transition: all 0.15s ease; }
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -122,6 +141,7 @@ button, a { transition: all 0.15s ease; }
     opacity: 0;
     transform: translateX(-30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -133,6 +153,7 @@ button, a { transition: all 0.15s ease; }
     opacity: 0;
     transform: translateX(30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -143,6 +164,7 @@ button, a { transition: all 0.15s ease; }
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -150,6 +172,184 @@ button, a { transition: all 0.15s ease; }
 
 .page-container {
   animation: pageSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-ocean-bg {
+  background: linear-gradient(180deg, #0a1628 0%, #0d2b45 50%, #0e7490 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.caustic-1 {
+  background: radial-gradient(ellipse 55% 45% at 70% 80%, rgba(14, 116, 144, 0.3) 0%, transparent 65%);
+  animation: caustic-drift 11s ease-in-out infinite, caustic-pulse 7s ease-in-out infinite;
+}
+
+.caustic-2 {
+  background: radial-gradient(ellipse 40% 55% at 30% 40%, rgba(14, 116, 144, 0.2) 0%, transparent 65%);
+  animation: caustic-drift 14s ease-in-out infinite reverse, caustic-pulse 5s ease-in-out infinite 2s;
+}
+
+@keyframes caustic-drift {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(-3%, 4%) scale(1.05);
+  }
+}
+
+@keyframes caustic-pulse {
+
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.bubble {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  animation: rise linear infinite;
+  bottom: -20px;
+}
+
+@keyframes rise {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(var(--tx), -60vh, 0);
+  }
+
+  100% {
+    transform: translate3d(0, -120vh, 0);
+  }
+}
+
+.wave {
+  animation: move-forever linear infinite;
+}
+
+.wave-1 {
+  animation-duration: 16s;
+  fill: rgba(56, 189, 248, 0.2);
+}
+
+.wave-2 {
+  animation-duration: 12s;
+  fill: rgba(45, 212, 191, 0.3);
+}
+
+.wave-3 {
+  animation-duration: 8s;
+  fill: var(--color-bg);
+}
+
+@keyframes move-forever {
+  0% {
+    transform: translate3d(-90px, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(85px, 0, 0);
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.btn-animated {
+  background-size: 200% auto !important;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes shine-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  20% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-glow {
+  position: relative;
+  background: rgba(55, 138, 221, 0.1);
+  /* Subtle base */
+  color: white !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  z-index: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+}
+
+.btn-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(100px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(56, 189, 248, 1),
+      transparent 50%);
+  z-index: -2;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn-glow:hover::before {
+  opacity: 1;
+}
+
+/* Inner background to mask the gradient and leave just the glowing border */
+.btn-glow::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  /* Border thickness */
+  background: var(--color-blue);
+  border-radius: 6px;
+  z-index: -1;
+  transition: background 0.3s ease;
+}
+
+.btn-glow:hover::after {
+  background: var(--color-blue-dark);
+}
+
+.btn-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(55, 138, 221, 0.4);
 }
 
 /* Input styling improvements */
@@ -189,7 +389,7 @@ input:focus {
   :root {
     --sidebar-width: 0px;
   }
-  
+
   body {
     font-size: 14px;
   }
@@ -200,7 +400,7 @@ input:focus {
   body {
     font-size: 13px;
   }
-  
+
   :root {
     --sidebar-width: 0px;
   }
@@ -218,10 +418,10 @@ input:focus {
 @media (max-width: 768px) {
   .page-header {
     /* Push header right to make room for hamburger menu, symmetric padding to keep text centered */
-    padding: 0 72px 0 72px !important; 
+    padding: 0 72px 0 72px !important;
     height: 72px !important;
   }
-  
+
   .page-header-title {
     font-size: 20px !important;
   }
@@ -256,16 +456,15 @@ input:focus {
   position: absolute;
   inset: 0;
   border-radius: var(--radius-card);
-  padding: 2px; /* border thickness */
-  
+  padding: 2px;
+  /* border thickness */
+
   /* Tracing light gradient */
-  background: conic-gradient(
-    from var(--border-angle),
-    color-mix(in srgb, var(--card-accent) 15%, transparent) 0%,
-    color-mix(in srgb, var(--card-accent) 15%, transparent) 60%,
-    var(--card-accent) 100%
-  );
-  
+  background: conic-gradient(from var(--border-angle),
+      color-mix(in srgb, var(--card-accent) 15%, transparent) 0%,
+      color-mix(in srgb, var(--card-accent) 15%, transparent) 60%,
+      var(--card-accent) 100%);
+
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -293,7 +492,8 @@ input:focus {
 .recharts-pie-sector path {
   transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.4s ease;
   transform-origin: 50% 45%;
-  transform-box: fill-box; /* usually view-box works better for SVG if origin is relative to svg */
+  transform-box: fill-box;
+  /* usually view-box works better for SVG if origin is relative to svg */
 }
 
 /* Actually, transform-origin for SVG paths works best with exact px coords if we do it inline, but let's try 50% 45% with view-box */
