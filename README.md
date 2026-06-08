@@ -143,13 +143,11 @@ The dashboard and ESP32 talk to FastAPI at the URL defined by `VITE_API_URL` and
 
 ## Documentation
 
-- [SETUP.md](SETUP.md) - Complete setup guide (backend, frontend, hardware, deployment, troubleshooting)
-- [QUICKSTART.md](QUICKSTART.md) - Daily development quick reference
-- [backend/README.md](backend/README.md) - Backend details and API reference
-- [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md) - ESP32 hardware wiring and MQTT integration
+- [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md) - Complete setup guide and quickstart
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) - Git workflow, branching, and team conventions
+- [backend/README.md](backend/README.md) - Backend details, API reference, ML, and MQTT integration
 - [frontend/README.md](frontend/README.md) - Frontend details
-- [GITHUB_SETUP.md](GITHUB_SETUP.md) - Git workflow
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Branching and commit conventions
+- [landing/README.md](landing/README.md) - Landing page details
 
 ## License
 
