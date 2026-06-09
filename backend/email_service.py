@@ -247,7 +247,7 @@ def send_transaction_alert(transaction_id: str, customer_email: str, volume_ml: 
                             <!-- Footer -->
                             <tr>
                                 <td align="center" style="padding: 24px 40px; border-top: 1px solid #e5e7eb;">
-                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Admin Notifications</p>
+                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Operations Center</p>
                                 </td>
                             </tr>
                         </table>
@@ -342,7 +342,7 @@ def send_water_level_alert(water_level: float, status: str = "warning") -> bool:
                             <!-- Footer -->
                             <tr>
                                 <td align="center" style="padding: 24px 40px; border-top: 1px solid #e5e7eb;">
-                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Admin Notifications</p>
+                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Operations Center</p>
                                 </td>
                             </tr>
                         </table>
@@ -434,7 +434,7 @@ def send_maintenance_due_alert(days_remaining: int, reason: str, severity: str) 
                             <!-- Footer -->
                             <tr>
                                 <td align="center" style="padding: 24px 40px; border-top: 1px solid #e5e7eb;">
-                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Admin Notifications</p>
+                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Operations Center</p>
                                 </td>
                             </tr>
                         </table>
@@ -522,7 +522,7 @@ def send_anomaly_alert(anomaly_type: str, message: str, severity: str) -> bool:
                             <!-- Footer -->
                             <tr>
                                 <td align="center" style="padding: 24px 40px; border-top: 1px solid #e5e7eb;">
-                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Admin Notifications</p>
+                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Operations Center</p>
                                 </td>
                             </tr>
                         </table>
@@ -534,3 +534,76 @@ def send_anomaly_alert(anomaly_type: str, message: str, severity: str) -> bool:
     """
     
     return send_email(ALERT_RECIPIENT_EMAILS, subject, html, "anomaly")
+
+def send_power_status_alert(is_on: bool) -> bool:
+    """Alert when system power state changes"""
+    if not should_send_alert("power_status"):
+        return False
+    
+    status_text = "POWER RESTORED" if is_on else "POWER LOST"
+    color = "#1D9E75" if is_on else "#d32f2f"
+    bg_color = "#e6f4ea" if is_on else "#fef2f2"
+    
+    subject = f"[SmartH2wo] System {status_text}"
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+                <tr>
+                    <td align="center">
+                        <table width="600" border="0" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px;">
+                            <!-- Header -->
+                            <tr>
+                                <td align="center" style="padding: 40px 40px 32px;">
+                                    <h1 style="margin: 0 0 12px; font-size: 28px; font-weight: 600; color: #1a1a1a; text-align: center;">Power Status Update</h1>
+                                    <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                                        <tr>
+                                            <td style="background-color: {color}; color: white; padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{status_text}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 0 40px 40px;">
+                                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color: {bg_color}; border-left: 4px solid {color}; border-radius: 4px;">
+                                        <tr>
+                                            <td style="padding: 24px;">
+                                                <p style="margin: 0 0 12px; font-size: 18px; font-weight: 600; color: {color};">The system is now {'ONLINE' if is_on else 'OFFLINE'}</p>
+                                                <p style="margin: 0; font-size: 15px; color: #666; line-height: 1.6;">
+                                                    {'The water dispenser has regained power and is operating normally.' if is_on else 'The water dispenser has lost power or the MCU has disconnected from the broker. Please investigate.'}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <table width="100%" border="0" cellpadding="10" cellspacing="0" style="margin-top: 24px;">
+                                        <tr>
+                                            <td style="font-size: 15px; color: #666;">Time Detected</td>
+                                            <td align="right" style="font-size: 15px; font-weight: 600; color: #1a1a1a;">{datetime.now().strftime('%b %d, %Y at %I:%M %p')}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td align="center" style="padding: 24px 40px; border-top: 1px solid #e5e7eb;">
+                                    <p style="margin: 0; font-size: 13px; color: #999;">SmartH2wo Operations Center</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+    </html>
+    """
+    
+    return send_email(ALERT_RECIPIENT_EMAILS, subject, html, "power_status")

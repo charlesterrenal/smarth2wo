@@ -14,7 +14,7 @@ load_dotenv()
 from supabase import create_client, Client
 from paymongo_service import create_checkout_session, handle_webhook, CreatePaymentRequest
 from mqtt_service import init_mqtt, publish_dispense, disconnect as mqtt_disconnect
-from email_service import init_email_service, send_transaction_alert, send_water_level_alert, send_maintenance_due_alert, send_anomaly_alert
+from email_service import init_email_service, send_transaction_alert, send_water_level_alert, send_maintenance_due_alert, send_anomaly_alert, send_power_status_alert
 from ml.inference import MaintenancePredictor, AnomalyDetector
 
 # Initialize ML Predictors
@@ -255,6 +255,8 @@ async def detect_anomalies_endpoint(sensor_data: SensorData, simulate: bool = Fa
                             "status": log_status,
                             "volume_ml": 0
                         }).execute()
+                        # Send email alert
+                        send_power_status_alert(sensor_data.power_on)
             except Exception as e:
                 print(f"Failed to check previous power state: {e}")
 
