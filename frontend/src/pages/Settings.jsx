@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockSchedule } from '../lib/mockData'
+import { useTheme } from '../context/ThemeContext'
 
 export default function Settings() {
   const [schedule, setSchedule] = useState([])
   const [loading, setLoading] = useState(true)
   const [power, setPower] = useState(true)
   const [confirmPowerAction, setConfirmPowerAction] = useState(null)
+  const { is24Hour, toggle24Hour } = useTheme()
 
   useEffect(() => {
     // Read from localStorage for mock mode
@@ -136,6 +138,39 @@ export default function Settings() {
               {power ? '⚡' : '🔌'}
             </span>
           </button>
+        </div>
+
+        {/* User Preferences */}
+        <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
+          <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}>User Preferences</h3>
+              <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', margin: 0 }}>Customize your dashboard experience</p>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderTop: '1px solid var(--color-border)' }}>
+            <div>
+              <p style={{ fontWeight: 600, color: 'var(--color-text)', margin: '0 0 4px 0' }}>24-Hour Time Format</p>
+              <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', margin: 0 }}>Use 24-hour time format (14:00) instead of AM/PM.</p>
+            </div>
+            <button
+              onClick={toggle24Hour}
+              style={{
+                width: '48px', height: '26px', borderRadius: '13px',
+                background: is24Hour ? 'var(--color-blue)' : '#d1d5db',
+                border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: '3px',
+                left: is24Hour ? '25px' : '3px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                background: 'white', transition: 'left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }} />
+            </button>
+          </div>
         </div>
 
         {/* Scheduler */}

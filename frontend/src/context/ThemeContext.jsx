@@ -16,6 +16,11 @@ export function ThemeProvider({ children }) {
     return saved !== null ? JSON.parse(saved) : true
   })
 
+  const [is24Hour, setIs24Hour] = useState(() => {
+    const saved = localStorage.getItem('is24Hour')
+    return saved !== null ? JSON.parse(saved) : false
+  })
+
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDark))
     if (isDark) {
@@ -25,11 +30,17 @@ export function ThemeProvider({ children }) {
     }
   }, [isDark])
 
+  useEffect(() => {
+    localStorage.setItem('is24Hour', JSON.stringify(is24Hour))
+  }, [is24Hour])
+
   const toggleTheme = () => setIsDark(!isDark)
+  const toggle24Hour = () => setIs24Hour(!is24Hour)
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDark, toggleTheme, is24Hour, toggle24Hour }}>
       {children}
     </ThemeContext.Provider>
   )
 }
+

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { DollarSign, Download, Filter, Search } from 'lucide-react';
 import StatCard from '../components/StatCard';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AdminPayments() {
+  const { is24Hour } = useTheme();
   // Recent Transactions (mock - would fetch from backend)
   const [transactions, setTransactions] = useState([
     {
@@ -84,7 +86,7 @@ export default function AdminPayments() {
                         </span>
                       </td>
                       <td style={{ padding: '18px 16px', color: 'var(--color-text-muted)', fontSize: '14px' }}>
-                        {new Date(tx.created_at).toLocaleTimeString()}
+                        {new Date(tx.created_at).toLocaleTimeString([], { hour12: !is24Hour })}
                       </td>
                     </tr>
                   ))

@@ -4,8 +4,10 @@ import { Droplet, Activity, Clock, BarChart2, Users, Leaf } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockTransactions } from '../lib/mockData'
+import { useTheme } from '../context/ThemeContext'
 
 export default function Analytics() {
+  const { is24Hour } = useTheme()
   const [transactions, setTransactions] = useState([])
   const [sensorHistory, setSensorHistory] = useState([])
   const [loading, setLoading] = useState(true)
@@ -116,7 +118,7 @@ export default function Analytics() {
 
   // Format sensor history for Recharts
   const historyData = sensorHistory.map(entry => ({
-    time: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !is24Hour }),
     temp: entry.temperature,
     level: entry.water_level_pct
   }))

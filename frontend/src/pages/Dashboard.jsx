@@ -5,12 +5,14 @@ import StatCard from '../components/StatCard'
 import AlertCard from '../components/AlertCard'
 import { supabase } from '../lib/supabase'
 import { getMaintenancePrediction, getAnomalies } from '../lib/maintenanceApi'
+import { useTheme } from '../context/ThemeContext'
 
 // TODO: Replace mock data with Supabase queries
 // import { supabase } from '../lib/supabase'
 // import { useWaterLevel } from '../hooks/useWaterLevel'
 
 export default function Dashboard() {
+  const { is24Hour } = useTheme()
   const [sensorStatus, setSensorStatus] = useState(null)
   const [sensorHistory, setSensorHistory] = useState([])
   const [revenueData, setRevenueData] = useState([])
@@ -99,7 +101,7 @@ export default function Dashboard() {
 
   // Format sensor history for Recharts
   const historyData = sensorHistory.map(entry => ({
-    time: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    time: new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: !is24Hour }),
     temp: entry.temperature,
     level: entry.water_level_pct
   }))

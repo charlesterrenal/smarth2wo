@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { mockLogs } from '../lib/mockData'
+import { useTheme } from '../context/ThemeContext'
 
 export default function Logs() {
+  const { is24Hour } = useTheme()
   const [logs, setLogs]     = useState([])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
@@ -50,7 +52,7 @@ export default function Logs() {
     )
 
   const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
-  const formatTime = (date) => new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+  const formatTime = (date) => new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: !is24Hour })
   const statusStyle = (status) => ({
     padding: '4px 10px',
     borderRadius: '6px',

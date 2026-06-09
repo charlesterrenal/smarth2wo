@@ -8,6 +8,7 @@ import { mockTransactions } from '../lib/mockData'
 const timeFilters = ['All', 'Today', 'This Week', 'This Month']
 
 export default function Transaction() {
+  const { is24Hour } = useTheme()
   const [transactions, setTransactions] = useState([])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
@@ -85,6 +86,10 @@ export default function Transaction() {
   }, {})
   const preferredPayment = Object.keys(paymentCounts).sort((a, b) => paymentCounts[b] - paymentCounts[a])[0] || 'N/A'
   const preferredPaymentCount = paymentCounts[preferredPayment] || 0
+
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: !is24Hour })
+  }
 
   return (
     <div className="page-container" style={{
@@ -271,10 +276,6 @@ export default function Transaction() {
       </div>
     </div>
   )
-}
-
-function formatTime(date) {
-  return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
 }
 
 function formatPaymentMethod(method) {
