@@ -226,34 +226,37 @@ export default function Analytics() {
         {/* Donut chart */}
         <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
           <p style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.02em', color: 'var(--color-text)' }}>Volume distribution</p>
-          <ResponsiveContainer width="100%" height={230}>
-            <PieChart>
-              <Pie
-                data={volumeDistribution}
-                dataKey="value"
-                cx="45%"
-                cy="50%"
-                innerRadius={65}
-                outerRadius={100}
-                paddingAngle={2}
-                style={{ cursor: 'pointer', outline: 'none' }}
-              >
-                {volumeDistribution.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Legend
-                layout="vertical"
-                verticalAlign="middle"
-                align="right"
-                iconType="circle"
-                iconSize={12}
-                wrapperStyle={{ fontSize: '15px', paddingLeft: '0', paddingRight: '20px', lineHeight: '28px' }}
-                formatter={(value) => <span style={{ color: 'var(--color-text)', fontWeight: 600, marginLeft: '4px' }}>{value}</span>}
-              />
-              <Tooltip cursor={false} formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '14px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '24px', minHeight: '240px' }}>
+            <div style={{ width: '240px', height: '240px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={volumeDistribution}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={105}
+                    paddingAngle={2}
+                    style={{ cursor: 'pointer', outline: 'none' }}
+                  >
+                    {volumeDistribution.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip cursor={false} formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '14px', background: '#ffffff', color: '#0f172a', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} itemStyle={{ color: '#0f172a', fontWeight: 700 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '100px' }}>
+              {volumeDistribution.map((entry, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: entry.color }} />
+                  <span style={{ color: 'var(--color-text)', fontWeight: 600, fontSize: '14px' }}>{entry.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Users volume summary */}
