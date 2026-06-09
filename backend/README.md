@@ -85,9 +85,9 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
 
 **Access the API:**
-- 🌐 API Base: `http://localhost:8000`
+-  API Base: `http://localhost:8000`
 - Interactive Docs (Swagger UI): `http://localhost:8000/docs`
-- 🔍 Alternative Docs (ReDoc): `http://localhost:8000/redoc`
+-  Alternative Docs (ReDoc): `http://localhost:8000/redoc`
 
 **For Development with Auto-Reload:**
 ```bash
@@ -315,9 +315,9 @@ This project is licensed under the MIT License - see LICENSE file for details.
 ## Support
 
 For issues, questions, or suggestions:
-- 🐛 [Report a Bug](https://github.com/yourusername/smarth2wo-backend/issues)
-- 💡 [Request a Feature](https://github.com/yourusername/smarth2wo-backend/issues)
-- 📧 Contact: your-email@example.com
+-  [Report a Bug](https://github.com/yourusername/smarth2wo-backend/issues)
+-  [Request a Feature](https://github.com/yourusername/smarth2wo-backend/issues)
+-  Contact: your-email@example.com
 
 ## Links
 
@@ -343,22 +343,22 @@ Complete guide for connecting ESP32 hardware to SmartH2wo backend.
 
 ```
 ESP32 (Hardware)
-├── 3 Volume Buttons (100ml / 500ml / 1000ml) → start checkout
-├── 2 Payment Buttons (QR Pay / Coin Pay) → pick payment method
-├── Coin Acceptor (Allan 1239A, Phase 2) → pulse stream → coin credit
-├── TFT Display → Ready / Choose Payment / QR / Coin progress / Dispensing
-├── HTTP POST  → /api/payments/create-checkout (QR path only)
-├── MQTT Listener → smarth2o/dispense topic
-└── Pump Output → GPIO trigger when payment confirmed
+├── 3 Volume Buttons (100ml / 500ml / 1000ml)  start checkout
+├── 2 Payment Buttons (QR Pay / Coin Pay)  pick payment method
+├── Coin Acceptor (Allan 1239A, Phase 2)  pulse stream  coin credit
+├── TFT Display  Ready / Choose Payment / QR / Coin progress / Dispensing
+├── HTTP POST   /api/payments/create-checkout (QR path only)
+├── MQTT Listener  smarth2o/dispense topic
+└── Pump Output  GPIO trigger when payment confirmed
 
-↓ (MQTT) ↓
+ (MQTT) 
 
 Backend (FastAPI)
-├── Publishes  → smarth2o/dispense when payment confirmed
-├── Subscribes → smarth2o/status (ESP32 status updates)
-└── Subscribes → smarth2o/sensors (sensor data)
+├── Publishes   smarth2o/dispense when payment confirmed
+├── Subscribes  smarth2o/status (ESP32 status updates)
+└── Subscribes  smarth2o/sensors (sensor data)
 
-↓ (HTTP) ↓
+ (HTTP) 
 
 Frontend (Dashboard)
 └── Shows transaction history, logs, sensor status, payments
@@ -367,10 +367,10 @@ Frontend (Dashboard)
 ### Payment flow
 
 ```
-READY → press volume button
-  → CHOOSE_PAYMENT
-       → press QR Pay  → QR_PAYMENT  → scan + pay → MQTT dispense
-       → press Coin Pay → COIN_PAYMENT → insert coins → auto-dispense
+READY  press volume button
+   CHOOSE_PAYMENT
+        press QR Pay   QR_PAYMENT   scan + pay  MQTT dispense
+        press Coin Pay  COIN_PAYMENT  insert coins  auto-dispense
 ```
 
 Coin payments dispense locally (no backend round-trip) once the credit
@@ -421,38 +421,38 @@ MQTT initialized - Broker: test.mosquitto.org:1883
 **Wiring:**
 ```
 Volume buttons (one leg to GPIO, other leg to GND, no external resistor):
-- BTN 100ml   → GPIO 12
-- BTN 500ml   → GPIO 13
-- BTN 1000ml  → GPIO 14
+- BTN 100ml    GPIO 12
+- BTN 500ml    GPIO 13
+- BTN 1000ml   GPIO 14
 
 Payment buttons (same wiring pattern):
-- BTN QR Pay  → GPIO 25
-- BTN Coin Pay → GPIO 32
+- BTN QR Pay   GPIO 25
+- BTN Coin Pay  GPIO 32
 
 TFT Display (SPI):
-- MOSI → GPIO 23
-- SCLK → GPIO 18
-- MISO → GPIO 19   (optional, not used in firmware)
-- CS   → GPIO 5
-- DC   → GPIO 27
-- RST  → GPIO 33
-- VCC  → 3.3V       (DO NOT use 5V)
-- GND  → GND
-- LED  → 3.3V       (backlight)
+- MOSI  GPIO 23
+- SCLK  GPIO 18
+- MISO  GPIO 19   (optional, not used in firmware)
+- CS    GPIO 5
+- DC    GPIO 27
+- RST   GPIO 33
+- VCC   3.3V       (DO NOT use 5V)
+- GND   GND
+- LED   3.3V       (backlight)
 
 LED (test) / Pump output:
-- GPIO 26 → LED anode through 220Ω resistor → GND
-            (production: GPIO 26 → Relay In / MOSFET Gate → pump)
+- GPIO 26  LED anode through 220Ω resistor  GND
+            (production: GPIO 26  Relay In / MOSFET Gate  pump)
 
 Coin acceptor (Phase 2 — wire when ready):
-- Allan 1239A RED   → +12V from external supply
-- Allan 1239A BLACK → external supply GND  AND  ESP32 GND (common ground!)
-- Allan 1239A WHITE → GPIO 34
+- Allan 1239A RED    +12V from external supply
+- Allan 1239A BLACK  external supply GND  AND  ESP32 GND (common ground!)
+- Allan 1239A WHITE  GPIO 34
     (CAUTION: some 1239A units output 12V on this signal line. Measure with
      a multimeter BEFORE connecting to GPIO 34. If you see 12V, use either
      a voltage divider (20kΩ + 10kΩ) or a PC817 optocoupler to drop to 3.3V.
      If it's floating / open-collector, direct connection is safe.)
-- Allan 1239A GREEN → tied to BLACK, or leave disconnected
+- Allan 1239A GREEN  tied to BLACK, or leave disconnected
 ```
 
 > All buttons use the ESP32's internal pull-up resistors (`INPUT_PULLUP`).
@@ -463,12 +463,12 @@ Coin acceptor (Phase 2 — wire when ready):
 **Arduino IDE Setup:**
 
 1. Install ESP32 board:
-   - File → Preferences
+   - File  Preferences
    - Add: `https://dl.espressif.com/dl/package_esp32_index.json`
-   - Tools → Board Manager → Search "esp32" → Install
+   - Tools  Board Manager  Search "esp32"  Install
 
 2. Install required libraries:
-   - Sketch → Include Library → Manage Libraries
+   - Sketch  Include Library  Manage Libraries
    - Search and install:
      - `TFT_eSPI` (by Bodmer)
      - `PubSubClient` (by Nick O'Leary)
@@ -495,8 +495,8 @@ Coin acceptor (Phase 2 — wire when ready):
      const char* WIFI_PASSWORD = "YOUR_PASSWORD";
      const char* BACKEND_URL = "http://192.168.x.x:8000";  // Your PC's IP
      ```
-   - Tools → Board → "ESP32 Dev Module"
-   - Tools → Upload Speed → 921600
+   - Tools  Board  "ESP32 Dev Module"
+   - Tools  Upload Speed  921600
    - Upload
 
 ---
@@ -517,8 +517,8 @@ needing the backend, MQTT broker, or PayMongo account.
 
 #### Test 0a: QR payment path
 
-1. Press any volume button → **Choose Payment** screen appears
-2. Press the **QR Pay** button → `Processing...` → real scannable QR appears
+1. Press any volume button  **Choose Payment** screen appears
+2. Press the **QR Pay** button  `Processing...`  real scannable QR appears
 3. (Optional: scan the QR with your phone to confirm it decodes; in TEST_MODE
    the URL is a dummy `https://smarth2wo.test/pay/<volume>ml`)
 4. After ~5 seconds it auto-confirms "payment" and goes to **Dispensing**
@@ -531,24 +531,24 @@ needing the backend, MQTT broker, or PayMongo account.
 In Phase 1, the volume buttons double as coin denominations on the coin screen.
 Phase 2 will replace this with real pulses from the Allan 1239A.
 
-1. Press a volume button (e.g. 500ml = ₱10) → **Choose Payment** screen
-2. Press the **Coin Pay** button → **Insert Coins** screen with `P0 / P10`
+1. Press a volume button (e.g. 500ml = ₱10)  **Choose Payment** screen
+2. Press the **Coin Pay** button  **Insert Coins** screen with `P0 / P10`
 3. Simulate coins:
-   - Press **100ml** → adds ₱1
-   - Press **500ml** → adds ₱5
-   - Press **1000ml** → adds ₱10
+   - Press **100ml**  adds ₱1
+   - Press **500ml**  adds ₱5
+   - Press **1000ml**  adds ₱10
    - Progress bar fills as you go
 4. Once credit reaches the price, **Dispensing** triggers automatically
 5. Returns to **READY**
 
 #### Test 0c: Cancel & timeout paths
 
-- On **Choose Payment**, wait 15 seconds with no input → auto-cancel to READY
-- On **Choose Payment**, press a different volume → header updates (no cancel)
-- On **QR** screen, press any button (after 1.2s lockout) → cancel to READY
-- On **Insert Coins**, wait 60s with insufficient credit → amber **warning**
-  screen appears with another 30s extension; wait that out → forfeit + READY
-- On **Insert Coins**, press **Coin Pay** → cancel back to READY
+- On **Choose Payment**, wait 15 seconds with no input  auto-cancel to READY
+- On **Choose Payment**, press a different volume  header updates (no cancel)
+- On **QR** screen, press any button (after 1.2s lockout)  cancel to READY
+- On **Insert Coins**, wait 60s with insufficient credit  amber **warning**
+  screen appears with another 30s extension; wait that out  forfeit + READY
+- On **Insert Coins**, press **Coin Pay**  cancel back to READY
 
 Once all three of these test groups pass, flip `TEST_MODE` to `false` and
 continue with the live tests below.
@@ -572,7 +572,7 @@ MQTT connected!
 Subscribed to dispense topic
 ```
 
-### Test 3: Button → QR Code
+### Test 3: Button  QR Code
 
 1. Press 100ml button on ESP32
 2. Display shows "Processing..."
@@ -589,7 +589,7 @@ POST /api/payments/create-checkout
 > bypass scanning during development, use `TEST_MODE` (Test 0) or the
 > "Simulate Payment Success" button on the admin dashboard.
 
-### Test 4: Payment → Dispense
+### Test 4: Payment  Dispense
 
 1. Go to http://localhost:5173/admin/payments
 2. Click "Simulate Payment Success" with same transaction ID
@@ -713,10 +713,10 @@ This MQTT setup is **production-ready** because:
 6. **Secure** - Use TLS + auth for production
 
 When you upgrade to final hardware:
-- Replace breadboard with PCB ✓
-- Use MOSFET instead of relay ✓
-- Add real pump controller ✓
-- All MQTT messages stay identical ✓
+- Replace breadboard with PCB 
+- Use MOSFET instead of relay 
+- Add real pump controller 
+- All MQTT messages stay identical 
 
 ---
 
@@ -724,9 +724,9 @@ When you upgrade to final hardware:
 
 - [ ] Get WiFi working (Serial Monitor shows IP)
 - [ ] Get MQTT working (Serial Monitor shows "MQTT connected")
-- [ ] Test button → HTTP request
-- [ ] Test button → QR display
-- [ ] Test payment simulation → pump trigger
+- [ ] Test button  HTTP request
+- [ ] Test button  QR display
+- [ ] Test payment simulation  pump trigger
 - [ ] Calibrate pump flow rate
 - [ ] Add pressure sensor data publishing
 - [ ] Add water level sensor data publishing
@@ -819,7 +819,7 @@ This guide outlines the critical next steps for your thesis project to transitio
 
 ---
 
-## 📋 Action Items Checklist
+##  Action Items Checklist
 
 ### 1. Merge the ML Branch
 - [ ] Create a Pull Request on GitHub from `feature/ml-predictive-maintenance` to `main`.

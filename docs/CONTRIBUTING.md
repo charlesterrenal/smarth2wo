@@ -515,8 +515,8 @@ git push
 
 1. Go to **https://github.com/USERNAME/smarth2wo-backend**
 2. You should see all your code files
-3. ✅ Check that `venv/` folder is **NOT** uploaded (thanks to .gitignore)
-4. ✅ Check that `.env` file is **NOT** uploaded
+3.  Check that `venv/` folder is **NOT** uploaded (thanks to .gitignore)
+4.  Check that `.env` file is **NOT** uploaded
 
 ---
 
@@ -547,7 +547,7 @@ ssh-add ~/.ssh/id_ed25519
 
 ---
 
-## 📝 Regular Workflow After Setup
+##  Regular Workflow After Setup
 
 Every time you make changes:
 
@@ -567,7 +567,7 @@ git push
 
 ---
 
-## 🔗 Link to Backend Repository
+##  Link to Backend Repository
 
 Once pushed, share this link with your team:
 ```
@@ -576,17 +576,17 @@ https://github.com/USERNAME/smarth2wo-backend
 
 ---
 
-## 💡 Tips
+##  Tips
 
 - **Never commit** sensitive data:
-  - ❌ API keys
-  - ❌ Database passwords
-  - ❌ `.env` files
-  - ✅ Use `.env.example` instead
+  -  API keys
+  -  Database passwords
+  -  `.env` files
+  -  Use `.env.example` instead
 
 - **Good commit messages** help track changes:
-  - ✅ `git commit -m "Add maintenance prediction endpoint"`
-  - ❌ `git commit -m "updates"`
+  -  `git commit -m "Add maintenance prediction endpoint"`
+  -  `git commit -m "updates"`
 
 - **Keep it organized**:
   - `main` branch = production-ready code
@@ -619,7 +619,7 @@ git push
 
 ---
 
-## ✅ Verification Checklist
+##  Verification Checklist
 
 - [ ] Repository created on GitHub
 - [ ] Code pushed successfully

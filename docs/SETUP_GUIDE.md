@@ -77,14 +77,14 @@ npm install
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your_anon_key
 ```
-Get these from: Supabase Dashboard → Project Settings → API
+Get these from: Supabase Dashboard  Project Settings  API
 
 #### PayMongo Configuration
 ```env
 PAYMONGO_PUBLIC_KEY=pk_live_xxxxx
 PAYMONGO_SECRET_KEY=sk_live_xxxxx
 ```
-Get these from: [PayMongo Dashboard](https://dashboard.paymongo.com) → API Keys
+Get these from: [PayMongo Dashboard](https://dashboard.paymongo.com)  API Keys
 
 #### MQTT Configuration (IoT Communication)
 ```env
@@ -117,7 +117,7 @@ ENVIRONMENT=development
 
 #### 1. Create Tables in Supabase
 
-Go to Supabase Dashboard → SQL Editor → Run these queries:
+Go to Supabase Dashboard  SQL Editor  Run these queries:
 
 **Transactions Table:**
 ```sql
@@ -218,24 +218,24 @@ API Docs: http://localhost:8000/docs
   - `smarth2o/dispense` - Backend sends dispense commands
   - `smarth2o/status` - ESP32 sends status updates
   - `smarth2o/sensors` - ESP32 sends sensor data
-- **Status:** ✅ Automatically initialized on startup
+- **Status:**  Automatically initialized on startup
 
 #### PayMongo (Payment Processing)
 - **Purpose:** QR code payments via GCash
-- **Flow:** ESP32 → Backend → QR Code → Customer Payment
+- **Flow:** ESP32  Backend  QR Code  Customer Payment
 - **Setup:** See [PayMongo Documentation](https://developers.paymongo.com)
 - **Testing:** Use "Simulate Payment Success" in admin panel
-- **Status:** ✅ Integrated and working
+- **Status:**  Integrated and working
 
 #### Resend (Email Alerts)
 - **Purpose:** Automated notifications for system events
 - **Alerts Sent For:**
-  - 💰 Transaction confirmations
-  - 💧 Water level warnings (< 20% or < 10%)
-  - 🔧 Maintenance due notifications
-  - 🚨 System anomalies (pressure, temperature, flow rate)
+  -  Transaction confirmations
+  -  Water level warnings (< 20% or < 10%)
+  -  Maintenance due notifications
+  -  System anomalies (pressure, temperature, flow rate)
 - **Cooldown:** Same alert won't send twice within 30 minutes
-- **Status:** ✅ Fully integrated
+- **Status:**  Fully integrated
 
 ---
 
@@ -276,8 +276,8 @@ Access at: http://localhost:5173
 
 - ESP32 Dev Board
 - 5 Push buttons:
-  - 3 volume buttons → GPIO 12, 13, 14
-  - 2 payment buttons → GPIO 25, 32
+  - 3 volume buttons  GPIO 12, 13, 14
+  - 2 payment buttons  GPIO 25, 32
 - 2.4" or 2.8" TFT SPI display (ILI9341 driver)
 - 1 LED + 220Ω resistor (for testing) OR relay/MOSFET for the pump
 - Allan 1239A coin acceptor + 12V/1A supply (Phase 2)
@@ -290,41 +290,41 @@ resistors needed.
 
 **Volume buttons:**
 ```
-BTN 100ml   → GPIO 12 → GND
-BTN 500ml   → GPIO 13 → GND
-BTN 1000ml  → GPIO 14 → GND
+BTN 100ml    GPIO 12  GND
+BTN 500ml    GPIO 13  GND
+BTN 1000ml   GPIO 14  GND
 ```
 
 **Payment buttons:**
 ```
-BTN QR Pay   → GPIO 25 → GND
-BTN Coin Pay → GPIO 32 → GND
+BTN QR Pay    GPIO 25  GND
+BTN Coin Pay  GPIO 32  GND
 ```
 
 **TFT Display (SPI):**
 ```
-MOSI → GPIO 23
-SCLK → GPIO 18
-MISO → GPIO 19   (optional)
-CS   → GPIO 5
-DC   → GPIO 27
-RST  → GPIO 33
-VCC  → 3.3V       (NOT 5V)
-GND  → GND
-LED  → 3.3V       (backlight)
+MOSI  GPIO 23
+SCLK  GPIO 18
+MISO  GPIO 19   (optional)
+CS    GPIO 5
+DC    GPIO 27
+RST   GPIO 33
+VCC   3.3V       (NOT 5V)
+GND   GND
+LED   3.3V       (backlight)
 ```
 
 **LED (test) / Pump output:**
 ```
-GPIO 26 → LED through 220Ω → GND
-          (production: GPIO 26 → Relay In / MOSFET Gate → pump)
+GPIO 26  LED through 220Ω  GND
+          (production: GPIO 26  Relay In / MOSFET Gate  pump)
 ```
 
 **Coin acceptor (Phase 2):**
 ```
-Allan 1239A RED   → +12V external supply
-Allan 1239A BLACK → external supply GND + ESP32 GND (common ground!)
-Allan 1239A WHITE → GPIO 34
+Allan 1239A RED    +12V external supply
+Allan 1239A BLACK  external supply GND + ESP32 GND (common ground!)
+Allan 1239A WHITE  GPIO 34
                     (measure signal voltage first; if 12V, use a voltage
                     divider or PC817 optocoupler)
 ```
@@ -335,12 +335,12 @@ on the coin acceptor wiring and Allan 1239A programming.
 ### Arduino IDE Setup
 
 1. Install ESP32 board:
-   - File → Preferences
+   - File  Preferences
    - Add: `https://dl.espressif.com/dl/package_esp32_index.json`
-   - Tools → Board Manager → Search "esp32" → Install
+   - Tools  Board Manager  Search "esp32"  Install
 
 2. Install libraries:
-   - Sketch → Include Library → Manage Libraries
+   - Sketch  Include Library  Manage Libraries
    - Install: `TFT_eSPI` (Bodmer), `PubSubClient` (Nick O'Leary),
      `ArduinoJson` (Benoit Blanchon), `QRCode` (Richard Moore / ricmoo)
 
@@ -365,8 +365,8 @@ on the coin acceptor wiring and Allan 1239A programming.
    const char* WIFI_PASSWORD = "YOUR_PASSWORD";
    const char* BACKEND_URL = "http://192.168.x.x:8000";  // Your PC IP
    ```
-3. Tools → Board → "ESP32 Dev Module"
-4. Tools → Upload Speed → 921600
+3. Tools  Board  "ESP32 Dev Module"
+4. Tools  Upload Speed  921600
 5. Upload
 
 ### Testing ESP32
@@ -381,8 +381,8 @@ on the coin acceptor wiring and Allan 1239A programming.
    MQTT connected!
    ```
 
-3. Press button on ESP32 → QR appears on display
-4. Scan QR → Payment gateway opens
+3. Press button on ESP32  QR appears on display
+4. Scan QR  Payment gateway opens
 5. Test payment flow
 
 ---
@@ -520,7 +520,7 @@ npm run dev
 # http://localhost:8000/docs
 
 # View database
-# Supabase Dashboard → Table Editor
+# Supabase Dashboard  Table Editor
 ```
 
 ---
@@ -652,7 +652,7 @@ curl http://localhost:8000/health
 
 ### View Database Logs
 1. Go to Supabase Dashboard
-2. SQL Editor → New Query
+2. SQL Editor  New Query
 3. Run: `SELECT * FROM logs ORDER BY created_at DESC LIMIT 10;`
 
 ### Test Email Alerts
@@ -683,7 +683,7 @@ curl -X POST http://localhost:8000/api/anomalies/detect \
 | Webhooks not received | 1. Check ngrok is running<br>2. Verify webhook URL in PayMongo dashboard<br>3. Look for "WEBHOOK RECEIVED" in backend logs |
 | QR code won't scan | See backend logs for "DEBUG: PayMongo checkout response" - QR PH string should be present |
 
-**Full troubleshooting?** See [SETUP.md → Troubleshooting](SETUP.md#troubleshooting)
+**Full troubleshooting?** See [SETUP.md  Troubleshooting](SETUP.md#troubleshooting)
 
 ---
 
@@ -691,7 +691,7 @@ curl -X POST http://localhost:8000/api/anomalies/detect \
 
 ```
 smarth2wo/
-├── SETUP.md               ← START HERE for setup
+├── SETUP.md                START HERE for setup
 ├── README.md              Project overview
 ├── QUICKSTART.md          (this file)
 ├── GITHUB_SETUP.md        Git workflow
@@ -720,22 +720,21 @@ smarth2wo/
 
 ## Key Features
 
-✅ **Real-time MQTT** - ESP32 hardware integration  
-✅ **Payment Processing** - PayMongo QR codes  
-✅ **Email Alerts** - Resend notifications  
-✅ **Predictive Maintenance** - ML-powered predictions  
-✅ **Anomaly Detection** - System health monitoring  
-✅ **Beautiful Dashboard** - React + Tailwind UI  
+ **Real-time MQTT** - ESP32 hardware integration  
+ **Payment Processing** - PayMongo QR codes  
+ **Email Alerts** - Resend notifications  
+ **Predictive Maintenance** - ML-powered predictions  
+ **Anomaly Detection** - System health monitoring  
+ **Beautiful Dashboard** - React + Tailwind UI  
 
 ---
 
 ## Need Help?
 
-- **Full setup?** → [SETUP.md](SETUP.md)
-- **Backend details?** → [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md)
-- **Git workflow?** → [GITHUB_SETUP.md](GITHUB_SETUP.md)
-- **Frontend?** → [frontend/README.md](frontend/README.md)
+- **Full setup?**  [SETUP.md](SETUP.md)
+- **Backend details?**  [backend/ESP32_MQTT_GUIDE.md](backend/ESP32_MQTT_GUIDE.md)
+- **Git workflow?**  [GITHUB_SETUP.md](GITHUB_SETUP.md)
+- **Frontend?**  [frontend/README.md](frontend/README.md)
 
 ---
 
-**Ready?** Run the commands above and you're all set! 🚀

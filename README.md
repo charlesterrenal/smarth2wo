@@ -141,15 +141,11 @@ The dashboard and ESP32 talk to FastAPI at the URL defined by `VITE_API_URL` and
 - [frontend/README.md](frontend/README.md) - Frontend details
 - [landing/README.md](landing/README.md) - Landing page details
 
-## License
-
-MIT License.
-
 ## Team
 
 | Name | Role |
 |------|------|
-| Charles Vincent P. Terrenal | Project Lead, Full Stack Developer, Hardware Assembly and Integration |
-| Anne Margareth B. Medina | Frontend Lead, UI Development and Design |
-| Marielle Lois P. Bahuyo | Full Stack Developer, Frontend and Backend Development |
-| Wilbert Lancelot S. Aguilar | UI/UX Designer, Hardware Assembly |
+| Charles Vincent P. Terrenal | Project Lead |
+| Anne Margareth B. Medina | Frontend Developer |
+| Marielle Lois P. Bahuyo | Full-Stack Developer |
+| Wilbert Lancelot S. Aguilar | UI/UX Lead |

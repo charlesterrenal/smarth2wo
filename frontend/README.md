@@ -1,12 +1,12 @@
 # SmartH2wo - Smart Water Dispenser Management System
 
-🚀 Complete IoT solution for smart water dispensers with **real-time monitoring**, **predictive maintenance**, and **payment processing**.
+ Complete IoT solution for smart water dispensers with **real-time monitoring**, **predictive maintenance**, and **payment processing**.
 
 Consists of:
-- 📱 **Frontend Dashboard** - React + Vite + Tailwind CSS
-- 🔧 **Backend API** - FastAPI with ML-powered analytics
-- 💾 **Database** - Supabase (PostgreSQL)
-- 🎮 **Hardware** - ESP32 with sensor integration
+-  **Frontend Dashboard** - React + Vite + Tailwind CSS
+-  **Backend API** - FastAPI with ML-powered analytics
+-  **Database** - Supabase (PostgreSQL)
+-  **Hardware** - ESP32 with sensor integration
 
 ---
 
@@ -23,7 +23,7 @@ Consists of:
 
 ---
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - **Node.js** 16+ (for frontend)
 - **Python** 3.9+ (for backend)
@@ -33,7 +33,7 @@ Consists of:
 
 ---
 
-## 🚀 Quick Start (Full Stack Setup)
+##  Quick Start (Full Stack Setup)
 
 ### Option 1: Run Both Frontend & Backend (Recommended for Development)
 
@@ -67,7 +67,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-**✅ Backend running when you see:**
+** Backend running when you see:**
 ```
 INFO:     Uvicorn running on http://0.0.0.0:8000
 ```
@@ -92,7 +92,7 @@ npm install
 npm run dev
 ```
 
-**✅ Dashboard ready when you see:**
+** Dashboard ready when you see:**
 ```
 Local:  http://localhost:5173
 ```
@@ -103,10 +103,10 @@ Local:  http://localhost:5173
 
 | Component | URL | Purpose |
 |-----------|-----|---------|
-| 📊 Dashboard | http://localhost:5173 | Main UI for monitoring & management |
-| 📚 Backend Docs | http://localhost:8000/docs | Interactive API documentation |
-| 🔍 ReDoc | http://localhost:8000/redoc | Alternative API docs |
-| 🏥 Backend Health | http://localhost:8000/health | API health check |
+|  Dashboard | http://localhost:5173 | Main UI for monitoring & management |
+|  Backend Docs | http://localhost:8000/docs | Interactive API documentation |
+|  ReDoc | http://localhost:8000/redoc | Alternative API docs |
+|  Backend Health | http://localhost:8000/health | API health check |
 
 ---
 
@@ -167,13 +167,13 @@ python main.py
 
 #### Step 4: Access the Dashboard
 
-- 📊 **Dashboard**: http://localhost:5173
-- 📚 **API Docs**: http://localhost:8000/docs
-- 🏥 **API Health**: http://localhost:8000/health
+-  **Dashboard**: http://localhost:5173
+-  **API Docs**: http://localhost:8000/docs
+-  **API Health**: http://localhost:8000/health
 
 ---
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 smarth2wo/
@@ -218,7 +218,7 @@ src/
 
 ---
 
-## 🔌 Backend API Endpoints
+##  Backend API Endpoints
 
 All API calls return JSON. See [Backend README](./smarth2wo-backend/README.md) for full documentation.
 
@@ -246,7 +246,7 @@ Full interactive API documentation available at `http://localhost:8000/docs`
 
 ---
 
-## 🛠️ Development Workflow
+## ️ Development Workflow
 
 ### Getting Started (For All Groupmates)
 
@@ -297,14 +297,14 @@ Open http://localhost:5173 in your browser.
 
 ---
 
-## 🔗 Git Workflow
+##  Git Workflow
 
 We use a **feature-branch** strategy:
 
 ```
-main     ← production-ready code (deployed to Vercel)
-dev      ← integration branch (latest working code)
-feature/xxx → your working branches
+main      production-ready code (deployed to Vercel)
+dev       integration branch (latest working code)
+feature/xxx  your working branches
 ```
 
 ### Daily Development
@@ -323,7 +323,7 @@ git commit -m "feat: add water consumption chart"
 
 # 4. Push & create Pull Request
 git push origin feature/add-water-chart
-# → Open PR: feature/add-water-chart → dev on GitHub
+#  Open PR: feature/add-water-chart  dev on GitHub
 
 # 5. After PR approved & merged
 git checkout dev
@@ -334,17 +334,17 @@ git pull origin dev
 
 ---
 
-## 🗄️ Database Setup (Supabase)
+## ️ Database Setup (Supabase)
 
 ### For Charles (Setup Only)
 
-1. Go to https://supabase.com → create new project named `smarth2wo`
-2. Go to **SQL Editor** → Run contents of `supabase_schema.sql`
-3. Go to **Database > Replication** → Enable Realtime for:
+1. Go to https://supabase.com  create new project named `smarth2wo`
+2. Go to **SQL Editor**  Run contents of `supabase_schema.sql`
+3. Go to **Database > Replication**  Enable Realtime for:
    - `transactions` table
    - `logs` table
    - `sensor_status` table
-4. Go to **Settings > API** → Copy credentials into `.env`
+4. Go to **Settings > API**  Copy credentials into `.env`
 5. Share credentials with team (privately, not in repo)
 
 ### For Everyone Else
@@ -383,7 +383,7 @@ useEffect(() => {
 }, [sensorData])
 ```
 
-**Backend stops → Graceful fallback**: If API is down, frontend shows mock data (no crashes).
+**Backend stops  Graceful fallback**: If API is down, frontend shows mock data (no crashes).
 
 ---
 
@@ -420,38 +420,38 @@ useEffect(() => {
 
 ---
 
-## 📊 Project Structure (Detailed)
+##  Project Structure (Detailed)
 
 ```
 src/
 ├── components/
-│   ├── Sidebar.jsx      ← Navigation (shared, do not edit without discussion)
-│   ├── StatCard.jsx     ← Reusable card component (shared)
-│   └── PageHeader.jsx   ← Page title component (shared)
+│   ├── Sidebar.jsx       Navigation (shared, do not edit without discussion)
+│   ├── StatCard.jsx      Reusable card component (shared)
+│   └── PageHeader.jsx    Page title component (shared)
 ├── pages/
-│   ├── Dashboard.jsx    ← System overview & predictions (Member 2)
-│   ├── Transaction.jsx  ← Payment history (Member 3)
-│   ├── Analytics.jsx    ← Water usage stats (Member 4)
-│   ├── Logs.jsx         ← System event logs (Member 3)
-│   └── Settings.jsx     ← Configuration (Member 4)
+│   ├── Dashboard.jsx     System overview & predictions (Member 2)
+│   ├── Transaction.jsx   Payment history (Member 3)
+│   ├── Analytics.jsx     Water usage stats (Member 4)
+│   ├── Logs.jsx          System event logs (Member 3)
+│   └── Settings.jsx      Configuration (Member 4)
 ├── lib/
-│   ├── supabase.js      ← Supabase client (do not edit)
-│   ├── maintenanceApi.js ← Backend API calls (Charles only)
-│   └── mockData.js      ← Development mock data
-├── hooks/               ← Custom React hooks (for future use)
-├── App.jsx              ← Routing & layout
-├── index.css            ← Global styles & CSS variables
-└── main.jsx             ← Entry point
+│   ├── supabase.js       Supabase client (do not edit)
+│   ├── maintenanceApi.js  Backend API calls (Charles only)
+│   └── mockData.js       Development mock data
+├── hooks/                Custom React hooks (for future use)
+├── App.jsx               Routing & layout
+├── index.css             Global styles & CSS variables
+└── main.jsx              Entry point
 ```
 
 ---
 
-## 🚀 Deployment
+##  Deployment
 
 ### Frontend (Vercel)
 
 1. Push to `main` branch
-2. Go to https://vercel.com → Import GitHub repo
+2. Go to https://vercel.com  Import GitHub repo
 3. Add environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
@@ -460,7 +460,7 @@ src/
 ### Backend (Render/Railway/Heroku)
 
 1. Push to backend repo's `main` branch
-2. Go to hosting provider → Import GitHub repo
+2. Go to hosting provider  Import GitHub repo
 3. Add environment variables from `.env`
 4. Set start command: `uvicorn main:app --host 0.0.0.0 --port 8000`
 5. Deploy
@@ -469,7 +469,7 @@ See [Backend README](./smarth2wo-backend/README.md) for detailed deployment inst
 
 ---
 
-## 🔌 ESP32 Hardware Integration
+##  ESP32 Hardware Integration
 
 The ESP32 posts transaction data directly to Supabase:
 
@@ -503,7 +503,7 @@ void logTransaction(int volume_ml, float price, String payment_method) {
 
 ---
 
-## 📚 API Documentation
+##  API Documentation
 
 ### Frontend Integration
 - See `src/lib/maintenanceApi.js` for all backend API calls
@@ -516,7 +516,7 @@ void logTransaction(int volume_ml, float price, String payment_method) {
 
 ---
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Frontend Won't Start
 ```bash
@@ -552,17 +552,17 @@ lsof -i :8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
 
 ---
 
-## 📝 Commit Message Guidelines
+##  Commit Message Guidelines
 
 Keep commits **atomic** and **descriptive**:
 
 ```bash
-# ✅ Good
+#  Good
 git commit -m "feat: add water level chart to dashboard"
 git commit -m "fix: prevent API errors when backend is down"
 git commit -m "style: update card shadows and remove border radius"
 
-# ❌ Bad
+#  Bad
 git commit -m "updates"
 git commit -m "fix stuff"
 git commit -m "WIP"
@@ -578,7 +578,7 @@ git commit -m "WIP"
 
 ---
 
-## 🎨 Theme & Design
+##  Theme & Design
 
 The dashboard uses **Atom Grey dark mode** with:
 - **Primary Colors**: Blue (#0052CC), Green (#00A651), Yellow (#FFA500)
@@ -611,7 +611,7 @@ All cards have:
 
 ---
 
-## 📖 Resources
+##  Resources
 
 - [React Docs](https://react.dev)
 - [Vite Guide](https://vitejs.dev)
@@ -623,22 +623,22 @@ All cards have:
 
 ---
 
-## 📞 Support & Questions
+##  Support & Questions
 
-- 🐛 **Bug Report**: [Open an Issue](https://github.com/YOUR_USERNAME/smarth2wo-dashboard/issues)
-- 💡 **Feature Request**: [Discussions](https://github.com/YOUR_USERNAME/smarth2wo-dashboard/discussions)
-- 📧 **Email**: your-email@example.com
-- 💬 **Slack/Team Chat**: (add channel link here)
+-  **Bug Report**: [Open an Issue](https://github.com/YOUR_USERNAME/smarth2wo-dashboard/issues)
+-  **Feature Request**: [Discussions](https://github.com/YOUR_USERNAME/smarth2wo-dashboard/discussions)
+-  **Email**: your-email@example.com
+-  **Slack/Team Chat**: (add channel link here)
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the **MIT License** - see LICENSE file for details.
 
 ---
 
-## 🏆 Team Info
+##  Team Info
 
 **Project**: SmartH2wo - IoT Water Dispenser Management System  
 **Org**: [Your Organization/School]  
@@ -647,9 +647,9 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 
-✨ **Dashboard Features**:
+ **Dashboard Features**:
 - Real-time water level monitoring
 - Predictive maintenance scheduling
 - Transaction history & revenue tracking
@@ -663,7 +663,7 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 
 ---
 
-## 🔐 Security Notes
+##  Security Notes
 
 - Never commit `.env` files (use `.env.example`)
 - Supabase credentials are environment variables (not hardcoded)
@@ -672,7 +672,7 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 
 ---
 
-## 🎯 Next Steps
+##  Next Steps
 
 - [ ] Complete all page implementations
 - [ ] Connect all pages to Supabase
@@ -685,4 +685,4 @@ This project is licensed under the **MIT License** - see LICENSE file for detail
 
 ---
 
-**Happy Coding! 🚀**
+
