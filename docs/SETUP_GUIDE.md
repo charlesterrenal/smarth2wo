@@ -389,45 +389,52 @@ on the coin acceptor wiring and Allan 1239A programming.
 
 ## Part 5: Production Deployment
 
-### Backend Deployment
+The recommended production setup uses a unified Docker Compose stack (`docker-compose.prod.yml`) paired with Cloudflare Tunnels to safely expose the services to the internet without opening router ports.
 
-**Option 1: Railway (Recommended)**
-1. Push code to GitHub
-2. Connect Railway to GitHub repo
-3. Set environment variables
-4. Deploy
+### 1. Build and Run the Stack
 
-**Option 2: Docker**
+The production stack spins up three containers:
+- `frontend` (React Dashboard) on port `80`
+- `landing` (React Marketing Page) on port `81`
+- `backend` (FastAPI) on port `8000`
+
+First, create the necessary `.env` files on your server (these are ignored by Git):
+- `backend/.env` (Supabase, PayMongo, Resend, MQTT credentials)
+- `frontend/.env` (Vite Supabase credentials)
+
+Then build and start the containers in detached mode:
 ```bash
-docker build -t smarth2o-backend .
-docker run -e SUPABASE_URL=... -p 8000:8000 smarth2o-backend
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-### Frontend Deployment
+### 2. Configure Cloudflare Tunnel (cloudflared)
 
-**Option: Vercel (Recommended)**
-```bash
-npm run build
-# Push to GitHub
-# Connect Vercel to repo
-# Auto-deploys on push
+Install `cloudflared` on your server or a separate Gateway LXC. Edit your `/etc/cloudflared/config.yml` to map your subdomains to the Docker ports:
+
+```yaml
+ingress:
+  - hostname: smarth2wo.tech
+    service: http://<DOCKER_SERVER_IP>:81      # Landing Page
+
+  - hostname: dash.smarth2wo.tech
+    service: http://<DOCKER_SERVER_IP>:80      # Dashboard
+
+  - hostname: api.smarth2wo.tech
+    service: http://<DOCKER_SERVER_IP>:8000    # FastAPI Backend
+
+  - service: http_status:404
 ```
 
-### ngrok for Webhook Testing
-
-For local testing of PayMongo webhooks:
-
+Restart the tunnel:
 ```bash
-# Install
-brew install ngrok  # macOS
-choco install ngrok # Windows
-
-# Start tunnel
-ngrok config add-authtoken YOUR_AUTH_TOKEN
-ngrok http 8000
-
-# Copy public URL and add to PayMongo dashboard
+systemctl restart cloudflared
 ```
+
+### 3. Setup DNS Records
+
+Go to your Cloudflare Dashboard -> DNS. For each subdomain (`@`, `dash`, `api`), create a `CNAME` record pointing to your tunnel's `.cfargotunnel.com` target, with the Orange Cloud (Proxy) enabled.
+
+Finally, go to **SSL/TLS -> Edge Certificates** and turn on **Always Use HTTPS** to automatically encrypt all traffic.
 
 ---
 
