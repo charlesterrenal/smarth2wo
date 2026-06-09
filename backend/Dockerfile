@@ -15,6 +15,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
+# Generate synthetic training data and train the ML models
+ENV PYTHONPATH=/app
+RUN python ml/generate_training_data.py && python ml/train_models.py
+
 # Expose port
 EXPOSE 8000
 
