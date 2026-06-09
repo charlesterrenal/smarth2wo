@@ -46,7 +46,7 @@ export default function Sidebar() {
           onClick={() => setIsOpen(!isOpen)}
           style={{
             position: 'fixed',
-            top: '15px',
+            top: 'calc(15px + env(safe-area-inset-top, 0px))',
             left: '16px',
             zIndex: 101,
             background: 'var(--color-surface)',

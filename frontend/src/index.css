@@ -416,7 +416,7 @@ input:focus {
 
 /* Page Header & Container Responsive Overrides */
 .page-header {
-  padding: 24px 40px;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 40px 24px;
 }
 
 .page-header-title {
@@ -426,8 +426,8 @@ input:focus {
 @media (max-width: 768px) {
   .page-header {
     /* Push header right to make room for hamburger menu, symmetric padding to keep text centered */
-    padding: 0 72px 0 72px !important;
-    height: 72px !important;
+    padding: env(safe-area-inset-top, 0px) 72px 0 72px !important;
+    height: calc(72px + env(safe-area-inset-top, 0px)) !important;
   }
 
   .page-header-title {
@@ -435,7 +435,7 @@ input:focus {
   }
 
   .page-container {
-    padding: 16px !important;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px !important;
   }
 }
 
