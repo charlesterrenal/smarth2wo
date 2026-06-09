@@ -469,10 +469,10 @@ async def update_power_status(data: SensorData):
             # Add to logs table
             from datetime import datetime, timezone
             event_msg = "System Powered ON (Manual Override)" if data.power_on else "System Powered OFF (Manual Override)"
-            severity_level = "info" if data.power_on else "warning"
+            status_level = "info" if data.power_on else "warning"
             supabase.table("logs").insert({
                 "event": event_msg,
-                "severity": severity_level,
+                "status": status_level,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }).execute()
         
