@@ -88,17 +88,24 @@ export default function Sidebar() {
           alignItems: 'center',
           minHeight: '40px'
         }}>
-          <img
-            src={isDark ? logoDark : logo}
-            alt="SmartH2WO Logo"
-            style={{
-              width: '100%',
-              maxWidth: isMobile ? '160px' : '220px',
-              height: isMobile ? '24px' : '32px',
-              objectFit: 'contain',
-              display: 'block'
-            }}
-          />
+          <NavLink 
+            to="/dashboard" 
+            onClick={() => isMobile && setIsOpen(false)}
+            style={{ display: 'block', width: '100%', textDecoration: 'none' }}
+          >
+            <img
+              src={isDark ? logoDark : logo}
+              alt="SmartH2WO Logo"
+              style={{
+                width: '100%',
+                maxWidth: isMobile ? '160px' : '220px',
+                height: isMobile ? '24px' : '32px',
+                objectFit: 'contain',
+                display: 'block',
+                margin: isMobile ? '0' : '0 auto'
+              }}
+            />
+          </NavLink>
         </div>
 
         {/* Nav links */}
