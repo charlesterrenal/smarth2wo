@@ -4,22 +4,22 @@ SmartH2wo is a smart water dispenser management system that combines an ESP32-co
 
 ## Overview
 
-The system links three layers. An ESP32 with a 2.4" TFT display, three volume buttons (100ml, 500ml, 1000ml), two payment-method buttons (QR / Coin), and a coin acceptor (Allan 1239A) handles the customer interaction at the dispenser. After picking a volume the customer chooses how to pay: QR PH renders a scannable PayMongo QR directly on the TFT, and Coin shows a live progress screen that counts inserted credit. A FastAPI backend brokers QR payments, runs maintenance and anomaly rules over incoming sensor data, sends email alerts, and dispatches dispense commands to the ESP32 over MQTT. A React dashboard gives administrators a live view of transactions, sensor status, logs, analytics, and payment activity, with Supabase providing realtime sync between backend writes and the frontend.
+The system links three core layers: physical hardware, a backend server, and a frontend dashboard.
+
+At the hardware layer, an ESP32 controls a 2.4" TFT display, volume buttons, payment buttons, and a coin acceptor. Customers select their desired volume and choose to pay via QR PH (PayMongo) or inserted coins.
+
+The FastAPI backend brokers these payments, analyzes sensor data using Machine Learning for predictive maintenance and anomaly detection, and sends email alerts. It communicates with the ESP32 via MQTT to trigger water dispensing.
+
+Finally, the React dashboard provides administrators with a real-time view of transactions, system health, and analytics, backed by Supabase for seamless data synchronization.
 
 ## Features
 
-- Dual payment options at the dispenser: **QR PH** (PayMongo, universal — works with GCash, Maya, BPI, BDO, etc.) and **Coins** (Allan 1239A acceptor)
-- "Choose payment" screen after selecting a volume, with a 15-second auto-cancel
-- Coin progress screen with live credit, progress bar, and a 60+30-second soft-timeout policy (warning before forfeit)
-- Dynamic QR PH rendered directly on the dispenser's TFT — no dashboard required
-- MQTT-driven dispense flow: paid QR transactions automatically trigger the ESP32 to release water
-- Cancel-during-QR: customers can press any button to cancel an in-progress checkout
-- TEST_MODE on the firmware for hardware-only validation without WiFi, backend, or PayMongo (volume buttons double as simulated coin denominations on the coin screen)
-- Predictive maintenance and anomaly detection based on water level, temperature, flow rate, and pressure
-- Email alerts (transactions, low water level, maintenance due, anomalies) through Resend
-- Realtime React dashboard with transactions, logs, analytics, sensor status, and admin payments
-- Supabase persistence with row-level security for transactions, logs, sensor status, and schedule
-- Role-aware admin payments page that can simulate payments for end-to-end testing
+- **Dual Payment System**: Pay via QR PH (PayMongo) or physical coins.
+- **Dynamic QR Generation**: Scannable QR codes are rendered directly on the dispenser's TFT display.
+- **Machine Learning Integration**: Predictive maintenance and anomaly detection based on live sensor data.
+- **Automated Alerts**: Real-time email notifications for maintenance, anomalies, and transactions.
+- **Real-Time Dashboard**: Live admin monitoring for sensor status, revenue analytics, and transaction logs.
+- **MQTT-Driven Dispensing**: Secure, instant communication between the backend and ESP32 hardware.
 
 ## Technology Stack
 
