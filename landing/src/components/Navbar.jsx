@@ -11,6 +11,8 @@ const NAV_ITEMS = [
 export function Navbar({ activeSection }) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  
+  const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL || 'http://localhost:5173/login'
 
   useEffect(() => {
     const handleScroll = () => {
@@ -90,7 +92,7 @@ export function Navbar({ activeSection }) {
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <a
-              href="http://localhost:5173/login"
+              href={dashboardUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center w-10 h-10 rounded-full border border-slate-700/50 dark:border-slate-800 bg-brand-blue text-white hover:bg-blue-600 transition-colors"
@@ -128,7 +130,7 @@ export function Navbar({ activeSection }) {
           ))}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
             <a
-              href="http://localhost:5173/login"
+              href={dashboardUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex justify-center w-full text-base font-semibold bg-brand-blue text-white px-5 py-3 rounded-full"
