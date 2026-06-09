@@ -457,6 +457,23 @@ async def check_payment_status(transaction_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/api/sensors/power")
+async def update_power_status(data: SensorData):
+    try:
+        if data.power_on is None:
+            raise HTTPException(status_code=400, detail="power_on must be provided")
+            
+        if supabase:
+            supabase.table("sensor_status").update({"power_on": data.power_on}).eq("id", 1).execute()
+        
+        # Send email alert
+        from email_service import send_power_status_alert
+        send_power_status_alert(data.power_on)
+        
+        return {"status": "success", "power_on": data.power_on}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

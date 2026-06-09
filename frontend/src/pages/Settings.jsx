@@ -317,7 +317,18 @@ export default function Settings() {
                   setPower(newPower)
                   localStorage.setItem('mockSystemPower', String(newPower))
                   if (isSupabaseConfigured) {
-                    await supabase.from('sensor_status').update({ power_on: newPower }).eq('id', 1)
+                    try {
+                      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+                      await fetch(`${apiUrl}/api/sensors/power`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ power_on: newPower })
+                      })
+                    } catch (error) {
+                      console.error('Failed to update power status', error)
+                      // Fallback to direct supabase if API is unreachable
+                      await supabase.from('sensor_status').update({ power_on: newPower }).eq('id', 1)
+                    }
                   }
                 }}
                 style={{
