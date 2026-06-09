@@ -81,6 +81,10 @@ def should_send_alert(alert_type: str) -> bool:
         return True
     
     try:
+        # Power status changes should always alert immediately without cooldown
+        if alert_type == "power_status":
+            return True
+
         cooldown_time = datetime.now(timezone.utc) - timedelta(minutes=EMAIL_COOLDOWN_MINUTES)
         
         response = supabase.table("email_logs").select("id").eq(
