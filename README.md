@@ -23,12 +23,14 @@ The system links three layers. An ESP32 with a 2.4" TFT display, three volume bu
 
 ## Technology Stack
 
-- **Frontend:** React 18, Vite, Tailwind CSS
-- **Backend:** FastAPI (Python 3.11+), Supabase (PostgreSQL & Realtime)
-- **Machine Learning:** Scikit-learn (Predictive Maintenance & Anomaly Detection)
-- **Payments:** PayMongo (QR PH)
-- **IoT & Hardware:** ESP32, MQTT, ILI9341 TFT Display
-- **Infrastructure:** Docker Compose, Cloudflare Tunnels
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | React 18, Vite, Tailwind CSS |
+| **Backend** | FastAPI (Python 3.11+), Supabase (PostgreSQL & Realtime) |
+| **Machine Learning** | Scikit-learn (Predictive Maintenance & Anomaly Detection) |
+| **Payments** | PayMongo (QR PH), Allan 1239A Coin Acceptor |
+| **IoT & Hardware** | ESP32, MQTT, ILI9341 TFT Display, Coin Slot |
+| **Infrastructure** | Docker Compose, Cloudflare Tunnels |
 
 ## Project Structure
 
@@ -146,6 +148,6 @@ The dashboard and ESP32 talk to FastAPI at the URL defined by `VITE_API_URL` and
 | Name | Role |
 |------|------|
 | Charles Vincent P. Terrenal | Project Lead |
-| Anne Margareth B. Medina | Frontend Developer |
-| Marielle Lois P. Bahuyo | Full-Stack Developer |
-| Wilbert Lancelot S. Aguilar | UI/UX Lead |
+| Anne Margareth B. Medina | Full-Stack Developer & UI/UX Design |
+| Marielle Lois P. Bahuyo | Full-Stack Developer & Machine Learning |
+| Wilbert Lancelot S. Aguilar | Frontend Developer & Hardware Engineer |
