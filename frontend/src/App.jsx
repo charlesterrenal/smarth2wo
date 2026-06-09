@@ -119,9 +119,8 @@ function AppInner() {
     return <Routes><Route path="*" element={<Login />} /></Routes>
   }
 
-  // If logged in, show dashboard layout with all routes
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', background: 'var(--color-bg)' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100%', background: 'var(--color-bg)' }}>
       <Sidebar />
       <AppContent />
     </div>
