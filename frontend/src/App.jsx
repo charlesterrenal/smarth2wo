@@ -53,7 +53,7 @@ function AppContent() {
         paddingTop: 0,
       }}>
         <Routes key={location.pathname}>
-          <Route path="/"            element={<Navigate to="/dashboard" replace />} />
+          <Route path="*"            element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"   element={<Dashboard />} />
           <Route path="/transaction" element={<Transaction />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
@@ -95,15 +95,7 @@ function AppInner() {
   }, [])
 
   if (!isSupabaseConfigured) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
-        <SetupBanner />
-        <div style={{ display: 'flex', flex: 1, minHeight: 0, background: 'var(--color-bg)' }}>
-          <Sidebar />
-          <AppContent />
-        </div>
-      </div>
-    )
+    return <Routes><Route path="*" element={<Login />} /></Routes>
   }
 
   if (loading) {
