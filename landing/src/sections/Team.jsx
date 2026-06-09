@@ -6,24 +6,28 @@ const team = [
     name: 'Charles Vincent P. Terrenal',
     role: 'Project Lead',
     initials: 'CT',
+    image: '/CharlesVincent.png',
     bg: 'bg-brand-blue/10 text-brand-blue'
   },
   {
     name: 'Anne Margareth B. Medina',
     role: 'Frontend Lead',
     initials: 'AM',
+    image: '/AnneM.png',
     bg: 'bg-brand-cyan/10 text-brand-cyan'
   },
   {
-    name: 'Marielle Lois P. Bahuyo',
+    name: 'Marielle Lois P.\nBahuyo',
     role: 'Full Stack Developer',
     initials: 'MB',
+    image: '/Lois.png',
     bg: 'bg-brand-pink/10 text-brand-pink'
   },
   {
     name: 'Wilbert Lancelot S. Aguilar',
     role: 'UI/UX Designer',
     initials: 'WA',
+    image: '/LANCEW.png',
     bg: 'bg-brand-yellow/10 text-brand-yellow'
   }
 ]
@@ -67,21 +71,43 @@ function TeamCard({ member, delay }) {
       <div className="absolute inset-[-100%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_270deg_at_50%_50%,#00000000_50%,#1D9E75_100%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" />
 
       {/* Inner Content Area */}
-      <div className="relative h-full w-full rounded-[14px] bg-[var(--bg-card)] flex flex-col items-center text-center p-8 z-10 overflow-hidden">
-        <div className={`w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold mb-6 ${member.bg} transition-transform group-hover:scale-110 duration-300 z-10`}>
-          {member.initials}
-        </div>
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1 z-10">{member.name}</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 z-10">{member.role}</p>
+      <div className="relative h-full w-full rounded-[14px] bg-[var(--bg-card)] flex flex-col items-center text-center z-10 overflow-hidden min-h-[300px]">
+        {member.image ? (
+          <>
+            <img src={member.image} alt={member.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 z-0" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent z-0" />
+            <div className="relative z-10 flex flex-col items-center justify-end w-full h-full px-4 pb-0 pt-8">
+              <div className="w-24 h-24 mb-auto"></div> {/* Spacer to maintain original box size */}
+              <h3 className="text-xl font-bold text-white mb-0 drop-shadow-md whitespace-pre-line">{member.name}</h3>
+              <p className="text-sm text-slate-200 mb-1 drop-shadow-md">{member.role}</p>
+              <div className="flex items-center gap-3 pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <a href="#" className="p-1 text-slate-200 hover:text-white transition-colors drop-shadow-md">
+                  <Globe size={18} />
+                </a>
+                <a href="#" className="p-1 text-slate-200 hover:text-white transition-colors drop-shadow-md">
+                  <Mail size={18} />
+                </a>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="relative z-10 flex flex-col items-center w-full h-full p-8">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold mb-6 ${member.bg} transition-transform group-hover:scale-110 duration-300 z-10`}>
+              {member.initials}
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1 z-10 whitespace-pre-line">{member.name}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 z-10">{member.role}</p>
 
-        <div className="flex items-center gap-3 mt-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-          <a href="#" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
-            <Globe size={18} />
-          </a>
-          <a href="#" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
-            <Mail size={18} />
-          </a>
-        </div>
+            <div className="flex items-center gap-3 mt-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+              <a href="#" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
+                <Globe size={18} />
+              </a>
+              <a href="#" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
+                <Mail size={18} />
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
