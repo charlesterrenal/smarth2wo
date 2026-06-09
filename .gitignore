@@ -77,7 +77,7 @@ temp/
 *.tmp
 
 # Package managers
-package-lock.json
+# (package-lock.json should NOT be ignored so Docker can use npm ci)
 
 # Machine Learning
 backend/ml/data/
