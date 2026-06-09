@@ -25,6 +25,17 @@ function AppContent() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
   
+  const pageTitle = location.pathname.startsWith('/dashboard') ? 'Dashboard' :
+          location.pathname.startsWith('/transaction') ? 'Transaction Overview' :
+          location.pathname.startsWith('/admin/payments') ? 'Admin Payments' :
+          location.pathname.startsWith('/analytics') ? 'Analytics' :
+          location.pathname.startsWith('/logs') ? 'System Logs' :
+          location.pathname.startsWith('/settings') ? 'Settings' : 'SmartH2wo';
+
+  useEffect(() => {
+    document.title = `${pageTitle} - SmartH2wo`;
+  }, [pageTitle]);
+
   return (
     <main style={{ 
       flex: 1, 
@@ -35,16 +46,7 @@ function AppContent() {
       display: 'flex',
       flexDirection: 'column',
     }}>
-      <PageHeader 
-        title={
-          location.pathname.startsWith('/dashboard') ? 'DASHBOARD' :
-          location.pathname.startsWith('/transaction') ? 'TRANSACTION OVERVIEW' :
-          location.pathname.startsWith('/admin/payments') ? 'ADMIN PAYMENTS' :
-          location.pathname.startsWith('/analytics') ? 'ANALYTICS' :
-          location.pathname.startsWith('/logs') ? 'SYSTEM LOGS' :
-          location.pathname.startsWith('/settings') ? 'SETTINGS' : 'SMARTH2WO'
-        } 
-      />
+      <PageHeader title={pageTitle.toUpperCase()} />
       <div style={{
         flex: 1,
         overflowY: 'scroll',
