@@ -30,7 +30,6 @@ function AppContent() {
       flex: 1, 
       marginLeft: isMobile ? '0' : 'var(--sidebar-width)', 
       overflow: 'hidden',
-      width: '100%',
       animation: 'pageTransition 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
       background: 'var(--color-bg)',
       display: 'flex',
@@ -48,7 +47,7 @@ function AppContent() {
       />
       <div style={{
         flex: 1,
-        overflow: 'auto',
+        overflowY: 'scroll',
         width: '100%',
         paddingTop: 0,
       }}>
@@ -72,7 +71,7 @@ function AppInner() {
   const location = useLocation()
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured()) {
       setLoading(false)
       return
     }
@@ -94,7 +93,7 @@ function AppInner() {
     return () => subscription?.unsubscribe()
   }, [])
 
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured()) {
     return <Routes><Route path="*" element={<Login />} /></Routes>
   }
 

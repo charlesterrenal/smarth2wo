@@ -255,7 +255,7 @@ export default function Login() {
           </button>
         </form>
 
-        {!isSupabaseConfigured && (
+        {!isSupabaseConfigured() && (
           <div style={{
             background: 'var(--color-warning-light)',
             border: '1px solid var(--color-warning)',
