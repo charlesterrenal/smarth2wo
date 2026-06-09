@@ -23,20 +23,12 @@ The system links three layers. An ESP32 with a 2.4" TFT display, three volume bu
 
 ## Technology Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend framework | React 18 |
-| Build tool | Vite |
-| Styling | Tailwind CSS |
-| Routing | React Router v6 |
-| Charts | Recharts |
-| Database and realtime | Supabase (PostgreSQL) |
-| Backend API | FastAPI (Python 3.11+) |
-| Payments | PayMongo (QR PH) |
-| Messaging | MQTT (paho-mqtt, HiveMQ public broker) |
-| Email | Resend |
-| Hardware | ESP32, ILI9341 2.4" TFT, push buttons, LED/relay |
-| Firmware libraries | TFT_eSPI, PubSubClient, ArduinoJson, QRCode (ricmoo) |
+- **Frontend:** React 18, Vite, Tailwind CSS
+- **Backend:** FastAPI (Python 3.11+), Supabase (PostgreSQL & Realtime)
+- **Machine Learning:** Scikit-learn (Predictive Maintenance & Anomaly Detection)
+- **Payments:** PayMongo (QR PH)
+- **IoT & Hardware:** ESP32, MQTT, ILI9341 TFT Display
+- **Infrastructure:** Docker Compose, Cloudflare Tunnels
 
 ## Project Structure
 
