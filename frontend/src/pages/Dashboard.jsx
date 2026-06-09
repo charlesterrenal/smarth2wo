@@ -42,6 +42,29 @@ export default function Dashboard() {
     return () => supabase.removeChannel(channel)
   }, [])
 
+  // Auto-refresh ML predictions when sensor data changes via Realtime
+  useEffect(() => {
+    if (!sensorStatus) return
+
+    const updateML = async () => {
+      try {
+        const savedPower = localStorage.getItem('mockSystemPower')
+        const isOperational = savedPower !== null ? savedPower === 'true' : sensorStatus.power_on
+        
+        const currentSensorData = { ...sensorStatus, power_on: isOperational }
+        const prediction = await getMaintenancePrediction(currentSensorData)
+        const anomalyList = await getAnomalies(currentSensorData)
+        
+        setMaintenancePrediction(prediction)
+        setAnomalies(anomalyList)
+      } catch (err) {
+        console.error('Failed to update ML predictions real-time:', err)
+      }
+    }
+    
+    updateML()
+  }, [sensorStatus?.water_level_pct, sensorStatus?.flow_rate, sensorStatus?.power_on])
+
   async function fetchData() {
     try {
       const [{ data: txData, error: txError }, { data: sensorData, error: sensorError }, { data: shData, error: shError }] = await Promise.all([

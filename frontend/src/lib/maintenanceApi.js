@@ -1,7 +1,7 @@
 // API functions for maintenance prediction and anomaly detection
-// Calls the Python FastAPI backend at http://localhost:8000
+// Calls the Python FastAPI backend
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 export async function getMaintenancePrediction(sensorData) {
   try {
