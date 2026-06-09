@@ -1,0 +1,45 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    env_file:
+      - ./backend/.env
+    restart: unless-stopped
+    networks:
+      - smarth2wo-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=https://api.smarth2wo.tech
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - smarth2wo-network
+
+  landing:
+    build:
+      context: ./landing
+      dockerfile: Dockerfile
+      args:
+        - VITE_DASHBOARD_URL=https://dash.smarth2wo.tech/login
+    ports:
+      - "81:80"
+    restart: unless-stopped
+    networks:
+      - smarth2wo-network
+
+networks:
+  smarth2wo-network:
+    driver: bridge

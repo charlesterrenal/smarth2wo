@@ -30,7 +30,6 @@ function AppContent() {
       flex: 1, 
       marginLeft: isMobile ? '0' : 'var(--sidebar-width)', 
       overflow: 'hidden',
-      width: '100%',
       animation: 'pageTransition 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
       background: 'var(--color-bg)',
       display: 'flex',
@@ -48,12 +47,12 @@ function AppContent() {
       />
       <div style={{
         flex: 1,
-        overflow: 'auto',
+        overflowY: 'scroll',
         width: '100%',
         paddingTop: 0,
       }}>
         <Routes key={location.pathname}>
-          <Route path="/"            element={<Navigate to="/dashboard" replace />} />
+          <Route path="*"            element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"   element={<Dashboard />} />
           <Route path="/transaction" element={<Transaction />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
@@ -72,7 +71,7 @@ function AppInner() {
   const location = useLocation()
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
+    if (!isSupabaseConfigured()) {
       setLoading(false)
       return
     }
@@ -94,16 +93,8 @@ function AppInner() {
     return () => subscription?.unsubscribe()
   }, [])
 
-  if (!isSupabaseConfigured) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
-        <SetupBanner />
-        <div style={{ display: 'flex', flex: 1, minHeight: 0, background: 'var(--color-bg)' }}>
-          <Sidebar />
-          <AppContent />
-        </div>
-      </div>
-    )
+  if (!isSupabaseConfigured()) {
+    return <Routes><Route path="*" element={<Login />} /></Routes>
   }
 
   if (loading) {
