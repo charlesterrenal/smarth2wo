@@ -124,8 +124,8 @@ export default function Dashboard() {
           <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, marginBottom: '16px', color: 'var(--color-text)', letterSpacing: '0.08em' }}>KEY METRICS</h3>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: anomalies.length > 0 ? 'repeat(auto-fit, minmax(200px, 1fr))' : 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '16px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '12px'
           }}>
             {/* Water Level */}
             <StatCard
@@ -140,7 +140,7 @@ export default function Dashboard() {
             {/* Bottles Saved */}
             <StatCard
               title="Bottles Saved"
-              accent="var(--color-purple)"
+              accent="var(--color-green)"
               icon={<Leaf size={20} />}
               value={Math.floor(transactions.reduce((sum, t) => sum + t.volume_ml, 0) / 500)}
               caption="Plastic bottles saved"
@@ -150,14 +150,14 @@ export default function Dashboard() {
             {/* Revenue */}
             <StatCard
               title="Revenue"
-              accent="var(--color-green)"
+              accent="var(--color-yellow)"
               icon={<DollarSign />}
               value={`₱${(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 1000).toFixed(1)}K`}
               caption="Total gross income"
               subtitle={
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <DollarSign size={14} /> Avg Daily: ₱{(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 7).toFixed(0)}
+                    Avg Daily: ₱{(transactions.reduce((sum, t) => sum + Number(t.price), 0) / 7).toFixed(0)}
                   </span>
                   <span style={{ fontSize: '11px', opacity: 0.8 }}>Last 7 days</span>
                 </span>
@@ -167,13 +167,7 @@ export default function Dashboard() {
             {/* Maintenance */}
             <StatCard
               title="Maintenance"
-              accent={
-                !isOperational || !maintenancePrediction ? 'var(--color-text-muted)' :
-                maintenancePrediction.severity === 'critical' ? 'var(--color-danger)' :
-                maintenancePrediction.severity === 'high' ? 'var(--color-warning)' :
-                maintenancePrediction.severity === 'medium' ? 'var(--color-yellow)' :
-                'var(--color-warning)'
-              }
+              accent="var(--color-red-orange)"
               icon={<Wrench size={20} />}
               value={isOperational && maintenancePrediction ? maintenancePrediction.days_remaining : '—'}
               caption={isOperational && maintenancePrediction ? "Days remaining" : "System Offline"}

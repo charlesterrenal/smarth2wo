@@ -25,7 +25,7 @@ export default function Analytics() {
           setSensorHistory(mockHistory)
           return
         }
-        
+
         const [{ data: txData, error: queryError }, { data: shData, error: shError }] = await Promise.all([
           supabase.from('transactions').select('*').order('created_at', { ascending: false }),
           supabase.from('sensor_history').select('*').order('created_at', { ascending: true }).limit(50)
@@ -50,8 +50,8 @@ export default function Analytics() {
 
   // Compute stats from real data
   const totalLiters = transactions.reduce((s, t) => s + t.volume_ml, 0) / 1000
-  const uniqueDays  = [...new Set(transactions.map(t => t.created_at?.slice(0, 10)))].length
-  const avgDaily    = uniqueDays > 0 ? (totalLiters / uniqueDays).toFixed(1) : 0
+  const uniqueDays = [...new Set(transactions.map(t => t.created_at?.slice(0, 10)))].length
+  const avgDaily = uniqueDays > 0 ? (totalLiters / uniqueDays).toFixed(1) : 0
 
   const bottlesSaved = Math.floor((totalLiters * 1000) / 500)
 
@@ -66,7 +66,7 @@ export default function Analytics() {
         hourCounts[hour] = (hourCounts[hour] || 0) + 1
       }
     })
-    
+
     let peakHour = null
     let maxCount = -1
     for (const [h, count] of Object.entries(hourCounts)) {
@@ -75,7 +75,7 @@ export default function Analytics() {
         peakHour = parseInt(h)
       }
     }
-    
+
     if (peakHour !== null) {
       const formatHour = (h) => {
         const ampm = h >= 12 ? 'PM' : 'AM'
@@ -102,14 +102,14 @@ export default function Analytics() {
       .reduce((s, t) => s + Number(t.price), 0)
   }))
 
-  const vol100  = transactions.filter(t => t.volume_ml === 100).length
-  const vol500  = transactions.filter(t => t.volume_ml === 500).length
+  const vol100 = transactions.filter(t => t.volume_ml === 100).length
+  const vol500 = transactions.filter(t => t.volume_ml === 500).length
   const vol1000 = transactions.filter(t => t.volume_ml === 1000).length
-  const total   = transactions.length || 1
+  const total = transactions.length || 1
   const volumeDistribution = [
-    { name: '100mL',  value: Math.round((vol100  / total) * 100), color: 'var(--color-blue)' },
-    { name: '500mL',  value: Math.round((vol500  / total) * 100), color: 'var(--color-yellow)' },
-    { name: '1 Liter',value: Math.round((vol1000 / total) * 100), color: 'var(--color-purple)' },
+    { name: '100mL', value: Math.round((vol100 / total) * 100), color: 'var(--color-blue)' },
+    { name: '500mL', value: Math.round((vol500 / total) * 100), color: 'var(--color-yellow)' },
+    { name: '1 Liter', value: Math.round((vol1000 / total) * 100), color: 'var(--color-purple)' },
   ]
 
   const mostUsed = volumeDistribution.sort((a, b) => b.value - a.value)[0]?.name ?? '—'
@@ -139,38 +139,38 @@ export default function Analytics() {
       margin: '0 auto'
     }}>
       {/* Top stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-        <StatCard 
-          title="Total Water Dispensed" 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+        <StatCard
+          title="Total Water Dispensed"
           accent="var(--color-blue)"
           value={`${totalLiters}L`}
           icon={<Droplet size={20} />}
           caption="Lifetime volume"
         />
-        <StatCard 
-          title="Bottles Saved" 
+        <StatCard
+          title="Avg Daily Water Consumption"
+          accent="var(--color-sky)"
+          value={`${avgDaily}L`}
+          icon={<Activity size={20} />}
+          caption="Per day average"
+        />
+        <StatCard
+          title="Bottles Saved"
           accent="var(--color-green)"
           value={bottlesSaved}
           icon={<Leaf size={20} />}
           caption="500mL equivalents"
         />
-        <StatCard 
-          title="Avg Daily Consumption" 
-          accent="var(--color-purple)"
-          value={`${avgDaily}L`}
-          icon={<Activity size={20} />}
-          caption="Per day average"
-        />
-        <StatCard 
-          title="Peak Usage Time" 
-          accent="var(--color-yellow)"
+        <StatCard
+          title="Peak Usage Time"
+          accent="var(--color-pink)"
           value={peakUsageString}
           icon={<Clock size={20} />}
           caption={peakCaption}
         />
-        <StatCard 
-          title="Most Used Volume" 
-          accent="var(--color-text-muted)"
+        <StatCard
+          title="Most Used Volume"
+          accent="var(--color-purple)"
           value={mostUsed}
           icon={<BarChart2 size={20} />}
           caption="Preferred size"
@@ -187,17 +187,17 @@ export default function Analytics() {
             <AreaChart data={consumptionData} margin={{ left: 0, right: 10, top: 10, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorMl" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-blue)" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="var(--color-blue)" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--color-blue)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="var(--color-blue)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
               <XAxis dataKey="day" tick={{ fontSize: 13, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} tickMargin={10} />
               <YAxis hide />
-              <Tooltip 
-                cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '3 3' }} 
-                formatter={(v) => [`${v}mL`, 'Consumed']} 
-                contentStyle={{ borderRadius: '12px', fontSize: '14px', fontWeight: '500', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
+              <Tooltip
+                cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '3 3' }}
+                formatter={(v) => [`${v}mL`, 'Consumed']}
+                contentStyle={{ borderRadius: '12px', fontSize: '14px', fontWeight: '500', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                 itemStyle={{ color: 'var(--color-blue)', fontWeight: '700' }}
               />
               <Area type="monotone" dataKey="ml" stroke="var(--color-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorMl)" activeDot={{ r: 6, fill: 'var(--color-blue)', stroke: 'var(--color-surface)', strokeWidth: 2 }} animationDuration={1500} animationEasing="ease-in-out" />
@@ -214,7 +214,7 @@ export default function Analytics() {
               <XAxis dataKey="day" tick={{ fontSize: 14, fill: 'var(--color-text-muted)' }} axisLine={false} tickLine={false} padding={{ left: 15, right: 15 }} />
               <YAxis hide />
               <Tooltip cursor={{ fill: 'var(--table-row-hover)' }} formatter={(v) => [`₱${v}`, 'Revenue']} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '14px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
-              <Bar dataKey="revenue" fill="var(--color-green)" radius={[6, 6, 0, 0]} barSize={26} maxBarSize={36} />
+              <Bar dataKey="revenue" fill="var(--color-yellow)" radius={[6, 6, 0, 0]} barSize={26} maxBarSize={36} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -226,34 +226,37 @@ export default function Analytics() {
         {/* Donut chart */}
         <div style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-card)', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
           <p style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', letterSpacing: '0.02em', color: 'var(--color-text)' }}>Volume distribution</p>
-          <ResponsiveContainer width="100%" height={230}>
-            <PieChart>
-              <Pie 
-                data={volumeDistribution} 
-                dataKey="value" 
-                cx="45%" 
-                cy="50%" 
-                innerRadius={65} 
-                outerRadius={100} 
-                paddingAngle={2}
-                style={{ cursor: 'pointer', outline: 'none' }}
-              >
-                {volumeDistribution.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Legend 
-                layout="vertical"
-                verticalAlign="middle"
-                align="right"
-                iconType="circle" 
-                iconSize={12} 
-                wrapperStyle={{ fontSize: '15px', paddingLeft: '0', paddingRight: '20px', lineHeight: '28px' }} 
-                formatter={(value) => <span style={{ color: 'var(--color-text)', fontWeight: 600, marginLeft: '4px' }}>{value}</span>}
-              />
-              <Tooltip cursor={false} formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '14px', background: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '24px', minHeight: '240px' }}>
+            <div style={{ width: '240px', height: '240px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={volumeDistribution}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={105}
+                    paddingAngle={2}
+                    style={{ cursor: 'pointer', outline: 'none' }}
+                  >
+                    {volumeDistribution.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip cursor={false} formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 'var(--radius-inner)', fontSize: '14px', background: '#ffffff', color: '#0f172a', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} itemStyle={{ color: '#0f172a', fontWeight: 700 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '100px' }}>
+              {volumeDistribution.map((entry, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: entry.color }} />
+                  <span style={{ color: 'var(--color-text)', fontWeight: 600, fontSize: '14px' }}>{entry.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Users volume summary */}
@@ -264,15 +267,15 @@ export default function Analytics() {
             { label: '500mL', users: todayVol500, total: `${todayVolume500Total.toFixed(2)}L`, color: 'var(--color-yellow)' },
             { label: '1 Liter', users: todayVol1000, total: `${todayVolume1000Total.toFixed(2)}L`, color: 'var(--color-purple)' },
           ].map(({ label, users, total, color }) => (
-            <div 
-              key={label} 
-              style={{ 
-                background: color, 
-                borderRadius: 'var(--radius-inner)', 
-                padding: '16px 20px', 
-                color: color === 'var(--color-yellow)' ? '#1a202c' : 'white', 
-                transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)', 
-                cursor: 'pointer', 
+            <div
+              key={label}
+              style={{
+                background: color,
+                borderRadius: 'var(--radius-inner)',
+                padding: '16px 20px',
+                color: 'white',
+                transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                cursor: 'pointer',
                 boxShadow: '0 6px 16px rgba(15, 23, 42, 0.04)',
                 transform: 'scale(1)'
               }}

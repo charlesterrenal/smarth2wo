@@ -10,9 +10,9 @@
   --color-green: #10B981;
   --color-green-dark: #059669;
   --color-green-light: #D1FAE5;
-  --color-yellow: #F59E0B;
-  --color-yellow-dark: #D97706;
-  --color-yellow-light: #FEF3C7;
+  --color-yellow: #EAB308;
+  --color-yellow-dark: #CA8A04;
+  --color-yellow-light: #FEF08A;
   --color-pink: #DB2777;
   --color-purple: #7B3FF2;
   --color-purple-dark: #6D28D9;
@@ -22,7 +22,10 @@
   --color-warning: #F97316;
   --color-warning-dark: #EA580C;
   --color-warning-light: #FFEDD5;
+  --color-red-orange: #FF5722;
   --color-info: #3B82F6;
+  --color-sky: #0EA5E9;
+  --color-cyan: #06B6D4;
   --color-teal: #14B8A6;
 
   /* Global UI Tokens */

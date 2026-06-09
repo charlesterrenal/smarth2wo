@@ -20,7 +20,7 @@ export default function AdminPayments() {
   return (
     <div className="page-container" style={{ padding: '32px', maxWidth: '1600px', margin: '0 auto' }}>
       {/* Search and Filters */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
         {/* Recent Transactions Card */}
         <div style={{
           background: 'var(--color-surface)',

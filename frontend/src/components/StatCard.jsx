@@ -24,7 +24,8 @@ export default function StatCard({ title, caption, subtitle, value, icon, accent
   return (
     <div className="stat-card" style={{
       background: isLight ? gradientLight : gradientDark,
-      padding: isSmall ? '14px' : '20px',
+      padding: isSmall ? '14px' : '16px',
+      borderRadius: 'var(--radius-card)',
       minHeight: isSmall ? '100px' : '160px',
       boxShadow: isSmall ? 'var(--shadow-card)' : 'var(--shadow-premium)',
       display: 'flex',
@@ -35,27 +36,27 @@ export default function StatCard({ title, caption, subtitle, value, icon, accent
       '--card-accent': accent || 'var(--color-warning)'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: isSmall ? '12px' : '15px', fontWeight: 700, color: titleColor, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</p>
+        <div style={{ flex: 1, minWidth: 0, paddingRight: '4px' }}>
+          <p style={{ margin: 0, fontSize: isSmall ? '10px' : '11px', fontWeight: 700, color: titleColor, textTransform: 'uppercase', letterSpacing: '0', overflowWrap: 'normal' }}>{title}</p>
         </div>
         {icon && (
-          <div style={{ width: isSmall ? '28px' : '36px', height: isSmall ? '28px' : '36px', borderRadius: isSmall ? '8px' : '12px', background: badgeBackground, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, boxShadow: '0 8px 16px rgba(0,0,0,0.08)' }}>
-            {React.isValidElement(icon) ? React.cloneElement(icon, { size: isSmall ? 14 : 18 }) : icon}
+          <div style={{ flexShrink: 0, width: isSmall ? '28px' : '32px', height: isSmall ? '28px' : '32px', borderRadius: isSmall ? '8px' : '10px', background: badgeBackground, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, boxShadow: '0 8px 16px rgba(0,0,0,0.08)' }}>
+            {React.isValidElement(icon) ? React.cloneElement(icon, { size: isSmall ? 14 : 16 }) : icon}
           </div>
         )}
       </div>
 
       {!isSmall && icon && (
-        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: '44px', height: '44px', borderRadius: '999px', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 8px 20px rgba(15, 23, 42, 0.16)' }}>
-            {React.isValidElement(icon) ? React.cloneElement(icon, { size: 22 }) : icon}
+        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
+          <div style={{ flexShrink: 0, width: '38px', height: '38px', borderRadius: '999px', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.16)' }}>
+            {React.isValidElement(icon) ? React.cloneElement(icon, { size: 18 }) : icon}
           </div>
         </div>
       )}
 
       <div style={{ marginTop: isSmall ? '8px' : '16px' }}>
         {value !== undefined && (
-          <p style={{ margin: 0, fontSize: isSmall ? '1.5rem' : ((typeof value === 'string' && value.length > 10) ? '1.25rem' : '2rem'), lineHeight: 1.1, fontWeight: 800, color: valueColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
+          <p style={{ margin: 0, fontSize: isSmall ? '1.25rem' : ((typeof value === 'string' && value.length > 8) ? '1.25rem' : '1.5rem'), lineHeight: 1.1, fontWeight: 800, color: valueColor, overflowWrap: 'anywhere' }}>{value}</p>
         )}
         {caption && (
           <p style={{ margin: isSmall ? '4px 0 0' : '6px 0 0', fontSize: isSmall ? '11px' : '13px', fontWeight: 600, color: captionColor }}>{caption}</p>
@@ -66,14 +67,14 @@ export default function StatCard({ title, caption, subtitle, value, icon, accent
       </div>
 
       {(subtitle || icon) && (
-        <div style={{ marginTop: isSmall ? '12px' : '16px', padding: isSmall ? '8px' : '12px', background: pillBackground, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ marginTop: isSmall ? '10px' : '14px', padding: isSmall ? '6px' : '8px', background: pillBackground, borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           {icon && (
-            <div style={{ width: isSmall ? '24px' : '32px', height: isSmall ? '24px' : '32px', borderRadius: isSmall ? '8px' : '12px', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, boxShadow: '0 8px 16px rgba(15, 23, 42, 0.08)' }}>
-              {React.isValidElement(icon) ? React.cloneElement(icon, { size: isSmall ? 12 : 16 }) : icon}
+            <div style={{ flexShrink: 0, width: isSmall ? '24px' : '26px', height: isSmall ? '24px' : '26px', borderRadius: '8px', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accent, boxShadow: '0 4px 10px rgba(15, 23, 42, 0.08)' }}>
+              {React.isValidElement(icon) ? React.cloneElement(icon, { size: isSmall ? 12 : 14 }) : icon}
             </div>
           )}
           {subtitle && (
-            <p style={{ margin: 0, fontSize: isSmall ? '11px' : '12px', fontWeight: 600, color: subtitleColor }}>{subtitle}</p>
+            <p style={{ margin: 0, fontSize: '10px', fontWeight: 600, color: subtitleColor, lineHeight: 1.2, overflowWrap: 'break-word', hyphens: 'auto' }}>{subtitle}</p>
           )}
         </div>
       )}

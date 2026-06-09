@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { useTheme } from '../context/ThemeContext'
 import logo from '../assets/smarth2wo_logo.png'
 import logoDark from '../assets/smarth2wo_logo_dark.png'
@@ -151,7 +151,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@smarth2wo.com"
+              placeholder="Email address"
               required
               style={{
                 width: '100%',
@@ -255,28 +255,6 @@ export default function Login() {
           </button>
         </form>
 
-        {!isSupabaseConfigured() && (
-          <div style={{
-            background: 'var(--color-warning-light)',
-            border: '1px solid var(--color-warning)',
-            borderRadius: '6px',
-            padding: '12px',
-            fontSize: '13px',
-            color: 'var(--color-warning-dark)',
-            marginTop: '8px',
-          }}>
-            Supabase is not configured. Use the generic credentials below to bypass login.
-          </div>
-        )}
-
-        <p style={{
-          textAlign: 'center',
-          fontSize: '12px',
-          color: 'var(--color-text-muted)',
-          marginTop: '20px'
-        }}>
-          Use <strong>admin@smarth2wo.com</strong> / <strong>admin123</strong> to login as demo
-        </p>
       </div>
     </div>
   )

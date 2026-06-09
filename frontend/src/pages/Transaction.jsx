@@ -93,7 +93,7 @@ export default function Transaction() {
       margin: '0 auto'
     }}>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <StatCard
           title="Preferred Payment"
           caption="Most used"
@@ -108,7 +108,7 @@ export default function Transaction() {
           subtitle="Completed orders"
           value={transactions.length}
           icon={<Repeat size={20} />}
-          accent="var(--color-blue)"
+          accent="var(--color-info)"
         />
         <StatCard
           title="Avg Order Value"
@@ -116,7 +116,7 @@ export default function Transaction() {
           subtitle="Average spend"
           value={`₱${aov}`}
           icon={<DollarSign size={20} />}
-          accent="var(--color-green)"
+          accent="var(--color-yellow)"
         />
         <TotalSalesCard
           transactions={transactions.length}
@@ -141,8 +141,8 @@ export default function Transaction() {
           marginBottom: '20px'
         }}>
           <div style={{
-            flex: '1 1 420px',
-            minWidth: '260px',
+            flex: '1 1 200px',
+            minWidth: '200px',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
@@ -294,7 +294,7 @@ function TotalSalesCard({ transactions, revenue }) {
       background: 'var(--surface-card)',
       border: '1px solid var(--dropdown-border)',
       borderRadius: 'var(--radius-card)',
-      padding: '24px',
+      padding: '20px',
       minHeight: '200px',
       boxShadow: 'var(--shadow-premium)',
       display: 'flex',
@@ -311,27 +311,27 @@ function TotalSalesCard({ transactions, revenue }) {
         e.currentTarget.style.transform = 'translateY(0)'
         e.currentTarget.style.boxShadow = 'var(--shadow-premium)'
       }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--color-text)' }}>Total Sales</p>
+          <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--color-text)', overflowWrap: 'break-word', hyphens: 'auto' }}>Total Sales</p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '3.5rem', lineHeight: 1, fontWeight: 800, color: 'var(--color-text)' }}>{transactions}</span>
-            <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-text-muted)' }}>Transactions</span>
+            <span style={{ fontSize: 'clamp(2.5rem, 8vw, 3.5rem)', lineHeight: 1, fontWeight: 800, color: 'var(--color-text)' }}>{transactions}</span>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-muted)' }}>Transactions</span>
           </div>
         </div>
-        <div style={{ width: '48px', height: '48px', flexShrink: 0, borderRadius: '16px', background: 'rgba(37, 99, 235, 0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB' }}>
-          <ShoppingBag size={22} />
+        <div style={{ width: '40px', height: '40px', flexShrink: 0, borderRadius: '14px', background: 'rgba(234, 179, 8, 0.16)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-yellow)' }}>
+          <ShoppingBag size={20} />
         </div>
       </div>
       <div style={{ borderTop: '1px solid rgba(148, 163, 184, 0.18)', margin: '18px 0' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
-        <div>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Total Revenue</p>
-          <p style={{ margin: '10px 0 0', fontSize: '1.75rem', fontWeight: 800, color: '#10B981' }}>₱{revenue.toFixed(0)}</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px', justifyContent: 'space-between' }}>
+        <div style={{ flex: '1 1 90px', minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', overflowWrap: 'anywhere' }}>Total Revenue</p>
+          <p style={{ margin: '8px 0 0', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-yellow)' }}>₱{revenue.toFixed(0)}</p>
         </div>
-        <div>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Transactions</p>
-          <p style={{ margin: '10px 0 0', fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text)' }}>{transactions}</p>
+        <div style={{ flex: '1 1 90px', minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', overflowWrap: 'anywhere' }}>Transactions</p>
+          <p style={{ margin: '8px 0 0', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-text)' }}>{transactions}</p>
         </div>
       </div>
     </div>
