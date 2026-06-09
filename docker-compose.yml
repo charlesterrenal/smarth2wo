@@ -10,6 +10,7 @@ services:
     environment:
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
+      - TZ=Asia/Manila
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
