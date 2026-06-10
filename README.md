@@ -1,4 +1,6 @@
-# SmartH2wo
+# SmartH2wo Systems
+
+**A thesis project developed for the Polytechnic University of the Philippines Institute of Technology.**
 
 SmartH2wo is a smart water dispenser management system that combines an ESP32-controlled physical dispenser, a FastAPI backend with predictive maintenance and anomaly detection, and a React dashboard for live monitoring. Customers can pay through QR PH (PayMongo) or by inserting coins, and the dispenser releases the selected volume automatically once payment is confirmed.
 

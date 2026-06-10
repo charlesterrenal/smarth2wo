@@ -58,7 +58,7 @@ export function Hero() {
           </h1>
 
           <p className="text-lg md:text-xl text-blue-100/80 mb-10 max-w-[600px] mx-auto leading-relaxed">
-            Monitor quality, manage payments, and predict maintenance for your water dispensers all from a single, powerful dashboard.
+            A thesis project developed for the <strong>Polytechnic University of the Philippines Institute of Technology</strong>. Monitor quality, manage payments, and predict maintenance for your water dispensers all from a single, powerful dashboard.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto mb-20">

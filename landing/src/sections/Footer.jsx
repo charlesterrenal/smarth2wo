@@ -26,7 +26,7 @@ export function Footer() {
               />
             </a>
             <p className="text-slate-500 dark:text-slate-400 max-w-[400px] leading-relaxed">
-              Modernizing automated water dispensing systems with real-time monitoring, predictive maintenance, and seamless payments.
+              A thesis project for the Polytechnic University of the Philippines Institute of Technology. Modernizing automated water dispensing systems with real-time monitoring, predictive maintenance, and seamless payments.
             </p>
           </div>
 

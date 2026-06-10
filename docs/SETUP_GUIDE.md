@@ -1,8 +1,10 @@
 # Complete Setup Guide
 
-# SmartH2wo - Complete Setup Guide
+# SmartH2wo Systems - Complete Setup Guide
 
-This is the **complete setup guide** for the SmartH2wo water dispenser system. Choose your section below.
+**A thesis project developed for the Polytechnic University of the Philippines Institute of Technology.**
+
+This is the **complete setup guide** for the SmartH2wo Systems water dispenser system. Choose your section below.
 
 **New to the project?** Start with [Part 1: Initial Setup](#part-1-initial-setup)
 
