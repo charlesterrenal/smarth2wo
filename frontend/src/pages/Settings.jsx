@@ -120,6 +120,20 @@ export default function Settings() {
     ))
   }
 
+  const convertTo24Hour = (timeStr) => {
+    if (!timeStr) return "00:00";
+    if (timeStr.toUpperCase().includes("AM") || timeStr.toUpperCase().includes("PM")) {
+      const parts = timeStr.trim().split(' ');
+      if (parts.length < 2) return "00:00";
+      let [hours, minutes] = parts[0].split(':');
+      if (!minutes) minutes = "00";
+      if (hours === '12') hours = '00';
+      if (parts[1].toUpperCase() === 'PM') hours = parseInt(hours, 10) + 12;
+      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+    }
+    return timeStr;
+  };
+
   const handleSave = async () => {
     if (!isSupabaseConfigured) {
       alert('Demo mode — connect Supabase in frontend/.env to save settings.')
@@ -312,8 +326,8 @@ export default function Settings() {
                       </td>
                       <td style={{ padding: '16px 12px 16px 0' }}>
                         <input
-                          type="text"
-                          value={row.start}
+                          type="time"
+                          value={convertTo24Hour(row.start)}
                           disabled={!row.active}
                           onChange={e => updateTime(i, 'start', e.target.value)}
                           style={{
@@ -329,8 +343,8 @@ export default function Settings() {
                       </td>
                       <td style={{ padding: '16px 12px 16px 0' }}>
                         <input
-                          type="text"
-                          value={row.end}
+                          type="time"
+                          value={convertTo24Hour(row.end)}
                           disabled={!row.active}
                           onChange={e => updateTime(i, 'end', e.target.value)}
                           style={{
