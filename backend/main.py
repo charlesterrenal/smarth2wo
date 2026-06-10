@@ -47,13 +47,18 @@ app = FastAPI(
 # === SUPABASE CLIENT INITIALIZATION ===
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 supabase: Optional[Client] = None
+supabase_admin: Optional[Client] = None
+
 if not SUPABASE_URL or not SUPABASE_KEY:
     print("WARNING: Supabase credentials missing inside .env file! Running without DB persistence.")
 else:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        if SUPABASE_SERVICE_ROLE_KEY:
+            supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     except Exception as e:
         print(f"WARNING: Failed to connect to Supabase client: {e}")
 
@@ -86,6 +91,10 @@ class Anomaly(BaseModel):
     message: str
     severity: str  # 'critical', 'high', 'medium', 'low'
     timestamp: str
+
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
 
 # ============ Helper Functions ============
 
@@ -481,6 +490,42 @@ async def update_power_status(data: SensorData):
         send_power_status_alert(data.power_on)
         
         return {"status": "success", "power_on": data.power_on}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# ============ User Management Routes ============
+
+@app.get("/api/users")
+async def list_admin_users():
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    try:
+        response = supabase.table("user_profiles").select("*").execute()
+        return {"users": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/users/create")
+async def create_admin_user(request: CreateUserRequest):
+    if not supabase_admin:
+        raise HTTPException(status_code=500, detail="Service Role Key not configured. Check backend/.env")
+    try:
+        # Create user in Supabase Auth
+        res = supabase_admin.auth.admin.create_user({
+            "email": request.email,
+            "password": request.password,
+            "email_confirm": True
+        })
+        user_id = res.user.id
+        
+        # Create user profile entry
+        supabase_admin.table("user_profiles").upsert({
+            "user_id": user_id,
+            "email": request.email,
+            "is_admin": True
+        }).execute()
+        
+        return {"success": True, "user_id": user_id, "message": "Admin user created successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
