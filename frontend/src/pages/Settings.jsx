@@ -10,6 +10,7 @@ export default function Settings() {
   const [power, setPower] = useState(true)
   const [confirmPowerAction, setConfirmPowerAction] = useState(null)
   const { is24Hour, toggle24Hour } = useTheme()
+  const currentDay = new Date().toLocaleDateString('en-US', { weekday: 'short' })
 
   // User Management State
   const [users, setUsers] = useState([])
@@ -256,7 +257,7 @@ export default function Settings() {
             <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
               <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}>User Preferences</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, color: 'var(--color-text)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>User Preferences</h3>
                   <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', margin: 0 }}>Customize your dashboard experience</p>
                 </div>
               </div>
@@ -289,7 +290,7 @@ export default function Settings() {
             <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
               <div style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '4px' }}>Automated Scheduler</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, color: 'var(--color-text)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>Automated Scheduler</h3>
                   <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>Configure daily operating hours for the dispenser</p>
                 </div>
                 <button
@@ -318,8 +319,10 @@ export default function Settings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {schedule.map((row, i) => (
-                    <tr key={row.day} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s', background: row.active ? 'transparent' : 'rgba(0,0,0,0.02)' }}>
+                  {schedule.map((row, i) => {
+                    const isToday = row.day === currentDay;
+                    return (
+                    <tr key={row.day} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s, box-shadow 0.2s', background: isToday ? 'rgba(37, 99, 235, 0.05)' : (row.active ? 'transparent' : 'rgba(0,0,0,0.02)'), boxShadow: isToday ? 'inset 4px 0 0 var(--color-blue)' : 'none' }}>
                       <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: '12px', color: row.active ? 'var(--color-text)' : 'var(--color-text-muted)', fontWeight: row.active ? 600 : 400, fontSize: '15px' }}>
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: row.active ? 'var(--color-green)' : 'var(--color-danger)', display: 'inline-block', boxShadow: row.active ? '0 0 8px rgba(16,185,129,0.4)' : 'none' }} />
                         {row.day}
@@ -377,7 +380,7 @@ export default function Settings() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
               </div>
@@ -387,7 +390,7 @@ export default function Settings() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
             {/* User List */}
             <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '16px' }}>Registered Admins</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, color: 'var(--color-text)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px' }}>Registered Admins</h3>
               {loadingUsers ? (
                 <p style={{ color: 'var(--color-text-muted)' }}>Loading users...</p>
               ) : (
@@ -412,7 +415,7 @@ export default function Settings() {
 
             {/* Create User Form */}
             <div style={{ background: 'var(--color-surface)', borderRadius: '24px', padding: '24px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-premium)', height: 'max-content' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, marginTop: 0, color: 'var(--color-text)', letterSpacing: '-0.01em', marginBottom: '16px' }}>Add Admin User</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, marginTop: 0, color: 'var(--color-text)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px' }}>Add Admin User</h3>
               <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--color-text)', textTransform: 'uppercase' }}>Email</label>
