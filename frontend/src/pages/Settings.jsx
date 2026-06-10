@@ -322,8 +322,8 @@ export default function Settings() {
                   {schedule.map((row, i) => {
                     const isToday = row.day === currentDay;
                     return (
-                    <tr key={row.day} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s, box-shadow 0.2s', background: isToday ? 'rgba(37, 99, 235, 0.05)' : (row.active ? 'transparent' : 'rgba(0,0,0,0.02)'), boxShadow: isToday ? 'inset 4px 0 0 var(--color-blue)' : 'none' }}>
-                      <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: '12px', color: row.active ? 'var(--color-text)' : 'var(--color-text-muted)', fontWeight: row.active ? 600 : 400, fontSize: '15px' }}>
+                    <tr key={row.day} className={isToday ? "today-sheen" : ""} style={{ borderBottom: '1px solid var(--color-border)', transition: 'background 0.2s', background: (!isToday && !row.active) ? 'rgba(0,0,0,0.02)' : (isToday ? undefined : 'transparent') }}>
+                      <td style={{ padding: '16px 0', display: 'flex', alignItems: 'center', gap: '14px', color: row.active ? 'var(--color-text)' : 'var(--color-text-muted)', fontWeight: row.active ? 700 : 500, fontSize: '18px', width: '140px' }}>
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: row.active ? 'var(--color-green)' : 'var(--color-danger)', display: 'inline-block', boxShadow: row.active ? '0 0 8px rgba(16,185,129,0.4)' : 'none' }} />
                         {row.day}
                       </td>
@@ -366,7 +366,7 @@ export default function Settings() {
                           onClick={() => toggle(i)}
                           style={{
                             width: '48px', height: '26px', borderRadius: '13px',
-                            background: row.active ? 'var(--color-blue)' : '#d1d5db',
+                            background: row.active ? 'var(--color-green)' : '#d1d5db',
                             border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s',
                           }}
                         >

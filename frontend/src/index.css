@@ -535,3 +535,20 @@ svg.recharts-surface .recharts-pie-sector path {
   position: relative;
   z-index: 1;
 }
+
+/* Animated sheen for current day */
+@keyframes row-sheen {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.today-sheen {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.02) 25%, rgba(37, 99, 235, 0.08) 50%, rgba(37, 99, 235, 0.02) 75%);
+  background-size: 200% 100%;
+  animation: row-sheen 3s infinite linear;
+}
+
+:root.dark-mode .today-sheen {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.05) 25%, rgba(37, 99, 235, 0.15) 50%, rgba(37, 99, 235, 0.05) 75%);
+  background-size: 200% 100%;
+}
