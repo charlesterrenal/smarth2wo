@@ -3,7 +3,6 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 import { Droplet, Activity, Clock, BarChart2, Users, Leaf } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { mockTransactions } from '../lib/mockData'
 import { useTheme } from '../context/ThemeContext'
 
 export default function Analytics() {
@@ -17,14 +16,9 @@ export default function Analytics() {
     const fetchData = async () => {
       try {
         if (!isSupabaseConfigured) {
-          setTransactions(mockTransactions)
-          // Create some mock sensor history for demo
-          const mockHistory = Array.from({ length: 24 }).map((_, i) => ({
-            created_at: new Date(Date.now() - (24 - i) * 60 * 60 * 1000).toISOString(),
-            temperature: 25 + Math.random() * 5,
-            water_level_pct: Math.max(10, 100 - (i * 2))
-          }))
-          setSensorHistory(mockHistory)
+          console.warn("Supabase is not configured.")
+          setTransactions([])
+          setSensorHistory([])
           return
         }
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { mockLogs } from '../lib/mockData'
 import { useTheme } from '../context/ThemeContext'
 
 export default function Logs() {
@@ -16,7 +15,8 @@ export default function Logs() {
     const fetchLogs = async () => {
       try {
         if (!isSupabaseConfigured) {
-          setLogs(mockLogs)
+          console.warn("Supabase is not configured.")
+          setLogs([])
           return
         }
         const { data, error: queryError } = await supabase

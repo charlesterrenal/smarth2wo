@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { mockSchedule } from '../lib/mockData'
 import { useTheme } from '../context/ThemeContext'
 
 export default function Settings() {
@@ -18,7 +17,8 @@ export default function Settings() {
     }
 
     if (!isSupabaseConfigured) {
-      setSchedule(mockSchedule)
+      console.warn("Supabase is not configured.")
+      setSchedule([])
       setLoading(false)
       return
     }

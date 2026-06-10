@@ -43,11 +43,15 @@
 #define TEST_MODE true
 
 // ===== WiFi Configuration =====
-const char* WIFI_SSID = "YOUR_SSID";
-const char* WIFI_PASSWORD = "YOUR_PASSWORD";
+const char* WIFI_SSID_PRIMARY = "YOUR_SSID";
+const char* WIFI_PASS_PRIMARY = "YOUR_PASSWORD";
+const char* WIFI_SSID_FALLBACK = "SmartH2wo_Demo";  // Mobile Hotspot fallback for presentation
+const char* WIFI_PASS_FALLBACK = "thesis2026";
 
 // ===== Backend Configuration =====
-const char* BACKEND_URL = "http://192.168.x.x:8000";  // Change to your backend IP
+String BACKEND_URL = "https://api.smarth2wo.tech";  // Starts with default
+const char* BACKEND_URL_PRIMARY = "https://api.smarth2wo.tech"; // Public URL
+const char* BACKEND_URL_FALLBACK = "http://192.168.254.201:8000"; // LAN URL if using hotspot/local LAN
 
 // ===== MQTT Configuration =====
 const char* MQTT_SERVER = "test.mosquitto.org";
@@ -691,11 +695,11 @@ void displayError(String message) {
 
 // ===== WiFi Functions =====
 void connectWiFi() {
-  Serial.print("Connecting to WiFi: ");
-  Serial.println(WIFI_SSID);
+  Serial.print("Connecting to PRIMARY WiFi: ");
+  Serial.println(WIFI_SSID_PRIMARY);
   
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(WIFI_SSID_PRIMARY, WIFI_PASS_PRIMARY);
   
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 20) {
@@ -705,11 +709,37 @@ void connectWiFi() {
   }
   
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi connected!");
+    Serial.println("\nPRIMARY WiFi connected!");
+    BACKEND_URL = BACKEND_URL_PRIMARY;
+  } else {
+    Serial.println("\nPRIMARY WiFi failed! Switching to FALLBACK WiFi (Mobile Hotspot)...");
+    WiFi.disconnect();
+    delay(1000);
+    
+    Serial.print("Connecting to FALLBACK WiFi: ");
+    Serial.println(WIFI_SSID_FALLBACK);
+    WiFi.begin(WIFI_SSID_FALLBACK, WIFI_PASS_FALLBACK);
+    
+    attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("\nFALLBACK WiFi connected!");
+      BACKEND_URL = BACKEND_URL_FALLBACK;
+    } else {
+      Serial.println("\nALL WiFi connections failed!");
+    }
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
-  } else {
-    Serial.println("\nWiFi connection failed!");
+    Serial.print("Using Backend URL: ");
+    Serial.println(BACKEND_URL);
   }
 }
 

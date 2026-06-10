@@ -3,7 +3,6 @@ import { useTheme } from '../context/ThemeContext'
 import { Search, Users, Repeat, DollarSign, ChevronDown, ShoppingBag, CreditCard } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { mockTransactions } from '../lib/mockData'
 
 const timeFilters = ['All', 'Today', 'This Week', 'This Month']
 
@@ -32,7 +31,8 @@ export default function Transaction() {
     const fetchTransactions = async () => {
       try {
         if (!isSupabaseConfigured) {
-          setTransactions(mockTransactions)
+          console.warn("Supabase is not configured.")
+          setTransactions([])
           return
         }
         const { data, error: queryError } = await supabase
