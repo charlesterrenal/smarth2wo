@@ -19,6 +19,7 @@ MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "")
 TOPIC_DISPENSE = "smarth2o/dispense"
 TOPIC_STATUS = "smarth2o/status"
 TOPIC_SENSORS = "smarth2o/sensors"
+TOPIC_CONTROL = "smarth2o/control"
 
 # Global MQTT client
 mqtt_client = None
@@ -120,6 +121,27 @@ def publish_dispense(transaction_id: str, volume_ml: int, amount_pesos: float):
         return True
     except Exception as e:
         print(f"Failed to publish dispense signal: {e}")
+        return False
+
+
+def publish_power_status(power_on: bool):
+    """
+    Signal ESP32 to turn hardware power relay ON or OFF.
+    """
+    if not mqtt_client:
+        print("MQTT not connected - cannot publish power status signal")
+        return False
+    
+    payload = {
+        "power_on": power_on
+    }
+    
+    try:
+        mqtt_client.publish(TOPIC_CONTROL, json.dumps(payload), qos=1)
+        print(f"Power control signal sent: {'ON' if power_on else 'OFF'}")
+        return True
+    except Exception as e:
+        print(f"Failed to publish power control signal: {e}")
         return False
 
 

@@ -515,3 +515,23 @@ svg.recharts-surface .recharts-pie-sector path {
   filter: drop-shadow(0px 8px 16px rgba(0, 0, 0, 0.15));
   outline: none;
 }
+
+/* Administrator Glow */
+@keyframes admin-pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+.admin-glow {
+  animation: admin-pulse-glow 2s infinite cubic-bezier(0.66, 0, 0, 1);
+  border: 2px solid var(--color-surface);
+  position: relative;
+  z-index: 1;
+}

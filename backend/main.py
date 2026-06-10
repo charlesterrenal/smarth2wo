@@ -13,13 +13,88 @@ load_dotenv()
 
 from supabase import create_client, Client
 from paymongo_service import create_checkout_session, handle_webhook, CreatePaymentRequest
-from mqtt_service import init_mqtt, publish_dispense, disconnect as mqtt_disconnect
+from mqtt_service import init_mqtt, publish_dispense, disconnect as mqtt_disconnect, publish_power_status
 from email_service import init_email_service, send_transaction_alert, send_water_level_alert, send_maintenance_due_alert, send_anomaly_alert, send_power_status_alert
 from ml.inference import MaintenancePredictor, AnomalyDetector
 
 # Initialize ML Predictors
 maintenance_predictor = MaintenancePredictor()
 anomaly_detector = AnomalyDetector()
+import asyncio
+
+async def scheduler_loop():
+    """Background worker to sync schedule with power state every minute."""
+    ph_tz = timezone(timedelta(hours=8))
+    print("STARTUP EVENT: Automated Scheduler Loop Started")
+    
+    while True:
+        try:
+            await asyncio.sleep(60) # Run every minute
+            if not supabase:
+                continue
+                
+            now = datetime.now(ph_tz)
+            day_str = now.strftime("%a") # e.g. 'Mon'
+            
+            # Fetch schedule
+            sched_res = supabase.table("schedule").select("*").eq("day", day_str).execute()
+            if not sched_res.data:
+                continue
+                
+            today_sched = sched_res.data[0]
+            desired_power = False
+            
+            if today_sched.get("active", False):
+                # Parse times
+                start_str = today_sched.get("start")
+                end_str = today_sched.get("end")
+                try:
+                    # Handle both 12-hour and 24-hour formats
+                    start_time = None
+                    try:
+                        start_time = datetime.strptime(start_str.strip(), "%I:%M %p").time()
+                    except ValueError:
+                        start_time = datetime.strptime(start_str.strip(), "%H:%M").time()
+                    
+                    end_time = None
+                    try:
+                        end_time = datetime.strptime(end_str.strip(), "%I:%M %p").time()
+                    except ValueError:
+                        end_time = datetime.strptime(end_str.strip(), "%H:%M").time()
+                        
+                    current_time = now.time()
+                    if start_time and end_time:
+                        if start_time <= current_time <= end_time:
+                            desired_power = True
+                except Exception as e:
+                    print(f"Scheduler time parse error for '{start_str}' or '{end_str}': {e}")
+                    
+            # Check current status
+            status_res = supabase.table("sensor_status").select("power_on").eq("id", 1).execute()
+            if status_res.data:
+                current_power = status_res.data[0].get("power_on")
+                if current_power != desired_power:
+                    print(f"SCHEDULER: Transitioning power to {desired_power}")
+                    
+                    # Update database
+                    supabase.table("sensor_status").update({"power_on": desired_power}).eq("id", 1).execute()
+                    
+                    # Log event
+                    event_msg = f"System Automatically Powered {'ON' if desired_power else 'OFF'} by Scheduler"
+                    supabase.table("logs").insert({
+                        "event": event_msg,
+                        "status": "success" if desired_power else "warning",
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }).execute()
+                    
+                    # Send Email
+                    send_power_status_alert(desired_power)
+                    
+                    # Send MQTT to hardware
+                    publish_power_status(desired_power)
+                    
+        except Exception as e:
+            print(f"Scheduler loop error: {e}")
 
 
 @asynccontextmanager
@@ -29,6 +104,10 @@ async def lifespan(app: FastAPI):
     init_mqtt()
     print("STARTUP EVENT: Initializing Email Service...")
     init_email_service(supabase)
+    
+    # Start the background task
+    task = asyncio.create_task(scheduler_loop())
+    
     print("=" * 60)
     try:
         yield

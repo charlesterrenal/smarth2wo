@@ -381,7 +381,7 @@ export default function Settings() {
                   {users.map(u => (
                     <div key={u.user_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--color-bg)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-blue)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
+                        <div className={u.is_admin ? "admin-glow" : ""} style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--color-blue)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>
                           {u.email.charAt(0).toUpperCase()}
                         </div>
                         <div>
