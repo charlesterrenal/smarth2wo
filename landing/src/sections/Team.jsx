@@ -1,5 +1,5 @@
 import { useFadeIn } from '../hooks/useFadeIn'
-import { Globe, Mail } from 'lucide-react'
+import { Mail, Linkedin, Instagram } from 'lucide-react'
 
 const team = [
   {
@@ -7,28 +7,44 @@ const team = [
     role: 'Project Lead',
     initials: 'CT',
     image: '/CharlesVincent.png',
-    bg: 'bg-brand-blue/10 text-brand-blue'
+    bg: 'bg-brand-blue/10 text-brand-blue',
+    socials: [
+      { icon: Linkedin, url: 'https://www.linkedin.com/in/charlesterrenal/' },
+      { icon: Mail, url: 'mailto:contact@charlesterrenal.com' }
+    ]
   },
   {
     name: 'Anne Margareth B. Medina',
     role: 'Frontend Lead',
     initials: 'AM',
     image: '/AnneM.png',
-    bg: 'bg-brand-cyan/10 text-brand-cyan'
+    bg: 'bg-brand-cyan/10 text-brand-cyan',
+    socials: [
+      { icon: Instagram, url: 'https://www.instagram.com/maria_garneth' },
+      { icon: Mail, url: 'mailto:annemargareth111969@gmail.com' }
+    ]
   },
   {
     name: 'Marielle Lois P.\nBahuyo',
     role: 'Full Stack Developer',
     initials: 'MB',
     image: '/Lois.png',
-    bg: 'bg-brand-pink/10 text-brand-pink'
+    bg: 'bg-brand-pink/10 text-brand-pink',
+    socials: [
+      { icon: Linkedin, url: 'https://www.linkedin.com/in/marielleloisbahuyo/' },
+      { icon: Mail, url: 'mailto:mariellelois9@gmail.com' }
+    ]
   },
   {
     name: 'Wilbert Lancelot S. Aguilar',
     role: 'UI/UX Designer',
     initials: 'WA',
     image: '/LANCEW.png',
-    bg: 'bg-brand-yellow/10 text-brand-yellow'
+    bg: 'bg-brand-yellow/10 text-brand-yellow',
+    socials: [
+      { icon: Instagram, url: 'https://www.instagram.com/aglrlance_' },
+      { icon: Mail, url: 'mailto:lanceaguilar22@gmail.com' }
+    ]
   }
 ]
 
@@ -81,12 +97,14 @@ function TeamCard({ member, delay }) {
               <h3 className="text-xl font-bold text-white mb-0 drop-shadow-md whitespace-pre-line">{member.name}</h3>
               <p className="text-sm text-slate-200 mb-1 drop-shadow-md">{member.role}</p>
               <div className="flex items-center gap-3 pb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <a href="#" className="p-1 text-slate-200 hover:text-white transition-colors drop-shadow-md">
-                  <Globe size={18} />
-                </a>
-                <a href="#" className="p-1 text-slate-200 hover:text-white transition-colors drop-shadow-md">
-                  <Mail size={18} />
-                </a>
+                {member.socials.map((social, idx) => {
+                  const Icon = social.icon
+                  return (
+                    <a key={idx} href={social.url} target="_blank" rel="noreferrer" className="p-1 text-slate-200 hover:text-white transition-colors drop-shadow-md">
+                      <Icon size={18} />
+                    </a>
+                  )
+                })}
               </div>
             </div>
           </>
@@ -99,12 +117,14 @@ function TeamCard({ member, delay }) {
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 z-10">{member.role}</p>
 
             <div className="flex items-center gap-3 mt-auto opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-              <a href="#" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
-                <Globe size={18} />
-              </a>
-              <a href="#" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
-                <Mail size={18} />
-              </a>
+              {member.socials.map((social, idx) => {
+                const Icon = social.icon
+                return (
+                  <a key={idx} href={social.url} target="_blank" rel="noreferrer" className="p-2 text-slate-400 hover:text-brand-blue transition-colors">
+                    <Icon size={18} />
+                  </a>
+                )
+              })}
             </div>
           </div>
         )}
