@@ -497,13 +497,46 @@ async def update_power_status(data: SensorData):
 
 @app.get("/api/users")
 async def list_admin_users():
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Database not configured")
-    try:
+    if not supabase_admin:
+        # Fallback to user_profiles if no admin key
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Database not configured")
         response = supabase.table("user_profiles").select("*").execute()
         return {"users": response.data}
+    try:
+        # Get all users directly from Supabase Auth
+        auth_users = supabase_admin.auth.admin.list_users()
+        
+        # Fetch existing profiles
+        profiles_res = supabase_admin.table("user_profiles").select("*").execute()
+        profiles_map = {p["user_id"]: p for p in profiles_res.data}
+        
+        users = []
+        for u in auth_users:
+            profile = profiles_map.get(u.id, {})
+            users.append({
+                "user_id": u.id,
+                "email": u.email,
+                "is_admin": profile.get("is_admin", True),
+                "created_at": str(u.created_at)
+            })
+            
+            # Auto-sync missing profiles (from manually added credentials)
+            if u.id not in profiles_map:
+                try:
+                    supabase_admin.table("user_profiles").insert({
+                        "user_id": u.id,
+                        "email": u.email,
+                        "is_admin": True
+                    }).execute()
+                except Exception:
+                    pass
+                    
+        return {"users": users}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print("Error pulling auth users:", e)
+        response = supabase.table("user_profiles").select("*").execute()
+        return {"users": response.data}
 
 @app.post("/api/users/create")
 async def create_admin_user(request: CreateUserRequest):
