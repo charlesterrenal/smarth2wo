@@ -64,8 +64,12 @@ async def scheduler_loop():
                         
                     current_time = now.time()
                     if start_time and end_time:
-                        if start_time <= current_time <= end_time:
-                            desired_power = True
+                        if start_time <= end_time:
+                            if start_time <= current_time <= end_time:
+                                desired_power = True
+                        else:
+                            if current_time >= start_time or current_time <= end_time:
+                                desired_power = True
                 except Exception as e:
                     print(f"Scheduler time parse error for '{start_str}' or '{end_str}': {e}")
                     
