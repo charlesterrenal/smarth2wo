@@ -1,26 +1,32 @@
 /*
   SmartH2wo ESP32 - Water Dispenser Hardware Controller
   
-  TEST MODE: Uses LED instead of pump
+  PHASE 2: Full hardware integration
   
   This code controls:
-  - 3 physical buttons (100ml, 500ml, 1000ml)
-  - 2.8" TFT SPI display (shows status)
-  - LED output (GPIO 26) - toggles when "dispensing"
-  - MQTT communication with backend
+  - 3 volume buttons (100ml, 500ml, 1000ml) + 2 payment buttons
+  - 2.8" TFT SPI display (shows status, QR codes, coin progress)
+  - 2-Channel 5V Relay: Pump (CH1) + Solenoid (CH2)
+  - ZJ-S201 Flow Sensor (pulse counting via interrupt)
+  - HC-SR04 Ultrasonic Sensor (water level measurement)
+  - Allan 1239A Coin Acceptor (pulse via interrupt, NPN open-collector)
+  - MQTT communication with backend (bidirectional)
   
-  When ready for production:
-  1. Replace LED_PIN with PUMP_PIN
-  2. Connect relay/MOSFET to GPIO 26
-  3. Update dispensePump() to use actual timing
-  See ESP32_MQTT_GUIDE.md for details
+  TEST_MODE = true: skips WiFi/MQTT/backend, simulates sensors with LED
+  TEST_MODE = false: full production mode with all hardware
   
-  Wiring:
-  - Button 100ml: GPIO 12
-  - Button 500ml: GPIO 13
+  Wiring (Phase 2 — boot-safe pin assignment):
+  - Button 100ml:  GPIO 15 (moved off strapping pin 12)
+  - Button 500ml:  GPIO 16 (moved off strapping pin 13)
   - Button 1000ml: GPIO 14
-  - LED output (testing): GPIO 26
-    (Replace with pump relay/MOSFET for production)
+  - Button QR Pay: GPIO 25
+  - Button Coin:   GPIO 32
+  - Relay Pump:    GPIO 26 (Active LOW)
+  - Relay Solenoid:GPIO 4  (Active LOW)
+  - Flow Sensor:   GPIO 34 (input-only, ext 10kΩ pull-up to 3.3V)
+  - HC-SR04 Trig:  GPIO 17
+  - HC-SR04 Echo:  GPIO 35 (input-only, 1kΩ+2kΩ voltage divider)
+  - Coin Acceptor: GPIO 36 (input-only, 10kΩ pull-up to 3.3V)
   - TFT SPI: MOSI(23), CLK(18), CS(5), DC(27), RST(33)
   
   Before uploading:
@@ -39,7 +45,7 @@
 // ===== Test Mode =====
 // When true, the ESP32 will NOT call the backend or PayMongo.
 // Button press -> fake QR shown on TFT -> auto "dispense" after 5s.
-// Use this to validate hardware (buttons + TFT + LED) before wiring up the cloud.
+// Sensors and relays are skipped; LED on GPIO 26 simulates pump.
 #define TEST_MODE true
 
 // ===== WiFi Configuration =====
@@ -59,16 +65,75 @@ const int MQTT_PORT = 1883;
 const char* MQTT_CLIENT_ID = "smarth2o-esp32";
 const char* MQTT_DISPENSE_TOPIC = "smarth2o/dispense";
 const char* MQTT_STATUS_TOPIC = "smarth2o/status";
+const char* MQTT_SENSORS_TOPIC = "smarth2o/sensors";
+const char* MQTT_CONTROL_TOPIC = "smarth2o/control";
 
-// ===== Hardware Pins =====
-const int BTN_100ML   = 12;
-const int BTN_500ML   = 13;
-const int BTN_1000ML  = 14;
-const int BTN_QR_PAY  = 25;   // NEW: "Pay with QR PH" button (Phase 1: payment menu)
-const int BTN_COIN_PAY = 32;  // NEW: "Pay with Coins" button (Phase 1: payment menu)
-const int LED_PIN     = 26;   // LED for testing (swap to PUMP_PIN when adding pump)
+// ===== Hardware Pins (Phase 2 — boot-safe) =====
+// Buttons (reassigned off strapping pins)
+const int BTN_100ML    = 15;   // Was GPIO 12 (boot strapping pin — unsafe)
+const int BTN_500ML    = 16;   // Was GPIO 13 (JTAG pin — unsafe)
+const int BTN_1000ML   = 14;
+const int BTN_QR_PAY   = 25;
+const int BTN_COIN_PAY = 32;
 
-// (Coin acceptor pulse pin will be wired to GPIO 34 in Phase 2 - not used yet)
+// Actuators (relay module — active LOW)
+const int RELAY_PUMP     = 26;  // Relay CH1: 12V DC water pump
+const int RELAY_SOLENOID = 4;   // Relay CH2: 12V solenoid valve
+
+// Sensors
+const int FLOW_SENSOR_PIN = 34;  // ZJ-S201 pulse output (input-only, ext pull-up)
+const int US_TRIG_PIN     = 17;  // HC-SR04 trigger
+const int US_ECHO_PIN     = 35;  // HC-SR04 echo (input-only, voltage divider)
+const int COIN_PULSE_PIN  = 36;  // Allan 1239A coin acceptor (input-only, ext pull-up)
+
+// LED for TEST_MODE only (same physical pin as RELAY_PUMP)
+const int LED_PIN = 26;
+
+// ===== Flow Sensor Calibration =====
+// ZJ-S201 spec: ~450 pulses per liter. Calibrate with a measuring cup!
+// Dispense exactly 1L, read pulseCount from Serial, then update this value.
+const float FLOW_PULSES_PER_ML = 0.45;  // 450 pulses / 1000ml = 0.45 pulses/ml
+
+// ===== Ultrasonic Calibration =====
+// Measure the distance from sensor face to tank bottom (empty tank) in cm.
+// Update this after physically mounting the sensor.
+const float TANK_HEIGHT_CM = 30.0;  // Default — calibrate on-site!
+const float US_MIN_DISTANCE_CM = 3.0;  // Minimum valid reading (sensor dead zone)
+
+// ===== Flow Sensor ISR Variables (volatile for interrupt safety) =====
+volatile unsigned long flowPulseCount = 0;
+volatile unsigned long lastFlowPulseTime = 0;
+
+void IRAM_ATTR flowSensorISR() {
+  unsigned long now = micros();
+  // Debounce: ignore pulses faster than 1ms apart (noise)
+  if (now - lastFlowPulseTime > 1000) {
+    flowPulseCount++;
+    lastFlowPulseTime = now;
+  }
+}
+
+// ===== Coin Acceptor ISR Variables =====
+volatile int coinPulseCount = 0;
+volatile unsigned long lastCoinPulseTime = 0;
+
+void IRAM_ATTR coinPulseISR() {
+  unsigned long now = millis();
+  // Debounce: ignore pulses faster than 50ms apart
+  if (now - lastCoinPulseTime > 50) {
+    coinPulseCount++;
+    lastCoinPulseTime = now;
+  }
+}
+
+// ===== Sensor State =====
+float currentWaterLevelPct = 100.0;  // Last ultrasonic reading as percentage
+float currentFlowRate = 0.0;         // L/min calculated from pulse frequency
+bool systemPowerEnabled = true;      // Controlled via MQTT from dashboard
+unsigned long lastSensorPublish = 0;  // Timer for periodic sensor MQTT publish
+unsigned long lastUltrasonicRead = 0; // Timer for periodic ultrasonic reads
+const unsigned long SENSOR_PUBLISH_INTERVAL = 10000;  // Publish every 10 seconds
+const unsigned long ULTRASONIC_READ_INTERVAL = 5000;  // Read every 5 seconds
 
 // ===== Global Objects =====
 TFT_eSPI tft = TFT_eSPI();
@@ -120,25 +185,49 @@ void setup() {
   delay(1000);
   
   Serial.println("\n\nSmartH2wo ESP32 Starting...");
+  Serial.println(TEST_MODE ? ">>> TEST MODE <<<" : ">>> PRODUCTION MODE <<<");
   
-  // Initialize pins
-  pinMode(BTN_100ML,   INPUT_PULLUP);
-  pinMode(BTN_500ML,   INPUT_PULLUP);
-  pinMode(BTN_1000ML,  INPUT_PULLUP);
-  pinMode(BTN_QR_PAY,  INPUT_PULLUP);
+  // Initialize button pins
+  pinMode(BTN_100ML,    INPUT_PULLUP);
+  pinMode(BTN_500ML,    INPUT_PULLUP);
+  pinMode(BTN_1000ML,   INPUT_PULLUP);
+  pinMode(BTN_QR_PAY,   INPUT_PULLUP);
   pinMode(BTN_COIN_PAY, INPUT_PULLUP);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
+  
+  if (TEST_MODE) {
+    // TEST_MODE: use LED on the relay pin for visual feedback
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
+  } else {
+    // PRODUCTION: initialize relay pins (HIGH = relay OFF for active-low modules)
+    pinMode(RELAY_PUMP, OUTPUT);
+    digitalWrite(RELAY_PUMP, HIGH);      // Pump OFF
+    pinMode(RELAY_SOLENOID, OUTPUT);
+    digitalWrite(RELAY_SOLENOID, HIGH);  // Solenoid OFF
+    
+    // Flow sensor interrupt
+    pinMode(FLOW_SENSOR_PIN, INPUT);     // External 10kΩ pull-up to 3.3V
+    attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), flowSensorISR, RISING);
+    
+    // HC-SR04 ultrasonic
+    pinMode(US_TRIG_PIN, OUTPUT);
+    digitalWrite(US_TRIG_PIN, LOW);
+    pinMode(US_ECHO_PIN, INPUT);         // Voltage divider on echo line
+    
+    // Coin acceptor interrupt (NPN open-collector, 10kΩ pull-up to 3.3V)
+    pinMode(COIN_PULSE_PIN, INPUT);      // External pull-up
+    attachInterrupt(digitalPinToInterrupt(COIN_PULSE_PIN), coinPulseISR, FALLING);
+    
+    Serial.println("Hardware initialized: relays, flow sensor, ultrasonic, coin acceptor");
+  }
   
   // Initialize display
   initDisplay();
   displayStartup();
 
   if (TEST_MODE) {
-    Serial.println("*** TEST_MODE enabled: skipping WiFi + MQTT + backend ***");
+    Serial.println("*** TEST_MODE enabled: Simulating Actuators, but USING real WiFi/MQTT ***");
     delay(800);
-    displayReady();
-    return;
   }
 
   // Connect to WiFi
@@ -147,38 +236,68 @@ void setup() {
   // Setup MQTT
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
+  mqttClient.setBufferSize(512);  // Larger buffer for sensor JSON payloads
   connectMQTT();
+  
+  // Take initial ultrasonic reading
+  currentWaterLevelPct = readWaterLevel();
+  Serial.printf("Initial water level: %.1f%%\n", currentWaterLevelPct);
+  
   displayReady();
 }
 
 // ===== Main Loop =====
 void loop() {
-  if (!TEST_MODE) {
-    // Maintain WiFi connection
-    if (WiFi.status() != WL_CONNECTED) {
-      connectWiFi();
-    }
-    // Maintain MQTT connection
-    if (!mqttClient.connected()) {
-      connectMQTT();
-    }
-    mqttClient.loop();
+  // Maintain WiFi connection
+  if (WiFi.status() != WL_CONNECTED) {
+    connectWiFi();
   }
+  // Maintain MQTT connection
+  if (!mqttClient.connected()) {
+    connectMQTT();
+  }
+  mqttClient.loop();
 
   // Check button presses
   checkButtons();
 
   unsigned long now = millis();
 
+  // === Process coin acceptor pulses (production only) ===
+  // ISR increments coinPulseCount; we process it here in the main loop
+  // to avoid calling display/MQTT functions inside an ISR.
+  if (!TEST_MODE && coinPulseCount > 0) {
+    noInterrupts();
+    int pulsesToProcess = coinPulseCount;
+    coinPulseCount = 0;
+    interrupts();
+    
+    // Each pulse = 1 peso (configure on coin slot via DIP switches)
+    if (appState == STATE_COIN_PAYMENT || appState == STATE_COIN_WARNING) {
+      for (int i = 0; i < pulsesToProcess; i++) {
+        addCoinCredit(1);
+      }
+    }
+  }
+
+  // === Periodic ultrasonic reading (production only) ===
+  if (!TEST_MODE && (now - lastUltrasonicRead >= ULTRASONIC_READ_INTERVAL)) {
+    lastUltrasonicRead = now;
+    // Only read when not dispensing (pump vibration can interfere)
+    if (appState != STATE_DISPENSING) {
+      currentWaterLevelPct = readWaterLevel();
+    }
+  }
+
+  // === Periodic sensor data publishing via MQTT (production only) ===
+  if (!TEST_MODE && (now - lastSensorPublish >= SENSOR_PUBLISH_INTERVAL)) {
+    lastSensorPublish = now;
+    publishSensorData();
+  }
+
+  // === State machine timeouts ===
   switch (appState) {
     case STATE_QR_PAYMENT:
-      // TEST_MODE: simulate the customer scanning + paying after a short delay
-      if (TEST_MODE && testDispenseAt > 0 && now > testDispenseAt) {
-        testDispenseAt = 0;
-        Serial.println("TEST_MODE: simulated payment confirmed -> dispense");
-        dispensePump(currentVolumeMl);
-        return;
-      }
       // Timeout QR if no payment made within the window
       if (now > qrDisplayTimeout) {
         Serial.println("QR display timed out - returning to READY");
@@ -212,7 +331,6 @@ void loop() {
       if (now > warnTimeoutAt) {
         if (coinCredit > 0) {
           Serial.printf("Coin credit forfeited: P%d (timeout)\n", coinCredit);
-          // TODO Phase 2: log to backend ("coin_forfeit", coinCredit)
         }
         resetTransactionState();
         displayReady();
@@ -227,19 +345,22 @@ void loop() {
 }
 
 // ===== UI Theme =====
-// RGB565 colors. Calm dark theme with cyan/blue accents.
-#define COL_BG        0x0841   // near-black with hint of blue (#080A18)
-#define COL_BG_ALT    0x1082   // slightly lighter bg (#101030)
-#define COL_CARD      0x1965   // card surface (#1A2D30)
-#define COL_HEADER    0x18E3   // top bar (#182030)
-#define COL_PRIMARY   0x05FF   // cyan accent (#00C0FF)
-#define COL_ACCENT    0x441F   // bright blue (#4080FF)
-#define COL_SUCCESS   0x2FE5   // lime green (#30FF30)
-#define COL_WARNING   0xFD20   // amber (#FFA800)
-#define COL_ERROR     0xF986   // soft red (#FF3030)
-#define COL_TEXT      0xFFFF   // white
-#define COL_MUTED     0x8C71   // light gray
-#define COL_DIM       0x52AA   // dim gray
+// RGB565 colors matched to dash.smarth2wo.tech design language.
+// Dashboard uses dark navy bg, electric cyan accent, emerald green for success.
+#define COL_BG        0x0862   // #0B1220 deep navy background
+#define COL_BG_ALT    0x0C44   // #111827 card surface
+#define COL_CARD      0x10A3   // #172033 elevated card
+#define COL_HEADER    0x0862   // same as BG (no contrast header)
+#define COL_PRIMARY   0x067F   // #06B6D4 cyan (dashboard --color-cyan)
+#define COL_BLUE      0x25DB   // #2563EB dashboard --color-blue
+#define COL_SUCCESS   0x0753   // #10B981 emerald (dashboard --color-green)
+#define COL_WARNING   0xFC60   // #F97316 orange (dashboard --color-warning)
+#define COL_ERROR     0xF8C4   // #EF4444 red (dashboard --color-danger)
+#define COL_TEXT      0xFFFF   // #FFFFFF white
+#define COL_MUTED     0xCE59   // #CBD5E1 secondary text
+#define COL_DIM       0x9492   // #94A3B8 muted text
+#define COL_BORDER    0x18C4   // #172033 subtle borders
+#define COL_ACCENT_BG 0x0902   // #0F1724 slightly lighter surface
 
 // ===== Display Functions =====
 void initDisplay() {
@@ -262,69 +383,100 @@ void uiCenterText(const char* text, int y, uint8_t font, uint8_t size,
   tft.setTextDatum(TL_DATUM);
 }
 
-// Branded top status bar with a status pill on the right.
-void uiHeader(const char* brand, const char* status, uint16_t statusBg) {
-  tft.fillRect(0, 0, tft.width(), 30, COL_HEADER);
-  tft.drawFastHLine(0, 30, tft.width(), COL_PRIMARY);
+// Branded top nav bar — matches the dashboard sidebar header strip.
+// Left: water-drop + brand text. Right: status pill.
+void uiHeader(const char* brand, const char* status, uint16_t statusColor) {
+  // Full-width solid header bar
+  tft.fillRect(0, 0, tft.width(), 36, COL_ACCENT_BG);
+  // Bottom border line — dashboard uses a thin subtle border
+  tft.drawFastHLine(0, 36, tft.width(), COL_BORDER);
+  // Cyan left-edge accent stripe (like active sidebar item)
+  tft.fillRect(0, 0, 3, 36, COL_PRIMARY);
 
-  // Small water-drop logo on the left
-  int dx = 14, dy = 15;
-  tft.fillTriangle(dx, dy - 8, dx - 5, dy + 1, dx + 5, dy + 1, COL_PRIMARY);
-  tft.fillCircle(dx, dy + 3, 5, COL_PRIMARY);
+  // Water-drop icon (teardrop shape)
+  int dx = 20, dy = 18;
+  tft.fillTriangle(dx, dy - 9, dx - 5, dy + 2, dx + 5, dy + 2, COL_PRIMARY);
+  tft.fillCircle(dx, dy + 3, 6, COL_PRIMARY);
+  // Inner shine highlight
+  tft.fillCircle(dx - 2, dy, 2, 0xC7DF);
 
-  // Brand text
-  tft.setTextFont(2);
+  // Brand text — bold white
+  tft.setTextFont(4);
   tft.setTextSize(1);
-  tft.setTextColor(COL_TEXT, COL_HEADER);
+  tft.setTextColor(COL_TEXT, COL_ACCENT_BG);
   tft.setTextDatum(ML_DATUM);
-  tft.drawString(brand, 26, 15);
+  tft.drawString(brand, 34, 18);
 
-  // Status pill
-  int statusW = strlen(status) * 7 + 18;
-  int statusX = tft.width() - statusW - 8;
-  tft.fillRoundRect(statusX, 6, statusW, 18, 4, statusBg);
-  tft.setTextColor(COL_BG, statusBg);
+  // Status pill (rounded badge, matching dashboard stat chip)
+  int statusW = strlen(status) * 7 + 20;
+  int statusX = tft.width() - statusW - 10;
+  tft.fillRoundRect(statusX, 9, statusW, 18, 9, statusColor);
+  tft.setTextFont(2);
+  tft.setTextColor(COL_BG, statusColor);
   tft.setTextDatum(MC_DATUM);
-  tft.drawString(status, statusX + statusW / 2, 15);
+  tft.drawString(status, statusX + statusW / 2, 18);
 
   tft.setTextDatum(TL_DATUM);
 }
 
-// Decorative water-drop icon at (cx, cy) with given outer radius.
+// Decorative water-drop icon centered at (cx, cy) with outer radius r.
 void uiWaterDrop(int cx, int cy, int r, uint16_t color) {
-  tft.fillTriangle(cx - r, cy + r/3,
-                   cx + r, cy + r/3,
-                   cx,     cy - r,        color);
+  // Teardrop body
+  tft.fillTriangle(cx - r, cy + r/3, cx + r, cy + r/3, cx, cy - r, color);
   tft.fillCircle(cx, cy + r/3, r * 3/4, color);
-  // little highlight
-  tft.fillCircle(cx - r/3, cy, 2, COL_TEXT);
+  // Inner shine (2 overlapping circles)
+  tft.fillCircle(cx - r/4, cy, r/5 + 1, 0xC7DF);
+  tft.fillCircle(cx - r/4 + 1, cy, r/6, COL_TEXT);
 }
 
-// One row in the volume list on the READY screen.
-// Minimalist: subtle card, small accent dot, volume left, price right.
-void uiVolumeRow(int y, const char* volume, const char* price, uint16_t accent) {
-  const int x = 16;
-  const int w = tft.width() - 32;
-  const int h = 48;
+// Horizontal progress bar with rounded ends.
+void uiProgressBar(int x, int y, int w, int h, float pct,
+                   uint16_t fillColor, uint16_t trackColor) {
+  tft.fillRoundRect(x, y, w, h, h/2, trackColor);
+  int fillW = (int)(pct * (w - 2));
+  if (fillW > 0) {
+    tft.fillRoundRect(x + 1, y + 1, fillW, h - 2, (h-2)/2, fillColor);
+  }
+}
 
-  // Soft card with thin border
-  tft.fillRoundRect(x, y, w, h, 8, COL_CARD);
-  tft.drawRoundRect(x, y, w, h, 8, COL_BG_ALT);
+// Volume selection card row — dashboard-style: dark card, left cyan bar, icon, label+price.
+void uiVolumeRow(int y, const char* volume, const char* price, const char* icon, uint16_t accent) {
+  const int x = 14;
+  const int w = tft.width() - 28;
+  const int h = 52;
+  const int r = 10;
 
-  // Tiny colored indicator dot on the left
-  tft.fillCircle(x + 16, y + h/2, 4, accent);
+  // Card base
+  tft.fillRoundRect(x, y, w, h, r, COL_CARD);
+  // Subtle border
+  tft.drawRoundRect(x, y, w, h, r, COL_BORDER);
+  // Left accent bar (like active nav item in dashboard sidebar)
+  tft.fillRoundRect(x, y, 4, h, 2, accent);
 
-  // Volume (left, white)
-  tft.setTextFont(4);
+  // Volume icon circle badge
+  int badgeX = x + 26, badgeY = y + h/2;
+  tft.fillCircle(badgeX, badgeY, 14, COL_ACCENT_BG);
+  tft.drawCircle(badgeX, badgeY, 14, accent);
+  tft.setTextFont(2);
   tft.setTextSize(1);
+  tft.setTextColor(accent, COL_ACCENT_BG);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(icon, badgeX, badgeY);
+
+  // Volume label — white, prominent
+  tft.setTextFont(4);
   tft.setTextColor(COL_TEXT, COL_CARD);
   tft.setTextDatum(ML_DATUM);
-  tft.drawString(volume, x + 32, y + h/2);
+  tft.drawString(volume, x + 50, y + h/2 - 8);
 
-  // Price (right, accent color)
-  tft.setTextColor(accent, COL_CARD);
-  tft.setTextDatum(MR_DATUM);
-  tft.drawString(price, x + w - 16, y + h/2);
+  // Price badge — cyan background, dark text
+  int priceW = strlen(price) * 8 + 16;
+  int priceX = x + w - priceW - 12;
+  tft.fillRoundRect(priceX, y + h/2 - 10, priceW, 20, 4, accent);
+  tft.setTextFont(2);
+  tft.setTextColor(COL_BG, accent);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(price, priceX + priceW/2, y + h/2);
 
   tft.setTextDatum(TL_DATUM);
 }
@@ -333,11 +485,36 @@ void uiVolumeRow(int y, const char* volume, const char* price, uint16_t accent) 
 
 void displayStartup() {
   tft.fillScreen(COL_BG);
-  uiWaterDrop(tft.width()/2, 75, 28, COL_PRIMARY);
 
-  uiCenterText("SmartH2wo", 125, 4, 1, COL_TEXT, COL_BG);
-  uiCenterText("Smart Water Dispenser", 158, 2, 1, COL_MUTED, COL_BG);
-  uiCenterText("Starting up...", 195, 2, 1, COL_DIM, COL_BG);
+  // Full-width cyan top accent strip
+  tft.fillRect(0, 0, tft.width(), 4, COL_PRIMARY);
+
+  // Large water drop centered
+  uiWaterDrop(tft.width()/2, 88, 36, COL_PRIMARY);
+
+  // App name — large, white
+  tft.setTextFont(4);
+  tft.setTextSize(1);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString("SmartH2wo", tft.width()/2, 140);
+
+  // Tagline — muted
+  tft.setTextFont(2);
+  tft.setTextColor(COL_MUTED, COL_BG);
+  tft.drawString("Smart Water Dispenser", tft.width()/2, 166);
+
+  // Loading indicator — cyan dots
+  tft.setTextColor(COL_DIM, COL_BG);
+  tft.drawString("Connecting...", tft.width()/2, 200);
+
+  // Three loading dots
+  int cy = 220, cx = tft.width()/2;
+  tft.fillRoundRect(cx - 20, cy - 3, 10, 6, 3, COL_PRIMARY);
+  tft.fillRoundRect(cx - 5,  cy - 3, 10, 6, 3, COL_BORDER);
+  tft.fillRoundRect(cx + 10, cy - 3, 10, 6, 3, COL_BORDER);
+
+  tft.setTextDatum(TL_DATUM);
 }
 
 void displayReady() {
@@ -348,40 +525,41 @@ void displayReady() {
   tft.fillScreen(COL_BG);
 
   uiHeader("SmartH2wo",
-           TEST_MODE ? "TEST" : "ONLINE",
+           TEST_MODE ? "TEST" : "LIVE",
            TEST_MODE ? COL_WARNING : COL_SUCCESS);
 
-  // Quiet section title
+  // Section label — muted, small, like dashboard section headers
   tft.setTextFont(2);
-  tft.setTextSize(1);
-  tft.setTextColor(COL_MUTED, COL_BG);
+  tft.setTextColor(COL_DIM, COL_BG);
   tft.setTextDatum(TL_DATUM);
-  tft.drawString("Choose your volume", 18, 42);
+  tft.drawString("SELECT VOLUME", 17, 46);
 
-  // Three options as a clean vertical list
-  uiVolumeRow(64,  "100 ml",  "P2",  COL_PRIMARY);
-  uiVolumeRow(120, "500 ml",  "P10", COL_PRIMARY);
-  uiVolumeRow(176, "1000 ml", "P20", COL_PRIMARY);
+  // Three volume cards stacked
+  uiVolumeRow(62,  "100 ml",  "P2",  "1", COL_PRIMARY);
+  uiVolumeRow(120, "500 ml",  "P10", "5", COL_PRIMARY);
+  uiVolumeRow(178, "1000 ml", "P20", "10", COL_PRIMARY);
 
-  // Footer hint
-  uiCenterText("Press a physical button to start",
-               tft.height() - 14, 2, 1, COL_DIM, COL_BG);
+  // Footer hint bar
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("Press a button to begin",
+               tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
 }
 
 void displayProcessing() {
   tft.fillScreen(COL_BG);
   uiHeader("SmartH2wo", "WAIT", COL_WARNING);
 
-  uiWaterDrop(tft.width()/2, 90, 26, COL_WARNING);
+  // Pulsing water drop
+  uiWaterDrop(tft.width()/2, 100, 30, COL_WARNING);
 
-  uiCenterText("PROCESSING", 140, 4, 1, COL_TEXT, COL_BG);
-  uiCenterText("Generating QR code...", 175, 2, 1, COL_MUTED, COL_BG);
+  uiCenterText("Processing...", 150, 4, 1, COL_TEXT, COL_BG);
+  uiCenterText("Generating checkout...", 182, 2, 1, COL_MUTED, COL_BG);
 
-  // simple 3-dot progress
-  int cy = 205, cx = tft.width()/2;
-  tft.fillCircle(cx - 14, cy, 3, COL_PRIMARY);
-  tft.fillCircle(cx,      cy, 3, COL_MUTED);
-  tft.fillCircle(cx + 14, cy, 3, COL_DIM);
+  // Animated dots (3 staggered pills)
+  int cy = 212, cx = tft.width()/2;
+  tft.fillRoundRect(cx - 22, cy - 3, 12, 6, 3, COL_PRIMARY);
+  tft.fillRoundRect(cx - 5,  cy - 3, 12, 6, 3, COL_DIM);
+  tft.fillRoundRect(cx + 12, cy - 3, 12, 6, 3, COL_BORDER);
 }
 
 // Render the given text/URL as a real scannable QR on the TFT at (x0, y0).
@@ -476,23 +654,65 @@ void displayChoosePayment() {
   tft.fillScreen(COL_BG);
 
   char hdr[32];
-  snprintf(hdr, sizeof(hdr), "%d ml  -  P%d", currentVolumeMl, currentPricePesos);
-  uiHeader(hdr, TEST_MODE ? "TEST" : "PAY", COL_PRIMARY);
+  snprintf(hdr, sizeof(hdr), "%d ml - P%d", currentVolumeMl, currentPricePesos);
+  uiHeader(hdr, "PAY", COL_PRIMARY);
 
-  // Subtitle
+  // Section label
   tft.setTextFont(2);
-  tft.setTextSize(1);
-  tft.setTextColor(COL_MUTED, COL_BG);
+  tft.setTextColor(COL_DIM, COL_BG);
   tft.setTextDatum(TL_DATUM);
-  tft.drawString("How would you like to pay?", 18, 42);
+  tft.drawString("CHOOSE PAYMENT METHOD", 17, 46);
 
-  // Two payment options stacked vertically
-  uiPaymentRow(68,  "QR", "QR PH Payment",  "Press the QR button",   COL_PRIMARY);
-  uiPaymentRow(132, "C",  "Coin Payment",   "Press the COIN button", COL_SUCCESS);
+  // QR Payment card
+  const int cx = 14, cw = tft.width() - 28, ch = 64, cr = 10;
 
-  // Footer hint
-  uiCenterText("Press another volume to change  -  Auto-cancel 15s",
-               tft.height() - 14, 2, 1, COL_DIM, COL_BG);
+  // Card 1: QR Pay
+  tft.fillRoundRect(cx, 62, cw, ch, cr, COL_CARD);
+  tft.drawRoundRect(cx, 62, cw, ch, cr, COL_BORDER);
+  tft.fillRoundRect(cx, 62, 4, ch, 2, COL_BLUE);
+  // Icon badge
+  tft.fillRoundRect(cx + 14, 74, 40, 40, 6, COL_BLUE);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_BLUE);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("QR", cx + 34, 94);
+  // Label
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString("QR PH Pay", cx + 64, 80);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
+  tft.drawString("GCash, Maya, Bank Apps", cx + 64, 102);
+  // Button hint chip
+  tft.fillRoundRect(cx + cw - 58, 80, 44, 18, 9, COL_BLUE);
+  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_BLUE);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("QR BTN", cx + cw - 36, 89);
+
+  // Card 2: Coin Pay
+  tft.fillRoundRect(cx, 134, cw, ch, cr, COL_CARD);
+  tft.drawRoundRect(cx, 134, cw, ch, cr, COL_BORDER);
+  tft.fillRoundRect(cx, 134, 4, ch, 2, COL_SUCCESS);
+  // Icon badge
+  tft.fillRoundRect(cx + 14, 146, 40, 40, 6, COL_SUCCESS);
+  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_SUCCESS);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("P", cx + 34, 166);
+  // Label
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString("Coin Insert", cx + 64, 152);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
+  tft.drawString("Drop coins to pay", cx + 64, 174);
+  // Button hint chip
+  tft.fillRoundRect(cx + cw - 64, 152, 50, 18, 9, COL_SUCCESS);
+  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_SUCCESS);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("COIN BTN", cx + cw - 39, 161);
+
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("Auto-cancel in 15s", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+
+  tft.setTextDatum(TL_DATUM);
 }
 
 // Redraw only the header when the user picks a different volume on the
@@ -500,8 +720,8 @@ void displayChoosePayment() {
 void refreshChoosePayment() {
   chooseTimeoutAt = millis() + CHOOSE_TIMEOUT_MS;  // reset the auto-cancel timer
   char hdr[32];
-  snprintf(hdr, sizeof(hdr), "%d ml  -  P%d", currentVolumeMl, currentPricePesos);
-  uiHeader(hdr, TEST_MODE ? "TEST" : "PAY", COL_PRIMARY);
+  snprintf(hdr, sizeof(hdr), "%d ml - P%d", currentVolumeMl, currentPricePesos);
+  uiHeader(hdr, "PAY", COL_PRIMARY);
 }
 
 // ----- Coin payment screen (progress) -----
@@ -510,72 +730,71 @@ void displayCoinPayment() {
   tft.fillScreen(COL_BG);
 
   char hdr[32];
-  snprintf(hdr, sizeof(hdr), "INSERT COINS  -  P%d", currentPricePesos);
-  uiHeader(hdr, TEST_MODE ? "TEST" : "COIN", COL_SUCCESS);
+  snprintf(hdr, sizeof(hdr), "INSERT COINS - P%d", currentPricePesos);
+  uiHeader(hdr, "COIN", COL_SUCCESS);
 
-  // Big amount readout: "P5 / P10"
+  // Coin icon circle
+  int cx = tft.width()/2;
+  tft.fillCircle(cx, 80, 24, COL_SUCCESS);
+  tft.fillCircle(cx, 80, 19, COL_BG);
+  tft.setTextFont(4); tft.setTextColor(COL_SUCCESS, COL_BG);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("P", cx, 80);
+
+  // Big credit / price readout
   char amount[24];
-  snprintf(amount, sizeof(amount), "P%d / P%d", coinCredit, currentPricePesos);
-  uiCenterText(amount, 56, 6, 1, COL_TEXT, COL_BG);
+  snprintf(amount, sizeof(amount), "P%d of P%d", coinCredit, currentPricePesos);
+  uiCenterText(amount, 112, 4, 1, COL_TEXT, COL_BG);
 
   // Progress bar
-  int barW = 240, barH = 14;
-  int barX = (tft.width() - barW) / 2;
-  int barY = 120;
-  int fillW = (coinCredit >= currentPricePesos) ? barW - 2
-            : (barW - 2) * coinCredit / currentPricePesos;
+  float pct = (currentPricePesos > 0)
+    ? min(1.0f, (float)coinCredit / (float)currentPricePesos)
+    : 0.0f;
+  uiProgressBar((tft.width() - 240)/2, 146, 240, 14, pct, COL_SUCCESS, COL_BORDER);
 
-  tft.drawRoundRect(barX, barY, barW, barH, 4, COL_DIM);
-  if (fillW > 0) {
-    tft.fillRoundRect(barX + 1, barY + 1, fillW, barH - 2, 3, COL_SUCCESS);
-  }
-
-  // Remaining amount
-  int remaining = currentPricePesos - coinCredit;
-  if (remaining < 0) remaining = 0;
+  // Remaining label
+  int remaining = max(0, currentPricePesos - coinCredit);
   char remStr[32];
-  snprintf(remStr, sizeof(remStr), "Remaining: P%d", remaining);
-  uiCenterText(remStr, 148, 4, 1, COL_PRIMARY, COL_BG);
+  snprintf(remStr, sizeof(remStr), "P%d remaining", remaining);
+  uiCenterText(remStr, 170, 2, 1, COL_MUTED, COL_BG);
 
-  // Phase-1 testing hint OR Phase-2 production hint
-  uiCenterText("TEST: 100ml=P1  500ml=P5  1000ml=P10",
-               186, 2, 1, COL_MUTED, COL_BG);
-
-  // Footer hint
-  uiCenterText("Press COIN to cancel  -  60s timeout",
-               tft.height() - 14, 2, 1, COL_DIM, COL_BG);
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("COIN BTN = Cancel  |  60s timeout",
+               tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
 }
 
 // ----- Coin warning (partial credit, soft timeout extension) -----
 
 void displayCoinWarning() {
   tft.fillScreen(COL_BG);
-
   uiHeader("STILL WAITING", "WARN", COL_WARNING);
 
-  // Warning icon (triangle with exclamation)
-  int cx = tft.width()/2, cy = 70;
-  tft.fillTriangle(cx - 26, cy + 22, cx + 26, cy + 22, cx, cy - 22, COL_WARNING);
-  tft.fillTriangle(cx - 20, cy + 18, cx + 20, cy + 18, cx, cy - 16, COL_BG);
-  tft.fillRect(cx - 2, cy - 8, 4, 14, COL_WARNING);
-  tft.fillCircle(cx, cy + 12, 2, COL_WARNING);
+  // Warning triangle
+  int cx = tft.width()/2, cy = 86;
+  tft.fillTriangle(cx - 28, cy + 24, cx + 28, cy + 24, cx, cy - 24, COL_WARNING);
+  tft.fillTriangle(cx - 22, cy + 18, cx + 22, cy + 18, cx, cy - 16, COL_BG);
+  tft.fillRoundRect(cx - 2, cy - 8, 5, 14, 2, COL_WARNING);
+  tft.fillCircle(cx, cy + 12, 3, COL_WARNING);
 
   // Status
+  int remaining = max(0, currentPricePesos - coinCredit);
   char st[40];
-  int remaining = currentPricePesos - coinCredit;
-  if (remaining < 0) remaining = 0;
   snprintf(st, sizeof(st), "P%d more needed", remaining);
-  uiCenterText(st, 116, 4, 1, COL_TEXT, COL_BG);
+  uiCenterText(st, 124, 4, 1, COL_TEXT, COL_BG);
+  uiCenterText("Insert coins or press COIN to cancel.", 156, 2, 1, COL_MUTED, COL_BG);
 
-  uiCenterText("Insert more coins or press COIN",
-               155, 2, 1, COL_MUTED, COL_BG);
-  uiCenterText("to cancel.  Credit forfeit in 30s.",
-               170, 2, 1, COL_MUTED, COL_BG);
+  // Progress bar (partial)
+  float pct = (currentPricePesos > 0)
+    ? min(1.0f, (float)coinCredit / (float)currentPricePesos)
+    : 0.0f;
+  uiProgressBar((tft.width() - 200)/2, 178, 200, 10, pct, COL_WARNING, COL_BORDER);
 
-  // Current credit recap
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
   char cr[32];
-  snprintf(cr, sizeof(cr), "Inserted so far: P%d", coinCredit);
-  uiCenterText(cr, tft.height() - 14, 2, 1, COL_DIM, COL_BG);
+  snprintf(cr, sizeof(cr), "Inserted: P%d  -  Forfeiting in 30s", coinCredit);
+  uiCenterText(cr, tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
 }
 
 void displayQRMessage() {
@@ -648,49 +867,63 @@ void displayDispensing() {
   tft.fillScreen(COL_BG);
   uiHeader("SmartH2wo", "ACTIVE", COL_SUCCESS);
 
-  uiWaterDrop(tft.width()/2, 80, 32, COL_SUCCESS);
+  // Success ring with water drop inside
+  int cx = tft.width()/2, cy = 96;
+  tft.fillCircle(cx, cy, 36, COL_SUCCESS);
+  tft.fillCircle(cx, cy, 30, COL_BG);
+  // Inner water drop
+  uiWaterDrop(cx, cy, 18, COL_SUCCESS);
 
-  uiCenterText("DISPENSING", 130, 4, 1, COL_SUCCESS, COL_BG);
+  // DISPENSING label
+  uiCenterText("DISPENSING", 146, 4, 1, COL_SUCCESS, COL_BG);
 
   // Volume readout
   char vol[24];
   snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
-  uiCenterText(vol, 165, 4, 1, COL_TEXT, COL_BG);
+  uiCenterText(vol, 172, 4, 1, COL_TEXT, COL_BG);
 
-  // Progress bar (full at start; could animate later)
-  int barW = 240, barH = 8;
-  int barX = (tft.width() - barW) / 2;
-  int barY = 205;
-  tft.drawRoundRect(barX, barY, barW, barH, 3, COL_DIM);
-  tft.fillRoundRect(barX + 1, barY + 1, barW - 2, barH - 2, 2, COL_SUCCESS);
+  // Animated progress bar (full — could track flow sensor in future)
+  uiProgressBar((tft.width() - 240)/2, 204, 240, 10, 1.0f, COL_SUCCESS, COL_BORDER);
 
-  uiCenterText("Please wait...", 220, 2, 1, COL_MUTED, COL_BG);
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("Please wait...", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
 }
 
 void displayError(String message) {
   tft.fillScreen(COL_BG);
 
-  // Red header bar
-  tft.fillRect(0, 0, tft.width(), 30, COL_ERROR);
-  tft.drawFastHLine(0, 30, tft.width(), COL_TEXT);
-  tft.setTextFont(2);
-  tft.setTextSize(1);
-  tft.setTextColor(COL_TEXT, COL_ERROR);
+  // Error header bar with icon
+  tft.fillRect(0, 0, tft.width(), 36, 0x6000);  // dark red header
+  tft.fillRect(0, 0, 3, 36, COL_ERROR);          // left red stripe
+  tft.drawFastHLine(0, 36, tft.width(), COL_ERROR);
+  tft.setTextFont(4); tft.setTextSize(1);
+  tft.setTextColor(COL_TEXT, 0x6000);
   tft.setTextDatum(MC_DATUM);
-  tft.drawString("! ERROR", tft.width()/2, 15);
-  tft.setTextDatum(TL_DATUM);
+  tft.drawString("Error", tft.width()/2, 18);
 
-  // X icon in a circle
-  int cx = tft.width()/2, cy = 90;
-  tft.fillCircle(cx, cy, 28, COL_ERROR);
-  tft.fillCircle(cx, cy, 23, COL_BG);
+  // Error X icon in a ring
+  int cx = tft.width()/2, cy = 102;
+  tft.fillCircle(cx, cy, 30, COL_ERROR);
+  tft.fillCircle(cx, cy, 24, COL_BG);
+  tft.drawCircle(cx, cy, 30, COL_ERROR);
+  // X lines (3px thick each direction)
   for (int t = -1; t <= 1; t++) {
-    tft.drawLine(cx - 11, cy - 11 + t, cx + 11, cy + 11 + t, COL_ERROR);
-    tft.drawLine(cx - 11, cy + 11 + t, cx + 11, cy - 11 + t, COL_ERROR);
+    tft.drawLine(cx - 12, cy - 12 + t, cx + 12, cy + 12 + t, COL_ERROR);
+    tft.drawLine(cx - 12, cy + 12 + t, cx + 12, cy - 12 + t, COL_ERROR);
   }
 
-  uiCenterText(message.c_str(), 145, 4, 1, COL_TEXT, COL_BG);
-  uiCenterText("Press any button to retry", 200, 2, 1, COL_MUTED, COL_BG);
+  uiCenterText(message.c_str(), 150, 2, 1, COL_MUTED, COL_BG);
+
+  // Retry chip
+  int chipW = 160, chipH = 22;
+  int chipX = (tft.width() - chipW) / 2;
+  tft.fillRoundRect(chipX, 190, chipW, chipH, 11, COL_BORDER);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BORDER);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("Press any button to retry", chipX + chipW/2, 201);
+
+  tft.setTextDatum(TL_DATUM);
 }
 
 // ===== WiFi Functions =====
@@ -753,7 +986,8 @@ void connectMQTT() {
     if (mqttClient.connect(MQTT_CLIENT_ID)) {
       Serial.println("MQTT connected!");
       mqttClient.subscribe(MQTT_DISPENSE_TOPIC);
-      Serial.println("Subscribed to dispense topic");
+      mqttClient.subscribe(MQTT_CONTROL_TOPIC);
+      Serial.println("Subscribed to MQTT topics");
       return;
     }
     Serial.print(".");
@@ -784,7 +1018,55 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     
     // Trigger pump
     dispensePump(volumeMl);
+  } else if (topicStr == MQTT_CONTROL_TOPIC) {
+    DynamicJsonDocument doc(256);
+    deserializeJson(doc, payload, length);
+    if (doc.containsKey("power_on")) {
+      systemPowerEnabled = doc["power_on"];
+      Serial.printf("Power state updated via MQTT: %s\n", systemPowerEnabled ? "ON" : "OFF");
+      if (!systemPowerEnabled && appState != STATE_READY && appState != STATE_DISPENSING) {
+        resetTransactionState();
+      }
+    }
   }
+}
+
+// ===== Sensor Functions =====
+float readWaterLevel() {
+  digitalWrite(US_TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(US_TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(US_TRIG_PIN, LOW);
+  
+  long duration = pulseIn(US_ECHO_PIN, HIGH, 30000); // 30ms timeout
+  if (duration == 0) return currentWaterLevelPct; // timeout/error, keep previous
+  
+  // Speed of sound is ~343 m/s = 0.0343 cm/us
+  float distanceCm = (duration * 0.0343) / 2.0;
+  
+  if (distanceCm < US_MIN_DISTANCE_CM) distanceCm = US_MIN_DISTANCE_CM;
+  if (distanceCm > TANK_HEIGHT_CM) distanceCm = TANK_HEIGHT_CM;
+  
+  // Calculate percentage (distance is from top to water surface)
+  float waterHeight = TANK_HEIGHT_CM - distanceCm;
+  float pct = (waterHeight / (TANK_HEIGHT_CM - US_MIN_DISTANCE_CM)) * 100.0;
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  return pct;
+}
+
+void publishSensorData() {
+  DynamicJsonDocument doc(256);
+  doc["water_level_pct"] = currentWaterLevelPct;
+  doc["flow_rate"] = currentFlowRate;
+  doc["power_on"] = systemPowerEnabled;
+  
+  String jsonStr;
+  serializeJson(doc, jsonStr);
+  mqttClient.publish(MQTT_SENSORS_TOPIC, jsonStr.c_str());
+  Serial.printf("Published sensors: Level=%.1f%%, Flow=%.2f L/min, Power=%s\n", 
+                currentWaterLevelPct, currentFlowRate, systemPowerEnabled ? "ON" : "OFF");
 }
 
 void publishStatus(String status, String message) {
@@ -899,12 +1181,20 @@ void handleQrButtons() {
 void handleCoinButtons() {
   if (!pastLockout()) return;
 
-  // PHASE 1 (UI testing): the volume buttons simulate coin denominations.
-  // PHASE 2 (real hardware): these become "cancel" instead; coins arrive via
-  // interrupt on GPIO 34 and call addCoinCredit() directly.
-  if (buttonPressed(BTN_100ML))  { addCoinCredit(1);  waitForRelease(); return; }
-  if (buttonPressed(BTN_500ML))  { addCoinCredit(5);  waitForRelease(); return; }
-  if (buttonPressed(BTN_1000ML)) { addCoinCredit(10); waitForRelease(); return; }
+  if (TEST_MODE) {
+    // In TEST_MODE, physical volume buttons simulate coins
+    if (buttonPressed(BTN_100ML))  { addCoinCredit(1);  waitForRelease(); return; }
+    if (buttonPressed(BTN_500ML))  { addCoinCredit(5);  waitForRelease(); return; }
+    if (buttonPressed(BTN_1000ML)) { addCoinCredit(10); waitForRelease(); return; }
+  } else {
+    // In production, volume buttons CANCEL out of the coin screen
+    // because real coins arrive via the coinPulseISR on GPIO 36
+    if (buttonPressed(BTN_100ML) || buttonPressed(BTN_500ML) || buttonPressed(BTN_1000ML)) {
+      cancelCheckout("user cancelled coin");
+      waitForRelease();
+      return;
+    }
+  }
 
   // QR Pay button = switch payment method to QR (carry the volume)
   if (buttonPressed(BTN_QR_PAY))   { chooseQR();   waitForRelease(); return; }
@@ -973,16 +1263,7 @@ void chooseQR() {
 
   displayProcessing();
 
-  // ----- TEST_MODE: don't call backend, just fake a QR + auto-dispense -----
-  if (TEST_MODE) {
-    currentTransactionId = "TEST-" + String(millis());
-    Serial.println("TEST_MODE: skipping HTTP, showing fake QR");
-    displayQRMessage();
-    screenShownAt  = millis();
-    qrShownAt      = millis();
-    testDispenseAt = millis() + TEST_AUTO_PAY_DELAY;
-    return;
-  }
+  // In TEST_MODE, we now call the backend to test the real PayMongo integration.
 
   // ----- Live mode: call backend -----
   if (WiFi.status() != WL_CONNECTED) {
@@ -1094,21 +1375,84 @@ void addCoinCredit(int pesos) {
 void dispensePump(int volumeMl) {
   appState = STATE_DISPENSING;
   displayDispensing();
-  if (!TEST_MODE) publishStatus("dispensing", "LED activated (testing)");
+  if (!TEST_MODE) publishStatus("dispensing", "Dispensing started");
 
-  Serial.printf("Dispense start - simulating %dml with LED\n", volumeMl);
+  Serial.printf("Dispense start - Target %dml\n", volumeMl);
 
-  // Crude volume-proportional timing so 1000ml feels longer than 100ml.
-  // ~2ml per millisecond -> 100ml=500ms, 500ml=2500ms, 1000ml=5000ms.
-  // Replace with calibrated pump timing in production.
-  unsigned long durationMs = max(500, volumeMl / 2);
-
-  digitalWrite(LED_PIN, HIGH);
-  delay(durationMs);
-  digitalWrite(LED_PIN, LOW);
+  if (TEST_MODE) {
+    unsigned long durationMs = max(500, volumeMl / 2);
+    digitalWrite(LED_PIN, HIGH);
+    delay(durationMs);
+    digitalWrite(LED_PIN, LOW);
+  } else {
+    // PRODUCTION: Option B sequencing with Flow Sensor
+    
+    // 1. Reset flow counters
+    noInterrupts();
+    flowPulseCount = 0;
+    interrupts();
+    
+    float targetPulses = volumeMl * FLOW_PULSES_PER_ML;
+    
+    // 2. Open Solenoid first
+    digitalWrite(RELAY_SOLENOID, LOW); // Active LOW
+    delay(200); // 200ms delay to prevent water hammer
+    
+    // 3. Start Pump
+    digitalWrite(RELAY_PUMP, LOW); // Active LOW
+    
+    // 4. Wait for flow sensor target
+    unsigned long startDispenseTime = millis();
+    unsigned long lastFlowCheck = millis();
+    unsigned long localPulseCount = 0;
+    
+    while (true) {
+      noInterrupts();
+      localPulseCount = flowPulseCount;
+      interrupts();
+      
+      if (localPulseCount >= targetPulses) {
+        Serial.println("Target volume reached!");
+        break;
+      }
+      
+      // Safety timeout: if pump runs for 60 seconds without hitting target (e.g., empty tank)
+      if (millis() - startDispenseTime > 60000) {
+        Serial.println("Dispense safety timeout! Tank empty or sensor error.");
+        break;
+      }
+      
+      // Calculate current flow rate for publishing
+      if (millis() - lastFlowCheck >= 1000) {
+        noInterrupts();
+        unsigned long currentPulses = flowPulseCount;
+        interrupts();
+        
+        // Flow rate roughly = (pulses / FLOW_PULSES_PER_ML) per sec * 60 / 1000 = L/min
+        float mlPerSec = (currentPulses / FLOW_PULSES_PER_ML);
+        currentFlowRate = (mlPerSec * 60.0) / 1000.0;
+        
+        lastFlowCheck = millis();
+      }
+      
+      delay(10); // Small delay to yield loop
+    }
+    
+    // 5. Stop Pump first
+    digitalWrite(RELAY_PUMP, HIGH); // Turn OFF
+    currentFlowRate = 0.0;
+    
+    // 6. Close Solenoid after delay
+    delay(200);
+    digitalWrite(RELAY_SOLENOID, HIGH); // Turn OFF
+    
+    // Calculate final actual volume
+    float actualMl = localPulseCount / FLOW_PULSES_PER_ML;
+    Serial.printf("Dispense finished. Target: %dml, Actual: %.1fml\n", volumeMl, actualMl);
+  }
 
   Serial.println("Dispense complete");
-  if (!TEST_MODE) publishStatus("complete", "Water dispensed (LED test)");
+  if (!TEST_MODE) publishStatus("complete", "Water dispensed");
 
   delay(1500);
   resetTransactionState();
