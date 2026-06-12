@@ -46,7 +46,7 @@
 // When true, the ESP32 will NOT call the backend or PayMongo.
 // Button press -> fake QR shown on TFT -> auto "dispense" after 5s.
 // Sensors and relays are skipped; LED on GPIO 26 simulates pump.
-#define TEST_MODE true
+#define TEST_MODE false
 
 // ===== WiFi Configuration =====
 const char* WIFI_SSID_PRIMARY = "YOUR_SSID";
@@ -60,7 +60,7 @@ const char* BACKEND_URL_PRIMARY = "https://api.smarth2wo.tech"; // Public URL
 const char* BACKEND_URL_FALLBACK = "http://192.168.254.201:8000"; // LAN URL if using hotspot/local LAN
 
 // ===== MQTT Configuration =====
-const char* MQTT_SERVER = "test.mosquitto.org";
+const char* MQTT_SERVER = "broker.hivemq.com";
 const int MQTT_PORT = 1883;
 const char* MQTT_CLIENT_ID = "smarth2o-esp32";
 const char* MQTT_DISPENSE_TOPIC = "smarth2o/dispense";
@@ -984,8 +984,10 @@ void connectMQTT() {
   int attempts = 0;
   while (!mqttClient.connected() && attempts < 5) {
     // Use a unique client ID each boot to avoid ghost session collisions
-    // on public brokers like test.mosquitto.org
-    String clientId = String(MQTT_CLIENT_ID) + "-" + String(millis());
+    // Make it static so the memory stays valid as long as the program runs,
+    // since some MQTT libraries might store the pointer.
+    static String clientId = String(MQTT_CLIENT_ID) + "-" + String(millis());
+    
     if (mqttClient.connect(clientId.c_str())) {
       Serial.println("MQTT connected! Client: " + clientId);
       // Subscribe at QoS 1 to match the backend's publish QoS (prevents drops)
