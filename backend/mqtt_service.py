@@ -30,7 +30,9 @@ def init_mqtt():
     global mqtt_client
     
     try:
-        mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id="smarth2o-backend")
+        import uuid
+        unique_id = str(uuid.uuid4())[:8]
+        mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=f"smarth2o-backend-{unique_id}")
         
         if MQTT_USERNAME and MQTT_PASSWORD:
             mqtt_client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
