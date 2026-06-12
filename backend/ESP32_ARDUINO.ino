@@ -167,7 +167,7 @@ unsigned long chooseTimeoutAt = 0;   // CHOOSE_PAYMENT auto-cancel deadline
 unsigned long coinTimeoutAt = 0;     // COIN_PAYMENT -> COIN_WARNING deadline
 unsigned long warnTimeoutAt = 0;     // COIN_WARNING -> forfeit deadline
 
-const unsigned long QR_DISPLAY_DURATION   = 60000;  // 60s QR timeout
+const unsigned long QR_DISPLAY_DURATION   = 300000; // 5 min QR timeout (plenty of time for GCash/Maya)
 const unsigned long TEST_AUTO_PAY_DELAY   = 5000;   // 5s TEST_MODE auto-pay (QR)
 const unsigned long CANCEL_LOCKOUT_MS     = 1200;   // 1.2s lockout after screen change
                                                     // (prevents the press that opened a
@@ -1005,16 +1005,26 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String topicStr = String(topic);
   
   if (topicStr == MQTT_DISPENSE_TOPIC) {
-    // Received dispense signal
+    // Received dispense signal from backend (triggered by PayMongo webhook)
     DynamicJsonDocument doc(256);
     deserializeJson(doc, payload, length);
     
-    String transactionId = doc["transaction_id"];
-    int volumeMl = doc["volume_ml"];
+    String transactionId = doc["transaction_id"] | "";
+    int volumeMl = doc["volume_ml"] | 0;
+    
+    // If backend didn't send volume_ml, fall back to what the user selected
+    if (volumeMl <= 0) volumeMl = currentVolumeMl;
     
     Serial.println("Dispense signal received!");
-    Serial.print("Volume: ");
-    Serial.println(volumeMl);
+    Serial.printf("Transaction: %s  Volume: %d ml\n", transactionId.c_str(), volumeMl);
+    
+    // Store transaction ID for status publishing
+    if (transactionId.length() > 0) currentTransactionId = transactionId;
+    
+    // Show dispensing screen immediately before starting the pump
+    appState = STATE_DISPENSING;
+    displayDispensing();
+    delay(300); // brief moment so the screen is visible before pump noise starts
     
     // Trigger pump
     dispensePump(volumeMl);
