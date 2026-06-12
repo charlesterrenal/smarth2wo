@@ -236,7 +236,7 @@ void setup() {
   // Setup MQTT
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setCallback(mqttCallback);
-  mqttClient.setBufferSize(512);  // Larger buffer for sensor JSON payloads
+  mqttClient.setBufferSize(1024); // Large buffer: dispense JSON + sensor payloads
   connectMQTT();
   
   // Take initial ultrasonic reading
@@ -983,11 +983,15 @@ void connectMQTT() {
   
   int attempts = 0;
   while (!mqttClient.connected() && attempts < 5) {
-    if (mqttClient.connect(MQTT_CLIENT_ID)) {
-      Serial.println("MQTT connected!");
-      mqttClient.subscribe(MQTT_DISPENSE_TOPIC);
-      mqttClient.subscribe(MQTT_CONTROL_TOPIC);
-      Serial.println("Subscribed to MQTT topics");
+    // Use a unique client ID each boot to avoid ghost session collisions
+    // on public brokers like test.mosquitto.org
+    String clientId = String(MQTT_CLIENT_ID) + "-" + String(millis());
+    if (mqttClient.connect(clientId.c_str())) {
+      Serial.println("MQTT connected! Client: " + clientId);
+      // Subscribe at QoS 1 to match the backend's publish QoS (prevents drops)
+      mqttClient.subscribe(MQTT_DISPENSE_TOPIC, 1);
+      mqttClient.subscribe(MQTT_CONTROL_TOPIC, 1);
+      Serial.println("Subscribed to MQTT topics (QoS 1)");
       return;
     }
     Serial.print(".");
