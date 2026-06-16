@@ -323,13 +323,13 @@ async def predict_maintenance_endpoint(sensor_data: SensorData, simulate: bool =
             prediction = predict_maintenance(sensor_data)
             print("ML FALLBACK: Using rule-based maintenance prediction.")
         if supabase and not simulate:
-            # Debounce maintenance logs: 1 minute cooldown
+            # Debounce maintenance logs: 60 minute cooldown to prevent spam
             should_log = True
             try:
-                one_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+                cooldown_time = (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat()
                 existing = supabase.table("logs").select("id").ilike(
                     "event", f"%{prediction.reason}%"
-                ).gte("created_at", one_min_ago).limit(1).execute()
+                ).gte("created_at", cooldown_time).limit(1).execute()
                 should_log = len(existing.data) == 0
             except Exception as check_err:
                 print(f"Daily log check error (non-critical): {check_err}")
@@ -414,12 +414,12 @@ async def detect_anomalies_endpoint(sensor_data: SensorData, simulate: bool = Fa
                 
             if anomalies:
                 for anomaly in anomalies:
-                    # Cooldown logic: Check if this specific anomaly was already logged in the last 10 seconds
+                    # Cooldown logic: Check if this specific anomaly was already logged in the last 60 minutes
                     try:
-                        ten_sec_ago = (datetime.now(timezone.utc) - timedelta(seconds=10)).isoformat()
+                        cooldown_time = (datetime.now(timezone.utc) - timedelta(minutes=60)).isoformat()
                         existing_log = supabase.table("logs").select("id").ilike(
                             "event", f"%{anomaly.type}%"
-                        ).gte("created_at", ten_sec_ago).limit(1).execute()
+                        ).gte("created_at", cooldown_time).limit(1).execute()
                         
                         already_logged_recently = len(existing_log.data) > 0
                     except Exception as check_err:
