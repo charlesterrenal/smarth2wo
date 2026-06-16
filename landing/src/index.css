@@ -265,4 +265,20 @@
     opacity: 1;
     transform: translateY(0);
   }
+
+  @keyframes scanDown {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(120px);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  .animate-scanDown {
+    animation: scanDown 2s ease-in-out infinite;
+  }
 }
