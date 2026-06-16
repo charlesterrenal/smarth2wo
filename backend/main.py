@@ -207,7 +207,7 @@ def predict_maintenance(sensor_data: SensorData) -> MaintenancePrediction:
             confidence = 0.80
     
     
-    if sensor_data.flow_rate is not None and sensor_data.flow_rate < 0.5:
+    if sensor_data.flow_rate is not None and 0.0 < sensor_data.flow_rate < 0.5:
         days_remaining = min(days_remaining, 10)
         reason = "Low flow rate - filter may need cleaning"
         severity = "medium"
@@ -247,7 +247,7 @@ def detect_anomalies(sensor_data: SensorData) -> List[Anomaly]:
                 timestamp=datetime.now().isoformat()
             ))
 
-    if sensor_data.flow_rate is not None and sensor_data.flow_rate < 0.1:
+    if sensor_data.flow_rate is not None and 0.0 < sensor_data.flow_rate < 0.1:
         anomalies.append(Anomaly(
             type="Low Flow",
             message=f"Flow rate critically low: {sensor_data.flow_rate} L/min",
