@@ -163,6 +163,13 @@ class SensorData(BaseModel):
     flow_rate: Optional[float] = None
     power_on: Optional[bool] = None
 
+class SystemStatus(BaseModel):
+    transaction_id: Optional[str] = ""
+    status: str
+    message: str
+    volume_ml: Optional[int] = 0
+    amount_pesos: Optional[int] = 0
+
 class MaintenancePrediction(BaseModel):
     days_remaining: int
     reason: str
@@ -267,6 +274,40 @@ def health_check():
         "timestamp": datetime.now().isoformat()
     }
 
+@app.post("/api/system/status")
+async def handle_system_status(status_data: SystemStatus):
+    """Handle status updates from ESP32 via MQTT"""
+    try:
+        print(f"System Status update: {status_data.status} - {status_data.message}")
+        
+        if not supabase:
+            return {"success": False, "message": "Database not configured"}
+            
+        if status_data.status == "paid_coin":
+            # Log transaction to Supabase as completed coin payment
+            supabase.table("transactions").insert({
+                "customer": "Guest (Coin)",
+                "volume_ml": status_data.volume_ml,
+                "price": status_data.amount_pesos,
+                "payment_method": "coin",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }).execute()
+            
+            # Log event to system logs
+            supabase.table("logs").insert({
+                "event": "Coin payment received",
+                "status": "success",
+                "message": f"Coin payment completed for {status_data.volume_ml}ml at P{status_data.amount_pesos}",
+                "volume_ml": status_data.volume_ml,
+                "payment_method": "coin",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }).execute()
+            
+        return {"success": True}
+    except Exception as e:
+        print(f"Error handling system status: {e}")
+        return {"success": False, "error": str(e)}
+
 @app.post("/api/maintenance/predict")
 async def predict_maintenance_endpoint(sensor_data: SensorData, simulate: bool = False):
     try:
@@ -282,7 +323,7 @@ async def predict_maintenance_endpoint(sensor_data: SensorData, simulate: bool =
             prediction = predict_maintenance(sensor_data)
             print("ML FALLBACK: Using rule-based maintenance prediction.")
         if supabase and not simulate:
-            # Debounce maintenance logs: 1 minute cooldown for presentation testing
+            # Debounce maintenance logs: 1 minute cooldown
             should_log = True
             try:
                 one_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()

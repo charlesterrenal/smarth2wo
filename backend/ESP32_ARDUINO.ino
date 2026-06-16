@@ -81,18 +81,23 @@ const int RELAY_PUMP     = 26;  // Relay CH1: 12V DC water pump
 const int RELAY_SOLENOID = 4;   // Relay CH2: 12V solenoid valve
 
 // Sensors
-const int FLOW_SENSOR_PIN = 34;  // ZJ-S201 pulse output (input-only, ext pull-up)
+const int FLOW_SENSOR_PIN = 33;  // ZJ-S201 pulse output (moved to 33 to use internal pull-up)
 const int US_TRIG_PIN     = 17;  // HC-SR04 trigger
 const int US_ECHO_PIN     = 35;  // HC-SR04 echo (input-only, voltage divider)
-const int COIN_PULSE_PIN  = 36;  // Allan 1239A coin acceptor (input-only, ext pull-up)
+const int COIN_PULSE_PIN  = 22;  // Allan 1239A coin acceptor (moved to 22 to use internal pull-up)
 
 // LED for TEST_MODE only (same physical pin as RELAY_PUMP)
 const int LED_PIN = 26;
 
 // ===== Flow Sensor Calibration =====
-// ZJ-S201 spec: ~450 pulses per liter. Calibrate with a measuring cup!
-// Dispense exactly 1L, read pulseCount from Serial, then update this value.
-const float FLOW_PULSES_PER_ML = 0.45;  // 450 pulses / 1000ml = 0.45 pulses/ml
+// Set FLOW_SENSOR_ENABLED to false to use time-based dispensing instead.
+// TIME-BASED MODE: Measure your pump's flow rate first!
+//   1. Run pump for exactly 10 seconds into a measuring cup.
+//   2. Note how many ml came out. Divide by 10 to get ml/sec.
+//   3. Set PUMP_FLOW_RATE_ML_PER_SEC to that value.
+#define FLOW_SENSOR_ENABLED true  // Enabled for final calibration
+const float FLOW_PULSES_PER_ML    = 0.45;   // We will recalibrate this next
+const float PUMP_FLOW_RATE_ML_PER_SEC = 30.0; // CALIBRATE: ml per second your pump outputs
 
 // ===== Ultrasonic Calibration =====
 // Measure the distance from sensor face to tank bottom (empty tank) in cm.
@@ -119,8 +124,8 @@ volatile unsigned long lastCoinPulseTime = 0;
 
 void IRAM_ATTR coinPulseISR() {
   unsigned long now = millis();
-  // Debounce: ignore pulses faster than 50ms apart
-  if (now - lastCoinPulseTime > 50) {
+  // Debounce: ignore pulses faster than 20ms apart (allows fast coins)
+  if (now - lastCoinPulseTime > 20) {
     coinPulseCount++;
     lastCoinPulseTime = now;
   }
@@ -206,16 +211,16 @@ void setup() {
     digitalWrite(RELAY_SOLENOID, HIGH);  // Solenoid OFF
     
     // Flow sensor interrupt
-    pinMode(FLOW_SENSOR_PIN, INPUT);     // External 10kΩ pull-up to 3.3V
-    attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), flowSensorISR, RISING);
+    pinMode(FLOW_SENSOR_PIN, INPUT_PULLUP); // Using ESP32's built-in internal resistor!
+    attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), flowSensorISR, FALLING);
     
     // HC-SR04 ultrasonic
     pinMode(US_TRIG_PIN, OUTPUT);
     digitalWrite(US_TRIG_PIN, LOW);
     pinMode(US_ECHO_PIN, INPUT);         // Voltage divider on echo line
     
-    // Coin acceptor interrupt (NPN open-collector, 10kΩ pull-up to 3.3V)
-    pinMode(COIN_PULSE_PIN, INPUT);      // External pull-up
+    // Coin acceptor interrupt
+    pinMode(COIN_PULSE_PIN, INPUT_PULLUP); // Using ESP32's built-in internal resistor!
     attachInterrupt(digitalPinToInterrupt(COIN_PULSE_PIN), coinPulseISR, FALLING);
     
     Serial.println("Hardware initialized: relays, flow sensor, ultrasonic, coin acceptor");
@@ -277,6 +282,9 @@ void loop() {
       for (int i = 0; i < pulsesToProcess; i++) {
         addCoinCredit(1);
       }
+    } else {
+      // Hardware Test: If they drop a coin while in the main menu, print it so they know it works!
+      Serial.printf("TEST: Coin dropped! (Pulses: %d). You must select a volume first to pay.\n", pulsesToProcess);
     }
   }
 
@@ -365,7 +373,7 @@ void loop() {
 // ===== Display Functions =====
 void initDisplay() {
   tft.init();
-  tft.setRotation(1);   // landscape, 320 x 240
+  tft.setRotation(3);   // landscape inverted (flipped 180 degrees)
   tft.fillScreen(COL_BG);
   tft.setTextColor(COL_TEXT, COL_BG);
 }
@@ -1090,6 +1098,8 @@ void publishStatus(String status, String message) {
   doc["transaction_id"] = currentTransactionId;
   doc["status"] = status;
   doc["message"] = message;
+  doc["volume_ml"] = currentVolumeMl;
+  doc["amount_pesos"] = currentPricePesos;
   
   String jsonStr;
   serializeJson(doc, jsonStr);
@@ -1393,7 +1403,7 @@ void dispensePump(int volumeMl) {
   displayDispensing();
   if (!TEST_MODE) publishStatus("dispensing", "Dispensing started");
 
-  Serial.printf("Dispense start - Target %dml\n", volumeMl);
+  Serial.printf("Dispense start - Target %dml\\n", volumeMl);
 
   if (TEST_MODE) {
     unsigned long durationMs = max(500, volumeMl / 2);
@@ -1401,24 +1411,24 @@ void dispensePump(int volumeMl) {
     delay(durationMs);
     digitalWrite(LED_PIN, LOW);
   } else {
-    // PRODUCTION: Option B sequencing with Flow Sensor
+    // PRODUCTION: Dispense water using either flow sensor or time-based mode
     
-    // 1. Reset flow counters
+    // 1. Open Solenoid first (always)
+    digitalWrite(RELAY_SOLENOID, LOW); // Active LOW
+    delay(200); // 200ms to let solenoid fully open
+    
+    // 2. Start Pump
+    digitalWrite(RELAY_PUMP, LOW); // Active LOW
+    
+    unsigned long startDispenseTime = millis();
+
+#if FLOW_SENSOR_ENABLED
+    // ---- FLOW SENSOR MODE ----
     noInterrupts();
     flowPulseCount = 0;
     interrupts();
     
     float targetPulses = volumeMl * FLOW_PULSES_PER_ML;
-    
-    // 2. Open Solenoid first
-    digitalWrite(RELAY_SOLENOID, LOW); // Active LOW
-    delay(200); // 200ms delay to prevent water hammer
-    
-    // 3. Start Pump
-    digitalWrite(RELAY_PUMP, LOW); // Active LOW
-    
-    // 4. Wait for flow sensor target
-    unsigned long startDispenseTime = millis();
     unsigned long lastFlowCheck = millis();
     unsigned long localPulseCount = 0;
     
@@ -1428,43 +1438,40 @@ void dispensePump(int volumeMl) {
       interrupts();
       
       if (localPulseCount >= targetPulses) {
-        Serial.println("Target volume reached!");
+        Serial.println("Flow target reached!");
         break;
       }
-      
-      // Safety timeout: if pump runs for 60 seconds without hitting target (e.g., empty tank)
       if (millis() - startDispenseTime > 60000) {
         Serial.println("Dispense safety timeout! Tank empty or sensor error.");
         break;
       }
-      
-      // Calculate current flow rate for publishing
       if (millis() - lastFlowCheck >= 1000) {
-        noInterrupts();
-        unsigned long currentPulses = flowPulseCount;
-        interrupts();
-        
-        // Flow rate roughly = (pulses / FLOW_PULSES_PER_ML) per sec * 60 / 1000 = L/min
-        float mlPerSec = (currentPulses / FLOW_PULSES_PER_ML);
-        currentFlowRate = (mlPerSec * 60.0) / 1000.0;
-        
+        Serial.printf("DEBUG Pulses: %lu / %.1f\n", localPulseCount, targetPulses);
         lastFlowCheck = millis();
       }
-      
-      delay(10); // Small delay to yield loop
+      delay(10);
     }
+    float actualMl = localPulseCount / FLOW_PULSES_PER_ML;
+    Serial.printf("Dispensed ~%.1fml (flow sensor)\n", actualMl);
+
+#else
+    // ---- TIME-BASED MODE (fallback while flow sensor is being debugged) ----
+    unsigned long dispenseMs = (unsigned long)((volumeMl / PUMP_FLOW_RATE_ML_PER_SEC) * 1000);
+    Serial.printf("TIME MODE: Dispensing %dml for %lums\n", volumeMl, dispenseMs);
     
-    // 5. Stop Pump first
+    while (millis() - startDispenseTime < dispenseMs) {
+      delay(10); // Just wait the calculated duration
+    }
+    Serial.printf("TIME MODE: Done. Ran for %lums\n", dispenseMs);
+#endif
+
+    // 3. Stop Pump first
     digitalWrite(RELAY_PUMP, HIGH); // Turn OFF
     currentFlowRate = 0.0;
     
-    // 6. Close Solenoid after delay
+    // 4. Close Solenoid after a short delay
     delay(200);
     digitalWrite(RELAY_SOLENOID, HIGH); // Turn OFF
-    
-    // Calculate final actual volume
-    float actualMl = localPulseCount / FLOW_PULSES_PER_ML;
-    Serial.printf("Dispense finished. Target: %dml, Actual: %.1fml\n", volumeMl, actualMl);
   }
 
   Serial.println("Dispense complete");

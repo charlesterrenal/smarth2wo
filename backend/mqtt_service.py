@@ -71,6 +71,14 @@ def on_message(client, userdata, msg):
         
         if msg.topic == TOPIC_STATUS:
             print(f"ESP32 Status: {payload}")
+            try:
+                import requests
+                port = os.getenv("BACKEND_PORT", "8000")
+                base_url = f"http://127.0.0.1:{port}"
+                requests.post(f"{base_url}/api/system/status", json=payload, timeout=5)
+            except Exception as req_err:
+                print(f"Failed to forward MQTT status to API: {req_err}")
+                
         elif msg.topic == TOPIC_SENSORS:
             print(f"Sensor Data: {payload}")
             
