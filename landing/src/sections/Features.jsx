@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useFadeIn } from '../hooks/useFadeIn'
 import { QrCode, LayoutDashboard, Wrench, Wifi } from 'lucide-react'
 
@@ -112,6 +113,8 @@ function FeatureRow({ feature, isReversed }) {
                   </div>
                 </div>
               </div>
+            ) : feature.title === 'Real-time Dashboard' ? (
+              <MonitorCarousel />
             ) : (
               <>
                 <div className={`relative z-10 p-4 rounded-2xl ${feature.bg} ${feature.color} mb-4 shadow-sm transition-transform duration-500 group-hover:scale-110`}>
@@ -140,4 +143,70 @@ function FeatureRow({ feature, isReversed }) {
       </div>
     </div>
   )
+}
+
+function MonitorCarousel() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const slides = [
+    '/DB.png',
+    '/TRANSAC.png',
+    '/AP.png',
+    '/ANALYTICS.png',
+    '/LOGS.png',
+    '/SETTINGS.png'
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide(curr => (curr + 1) % slides.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [slides.length]);
+
+  return (
+    <div className="absolute inset-0 flex items-end justify-center bg-[#0d1117] overflow-hidden pt-4">
+      {/* Monitor Mockup Wrapper */}
+      <div className="relative flex flex-col items-center w-[96%] max-w-[540px] translate-y-3 group-hover:-translate-y-1 transition-transform duration-500">
+        {/* Monitor Screen Bezel */}
+        <div className="w-full aspect-[16/10] bg-[#1a1a2e] rounded-t-2xl rounded-b-lg p-2.5 pb-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] relative border border-slate-700/50 flex flex-col">
+          {/* Monitor Display */}
+          <div className="flex-1 w-full rounded-md overflow-hidden relative shadow-inner bg-[#0a0f1e]">
+            
+            {/* Carousel Track */}
+            <div 
+              className="w-full h-full flex transition-transform duration-500 ease-in-out"
+              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            >
+              {slides.map((src, i) => (
+                <div key={i} className="w-full h-full flex-shrink-0">
+                  <img 
+                    src={src} 
+                    alt={`Dashboard Slide ${i + 1}`} 
+                    className="w-full h-full object-cover object-top" 
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Dots Indicator */}
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2 z-10">
+              {slides.map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${i === currentSlide ? 'bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.8)]' : 'bg-white/30'}`}
+                />
+              ))}
+            </div>
+            
+          </div>
+        </div>
+
+        {/* Monitor Neck */}
+        <div className="w-10 h-6 bg-gradient-to-b from-[#1a1a2e] to-[#0f0f1c] border-x border-slate-800/80"></div>
+        
+        {/* Monitor Base (Flat Elliptical) */}
+        <div className="w-36 h-3 bg-[#1a1a2e] rounded-[100%] border border-slate-700/50 shadow-lg -mt-1.5"></div>
+      </div>
+    </div>
+  );
 }
