@@ -37,12 +37,7 @@ export default function App() {
         {/* We give hero an id='top' implicitly handled by navbar scrollTo */}
         <Hero />
         <Features />
-        <div className="h-[24rem] md:h-[48rem] flex flex-col items-center justify-start px-6 pt-8 md:pt-12">
-          <span className="eyebrow mb-2">The Prototype</span>
-          <h2 className="sec-title text-center">
-            SmartH2wo Water Dispenser
-          </h2>
-        </div>
+
         <HowItWorks />
         <Team />
       </main>
