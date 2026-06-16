@@ -995,8 +995,10 @@ void connectMQTT() {
     // Make it static so the memory stays valid as long as the program runs,
     // since some MQTT libraries might store the pointer.
     static String clientId = String(MQTT_CLIENT_ID) + "-" + String(millis());
-    
-    if (mqttClient.connect(clientId.c_str())) {
+    // LWT (Last Will and Testament): If the ESP32 loses power or WiFi drops,
+    // the broker will publish this payload to tell the backend it died.
+    const char* lwtPayload = "{\"power_on\":false,\"water_level_pct\":0,\"flow_rate\":0}";
+    if (mqttClient.connect(clientId.c_str(), MQTT_SENSORS_TOPIC, 1, false, lwtPayload)) {
       Serial.println("MQTT connected! Client: " + clientId);
       // Subscribe at QoS 1 to match the backend's publish QoS (prevents drops)
       mqttClient.subscribe(MQTT_DISPENSE_TOPIC, 1);
