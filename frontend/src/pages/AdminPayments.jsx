@@ -1,23 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign, Download, Filter, Search } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import { useTheme } from '../context/ThemeContext';
+import { supabase } from '../lib/supabase';
 
 export default function AdminPayments() {
   const { is24Hour } = useTheme();
-  // Recent Transactions (mock - would fetch from backend)
-  const [transactions, setTransactions] = useState([
-    {
-      id: 1,
-      transaction_id: '92dc54f1-2397-4bb6-bbd4-d095def6da19',
-      customer: 'admin@test.com',
-      volume_ml: 500,
-      price: 10.00,
-      payment_method: 'qr',
-      created_at: new Date().toISOString(),
-      status: 'completed'
-    }
-  ]);
+  const [transactions, setTransactions] = useState([]);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+          
+        if (error) throw error;
+        if (data) setTransactions(data);
+      } catch (err) {
+        console.error('Error fetching transactions:', err);
+      }
+    };
+    
+    fetchTransactions();
+    
+    // Set up realtime subscription for new transactions
+    const subscription = supabase
+      .channel('public:transactions')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, payload => {
+        setTransactions(prev => [payload.new, ...prev].slice(0, 20));
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
 
   return (
     <div className="page-container" style={{ padding: '32px', maxWidth: '1600px', margin: '0 auto' }}>
@@ -57,7 +77,7 @@ export default function AdminPayments() {
               </thead>
               <tbody>
                 {transactions.length > 0 ? (
-                  transactions.slice(0, 5).map((tx, idx) => (
+                  transactions.slice(0, 20).map((tx, idx) => (
                     <tr 
                       key={idx} 
                       style={{ 
@@ -78,15 +98,19 @@ export default function AdminPayments() {
                             fontWeight: 600,
                             textTransform: 'uppercase',
                             borderRadius: '6px',
-                            background: tx.status === 'completed' ? 'var(--color-green-light)' : 'var(--color-yellow-light)',
-                            color: tx.status === 'completed' ? 'var(--color-green-dark)' : 'var(--color-yellow-dark)',
+                            background: tx.payment_method ? 'var(--color-green-light)' : 'var(--color-yellow-light)',
+                            color: tx.payment_method ? 'var(--color-green-dark)' : 'var(--color-yellow-dark)',
                           }}
                         >
-                          {tx.status}
+                          {tx.payment_method ? 'completed' : 'pending'}
                         </span>
                       </td>
                       <td style={{ padding: '18px 16px', color: 'var(--color-text-muted)', fontSize: '14px' }}>
-                        {new Date(tx.created_at).toLocaleTimeString([], { hour12: !is24Hour })}
+                        {new Date(tx.created_at).toLocaleString([], { 
+                          year: 'numeric', month: 'short', day: 'numeric',
+                          hour: '2-digit', minute: '2-digit', 
+                          hour12: !is24Hour 
+                        })}
                       </td>
                     </tr>
                   ))
