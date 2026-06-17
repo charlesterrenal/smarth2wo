@@ -115,6 +115,10 @@ function FeatureRow({ feature, isReversed }) {
               </div>
             ) : feature.title === 'Real-time Dashboard' ? (
               <MonitorCarousel />
+            ) : feature.title === 'Predictive Maintenance' ? (
+              <DesktopMockup imageSrc="/4.png" />
+            ) : feature.title === 'IoT Sensor Monitoring' ? (
+              <TerminalMockup />
             ) : (
               <>
                 <div className={`relative z-10 p-4 rounded-2xl ${feature.bg} ${feature.color} mb-4 shadow-sm transition-transform duration-500 group-hover:scale-110`}>
@@ -148,12 +152,12 @@ function FeatureRow({ feature, isReversed }) {
 function MonitorCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const slides = [
-    '/DB.png',
-    '/TRANSAC.png',
-    '/AP.png',
-    '/ANALYTICS.png',
-    '/LOGS.png',
-    '/SETTINGS.png'
+    '/1.png',
+    '/2.png',
+    '/3.png',
+    '/4.png',
+    '/5.png',
+    '/6.png'
   ];
 
   useEffect(() => {
@@ -198,6 +202,148 @@ function MonitorCarousel() {
               ))}
             </div>
             
+          </div>
+        </div>
+
+        {/* Monitor Neck */}
+        <div className="w-10 h-6 bg-gradient-to-b from-[#1a1a2e] to-[#0f0f1c] border-x border-slate-800/80"></div>
+        
+        {/* Monitor Base (Flat Elliptical) */}
+        <div className="w-36 h-3 bg-[#1a1a2e] rounded-[100%] border border-slate-700/50 shadow-lg -mt-1.5"></div>
+      </div>
+    </div>
+  );
+}
+
+function DesktopMockup({ imageSrc }) {
+  return (
+    <div className="absolute inset-0 flex items-end justify-center bg-[#0d1117] overflow-hidden pt-4">
+      {/* Monitor Mockup Wrapper */}
+      <div className="relative flex flex-col items-center w-[96%] max-w-[540px] translate-y-3 group-hover:-translate-y-1 transition-transform duration-500">
+        {/* Monitor Screen Bezel */}
+        <div className="w-full aspect-[16/10] bg-[#1a1a2e] rounded-t-2xl rounded-b-lg p-2.5 pb-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] relative border border-slate-700/50 flex flex-col">
+          {/* Monitor Display */}
+          <div className="flex-1 w-full rounded-md overflow-hidden relative shadow-inner bg-[#0a0f1e]">
+            <img 
+              src={imageSrc} 
+              alt="Mockup" 
+              className="w-full h-full object-cover object-top" 
+            />
+          </div>
+        </div>
+
+        {/* Monitor Neck */}
+        <div className="w-10 h-6 bg-gradient-to-b from-[#1a1a2e] to-[#0f0f1c] border-x border-slate-800/80"></div>
+        
+        {/* Monitor Base (Flat Elliptical) */}
+        <div className="w-36 h-3 bg-[#1a1a2e] rounded-[100%] border border-slate-700/50 shadow-lg -mt-1.5"></div>
+      </div>
+    </div>
+  );
+}
+
+function TerminalMockup() {
+  const [command, setCommand] = useState("");
+  const [showOutput, setShowOutput] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const animate = async () => {
+      const typeText = async (text, delay = 50) => {
+        for (let i = 0; i <= text.length; i++) {
+          if (!isMounted) return;
+          setCommand(text.substring(0, i));
+          await new Promise(r => setTimeout(r, delay));
+        }
+      };
+
+      const deleteText = async (text, delay = 30) => {
+        for (let i = text.length; i >= 0; i--) {
+          if (!isMounted) return;
+          setCommand(text.substring(0, i));
+          await new Promise(r => setTimeout(r, delay));
+        }
+      };
+
+      while (isMounted) {
+        setShowOutput(false);
+        setCommand("");
+        await new Promise(r => setTimeout(r, 1000));
+        
+        if (!isMounted) return;
+        await typeText("ping -c 3 192.168.1.100");
+        await new Promise(r => setTimeout(r, 800));
+        
+        if (!isMounted) return;
+        await deleteText("ping -c 3 192.168.1.100");
+        await new Promise(r => setTimeout(r, 400));
+        
+        if (!isMounted) return;
+        await typeText("./connect_sensors.sh --all");
+        await new Promise(r => setTimeout(r, 500));
+        
+        if (!isMounted) return;
+        setShowOutput(true);
+        
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    };
+
+    animate();
+    return () => { isMounted = false; };
+  }, []);
+
+  return (
+    <div className="absolute inset-0 flex items-end justify-center bg-[#0d1117] overflow-hidden pt-4">
+      {/* Monitor Mockup Wrapper */}
+      <div className="relative flex flex-col items-center w-[96%] max-w-[540px] translate-y-3 group-hover:-translate-y-1 transition-transform duration-500">
+        {/* Monitor Screen Bezel */}
+        <div className="w-full aspect-[16/10] bg-[#1a1a2e] rounded-t-2xl rounded-b-lg p-2.5 pb-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] relative border border-slate-700/50 flex flex-col">
+          {/* Monitor Display */}
+          <div className="flex-1 w-full rounded-md overflow-hidden relative shadow-inner bg-[#0a0f1e] p-4 sm:p-6 font-mono text-[10px] sm:text-xs text-left flex flex-col">
+            {/* Fake Window Controls */}
+            <div className="flex gap-1.5 mb-4 opacity-70">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+            </div>
+            
+            {/* Terminal Output */}
+            <div className="flex-1 flex flex-col gap-1.5 opacity-90 overflow-hidden">
+              <div className="flex">
+                <span className="text-emerald-400 font-bold mr-2 whitespace-nowrap">admin@smarth2wo:~$</span>
+                <span className="text-slate-200">{command}</span>
+                {!showOutput && <span className="w-2 h-4 bg-slate-300 ml-1 animate-pulse inline-block align-middle"></span>}
+              </div>
+              
+              {showOutput && (
+                <>
+                  <p className="text-slate-400">Initializing IoT sensor handshake...</p>
+                  <div className="flex gap-2">
+                    <span className="text-cyan-400">[NODE-A1]</span>
+                    <span className="text-emerald-400">ONLINE</span>
+                    <span className="text-slate-400">| 98% purity | Flow: 2.1L/min</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-cyan-400">[NODE-B2]</span>
+                    <span className="text-emerald-400">ONLINE</span>
+                    <span className="text-slate-400">| 99% purity | Flow: 1.8L/min</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-cyan-400">[NODE-C3]</span>
+                    <span className="text-emerald-400">ONLINE</span>
+                    <span className="text-slate-400">| 97% purity | Flow: 2.0L/min</span>
+                  </div>
+                  <p className="text-yellow-400 mt-1">Analyzing real-time data stream...</p>
+                  <p className="text-slate-300">All systems operational. Telemetry logging active.</p>
+                  <div className="flex mt-1 items-center">
+                    <span className="text-emerald-400 font-bold mr-2 whitespace-nowrap">admin@smarth2wo:~$</span>
+                    <span className="w-2 h-4 bg-slate-300 animate-pulse"></span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
