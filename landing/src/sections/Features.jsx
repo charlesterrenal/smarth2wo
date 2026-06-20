@@ -1,5 +1,6 @@
 import { useFadeIn } from '../hooks/useFadeIn'
-import { QrCode, LayoutDashboard, Wrench, Wifi, Scan } from 'lucide-react'
+import { useState } from 'react'
+import { QrCode, LayoutDashboard, Wrench, Wifi, Scan, Cpu } from 'lucide-react'
 
 const features = [
   {
@@ -37,6 +38,14 @@ const features = [
     color: 'text-brand-yellow',
     bg: 'bg-orange-50 dark:bg-orange-900/20',
     component: <IoTSensorTerminal />
+  },
+  {
+    title: 'Custom-Engineered Hardware',
+    description: 'A complete physical prototype integrating robust mechanical components with an intelligent ESP32 controller.',
+    icon: <Cpu size={24} />,
+    color: 'text-indigo-500',
+    bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+    component: <PrototypeMockup />
   }
 ]
 
@@ -167,6 +176,58 @@ function IoTSensorTerminal() {
         <div className="text-slate-500 animate-[pulse_1s_ease-in-out_infinite] mt-1">_</div>
       </div>
       <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-900 to-transparent pointer-events-none"></div>
+    </div>
+  )
+}
+
+function PrototypeMockup() {
+  const [activeHotspot, setActiveHotspot] = useState(null)
+  
+  const hotspots = [
+    { id: 1, title: 'TFT Display', top: '21%', left: '50%' },
+    { id: 2, title: 'Coin Acceptor', top: '28%', left: '50%' },
+    { id: 3, title: 'Nozzle', top: '44%', left: '50%' },
+    { id: 4, title: 'Buttons', top: '25%', left: '55%' }
+  ]
+
+  return (
+    <div className="w-full h-full bg-slate-50 dark:bg-slate-900 rounded-[calc(1.5rem-2px)] p-4 flex items-center justify-center relative overflow-hidden group">
+      {/* Light Mode Image */}
+      <img 
+        src="/images/prototype-mockup-wall.png" 
+        alt="Prototype" 
+        className="w-full h-full object-contain dark:hidden transition-transform duration-700 group-hover:scale-[1.02]"
+      />
+      {/* Dark Mode Image */}
+      <img 
+        src="/images/prototype-mockup-wall-dark.png" 
+        alt="Prototype Dark" 
+        className="w-full h-full object-contain hidden dark:block transition-transform duration-700 group-hover:scale-[1.02]"
+      />
+
+      {/* Hotspots */}
+      {hotspots.map((spot) => (
+        <div 
+          key={spot.id}
+          className="absolute z-20"
+          style={{ top: spot.top, left: spot.left }}
+          onMouseEnter={() => setActiveHotspot(spot.id)}
+          onMouseLeave={() => setActiveHotspot(null)}
+        >
+          <span className="absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 transition-transform duration-300 ${activeHotspot === spot.id ? 'scale-150' : ''}`}></span>
+            <span className={`relative inline-flex rounded-full h-5 w-5 bg-blue-500 border-2 border-white cursor-pointer transition-transform shadow-[0_0_15px_rgba(59,130,246,0.8)] ${activeHotspot === spot.id ? 'scale-125 bg-brand-blue' : 'hover:scale-110'}`}></span>
+          </span>
+
+          <div 
+            className={`absolute left-6 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg backdrop-blur-md bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-xl transition-all duration-300 origin-left z-50 whitespace-nowrap
+              ${activeHotspot === spot.id ? 'opacity-100 translate-x-0 visible' : 'opacity-0 -translate-x-2 invisible'}
+            `}
+          >
+            <span className="text-xs font-bold text-slate-900 dark:text-white">{spot.title}</span>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
