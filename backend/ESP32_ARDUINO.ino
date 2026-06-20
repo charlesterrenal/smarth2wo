@@ -57,7 +57,7 @@ const char* WIFI_PASS_FALLBACK = "thesis2026";
 // ===== Backend Configuration =====
 String BACKEND_URL = "https://api.smarth2wo.tech";  // Starts with default
 const char* BACKEND_URL_PRIMARY = "https://api.smarth2wo.tech"; // Public URL
-const char* BACKEND_URL_FALLBACK = "http://192.168.254.201:8000"; // LAN URL if using hotspot/local LAN
+const char* BACKEND_URL_FALLBACK = "http://192.168.137.1:8000"; // Use "http://172.20.10.2:8000" if connected to Phone hotspot instead
 
 // ===== MQTT Configuration =====
 const char* MQTT_SERVER = "broker.hivemq.com";
@@ -71,8 +71,8 @@ const char* MQTT_CONTROL_TOPIC = "smarth2o/control";
 // ===== Hardware Pins (Phase 2 — boot-safe) =====
 // Buttons (reassigned off strapping pins)
 const int BTN_100ML    = 15;   // Was GPIO 12 (boot strapping pin — unsafe)
-const int BTN_500ML    = 16;   // Was GPIO 13 (JTAG pin — unsafe)
-const int BTN_1000ML   = 14;
+const int BTN_250ML    = 16;   // Was GPIO 13 (JTAG pin — unsafe)
+const int BTN_500ML    = 14;
 const int BTN_QR_PAY   = 25;
 const int BTN_COIN_PAY = 32;
 
@@ -81,7 +81,7 @@ const int RELAY_PUMP     = 26;  // Relay CH1: 12V DC water pump
 const int RELAY_SOLENOID = 4;   // Relay CH2: 12V solenoid valve
 
 // Sensors
-const int FLOW_SENSOR_PIN = 33;  // ZJ-S201 pulse output (moved to 33 to use internal pull-up)
+const int FLOW_SENSOR_PIN = 34;  // ZJ-S201 pulse output (input-only, ext 10kΩ pull-up to 3.3V)
 const int US_TRIG_PIN     = 17;  // HC-SR04 trigger
 const int US_ECHO_PIN     = 35;  // HC-SR04 echo (input-only, voltage divider)
 const int COIN_PULSE_PIN  = 22;  // Allan 1239A coin acceptor (moved to 22 to use internal pull-up)
@@ -95,14 +95,14 @@ const int LED_PIN = 26;
 //   1. Run pump for exactly 10 seconds into a measuring cup.
 //   2. Note how many ml came out. Divide by 10 to get ml/sec.
 //   3. Set PUMP_FLOW_RATE_ML_PER_SEC to that value.
-#define FLOW_SENSOR_ENABLED true  // Enabled for final calibration
-const float FLOW_PULSES_PER_ML    = 0.45;   // We will recalibrate this next
-const float PUMP_FLOW_RATE_ML_PER_SEC = 30.0; // CALIBRATE: ml per second your pump outputs
+#define FLOW_SENSOR_ENABLED false  // TIME-BASED MODE for reliable demo
+const float FLOW_PULSES_PER_ML    = 0.45;   // Not used in time-based mode
+const float PUMP_FLOW_RATE_ML_PER_SEC = 24.0; // CALIBRATED: 80ml/3.33s measured on 2026-06-17
 
 // ===== Ultrasonic Calibration =====
 // Measure the distance from sensor face to tank bottom (empty tank) in cm.
 // Update this after physically mounting the sensor.
-const float TANK_HEIGHT_CM = 30.0;  // Default — calibrate on-site!
+const float TANK_HEIGHT_CM = 45.0;  // CALIBRATED on-site
 const float US_MIN_DISTANCE_CM = 3.0;  // Minimum valid reading (sensor dead zone)
 
 // ===== Flow Sensor ISR Variables (volatile for interrupt safety) =====
@@ -111,8 +111,8 @@ volatile unsigned long lastFlowPulseTime = 0;
 
 void IRAM_ATTR flowSensorISR() {
   unsigned long now = micros();
-  // Debounce: ignore pulses faster than 1ms apart (noise)
-  if (now - lastFlowPulseTime > 1000) {
+  // Debounce: ignore pulses faster than 5ms apart (filters out pump motor electrical noise)
+  if (now - lastFlowPulseTime > 5000) {
     flowPulseCount++;
     lastFlowPulseTime = now;
   }
@@ -194,8 +194,8 @@ void setup() {
   
   // Initialize button pins
   pinMode(BTN_100ML,    INPUT_PULLUP);
+  pinMode(BTN_250ML,    INPUT_PULLUP);
   pinMode(BTN_500ML,    INPUT_PULLUP);
-  pinMode(BTN_1000ML,   INPUT_PULLUP);
   pinMode(BTN_QR_PAY,   INPUT_PULLUP);
   pinMode(BTN_COIN_PAY, INPUT_PULLUP);
   
@@ -210,8 +210,8 @@ void setup() {
     pinMode(RELAY_SOLENOID, OUTPUT);
     digitalWrite(RELAY_SOLENOID, HIGH);  // Solenoid OFF
     
-    // Flow sensor interrupt
-    pinMode(FLOW_SENSOR_PIN, INPUT_PULLUP); // Using ESP32's built-in internal resistor!
+    // Flow sensor interrupt (using the external physical 10k resistor!)
+    pinMode(FLOW_SENSOR_PIN, INPUT);
     attachInterrupt(digitalPinToInterrupt(FLOW_SENSOR_PIN), flowSensorISR, FALLING);
     
     // HC-SR04 ultrasonic
@@ -544,8 +544,8 @@ void displayReady() {
 
   // Three volume cards stacked
   uiVolumeRow(62,  "100 ml",  "P2",  "1", COL_PRIMARY);
-  uiVolumeRow(120, "500 ml",  "P10", "5", COL_PRIMARY);
-  uiVolumeRow(178, "1000 ml", "P20", "10", COL_PRIMARY);
+  uiVolumeRow(120, "250 ml",  "P5",  "2.5", COL_PRIMARY);
+  uiVolumeRow(178, "500 ml",  "P10", "5", COL_PRIMARY);
 
   // Footer hint bar
   tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
@@ -970,7 +970,7 @@ void connectWiFi() {
     
     if (WiFi.status() == WL_CONNECTED) {
       Serial.println("\nFALLBACK WiFi connected!");
-      BACKEND_URL = BACKEND_URL_FALLBACK;
+      BACKEND_URL = BACKEND_URL_PRIMARY; // Use live production server
     } else {
       Serial.println("\nALL WiFi connections failed!");
     }
@@ -1152,8 +1152,8 @@ bool buttonPressed(int pin) {
 // being interpreted as multiple presses across screens).
 void waitForRelease() {
   while (digitalRead(BTN_100ML)   == LOW ||
+         digitalRead(BTN_250ML)   == LOW ||
          digitalRead(BTN_500ML)   == LOW ||
-         digitalRead(BTN_1000ML)  == LOW ||
          digitalRead(BTN_QR_PAY)  == LOW ||
          digitalRead(BTN_COIN_PAY) == LOW) {
     delay(10);
@@ -1174,20 +1174,20 @@ bool pastLockout() {
 void handleReadyButtons() {
   // Pressing a volume button starts a checkout.
   // The payment-method buttons are ignored on this screen.
-  if (buttonPressed(BTN_100ML))  { startCheckout(100,  2);  waitForRelease(); return; }
-  if (buttonPressed(BTN_500ML))  { startCheckout(500,  10); waitForRelease(); return; }
-  if (buttonPressed(BTN_1000ML)) { startCheckout(1000, 20); waitForRelease(); return; }
+  if (buttonPressed(BTN_100ML))  { startCheckout(100, 2);  waitForRelease(); return; }
+  if (buttonPressed(BTN_250ML))  { startCheckout(250, 5);  waitForRelease(); return; }
+  if (buttonPressed(BTN_500ML))  { startCheckout(500, 10); waitForRelease(); return; }
 }
 
 void handleChoosePaymentButtons() {
   if (!pastLockout()) return;
 
   // Pressing a different volume just updates the selection (no need to back out).
-  if (buttonPressed(BTN_100ML))  { currentVolumeMl = 100;  currentPricePesos = 2;
+  if (buttonPressed(BTN_100ML))  { currentVolumeMl = 100; currentPricePesos = 2;
                                    refreshChoosePayment(); waitForRelease(); return; }
-  if (buttonPressed(BTN_500ML))  { currentVolumeMl = 500;  currentPricePesos = 10;
+  if (buttonPressed(BTN_250ML))  { currentVolumeMl = 250; currentPricePesos = 5;
                                    refreshChoosePayment(); waitForRelease(); return; }
-  if (buttonPressed(BTN_1000ML)) { currentVolumeMl = 1000; currentPricePesos = 20;
+  if (buttonPressed(BTN_500ML))  { currentVolumeMl = 500; currentPricePesos = 10;
                                    refreshChoosePayment(); waitForRelease(); return; }
 
   // Commit to a payment method.
@@ -1198,8 +1198,8 @@ void handleChoosePaymentButtons() {
 void handleQrButtons() {
   if (!pastLockout()) return;
   // ANY of the 5 buttons cancels the QR.
-  if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_500ML)  ||
-      buttonPressed(BTN_1000ML) || buttonPressed(BTN_QR_PAY) ||
+  if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_250ML)  ||
+      buttonPressed(BTN_500ML)  || buttonPressed(BTN_QR_PAY) ||
       buttonPressed(BTN_COIN_PAY)) {
     cancelCheckout("user pressed during QR");
     waitForRelease();
@@ -1212,12 +1212,12 @@ void handleCoinButtons() {
   if (TEST_MODE) {
     // In TEST_MODE, physical volume buttons simulate coins
     if (buttonPressed(BTN_100ML))  { addCoinCredit(1);  waitForRelease(); return; }
-    if (buttonPressed(BTN_500ML))  { addCoinCredit(5);  waitForRelease(); return; }
-    if (buttonPressed(BTN_1000ML)) { addCoinCredit(10); waitForRelease(); return; }
+    if (buttonPressed(BTN_250ML))  { addCoinCredit(5);  waitForRelease(); return; }
+    if (buttonPressed(BTN_500ML))  { addCoinCredit(10); waitForRelease(); return; }
   } else {
     // In production, volume buttons CANCEL out of the coin screen
     // because real coins arrive via the coinPulseISR on GPIO 36
-    if (buttonPressed(BTN_100ML) || buttonPressed(BTN_500ML) || buttonPressed(BTN_1000ML)) {
+    if (buttonPressed(BTN_100ML) || buttonPressed(BTN_250ML) || buttonPressed(BTN_500ML)) {
       cancelCheckout("user cancelled coin");
       waitForRelease();
       return;
@@ -1232,8 +1232,8 @@ void handleCoinButtons() {
 
 void handleErrorButtons() {
   // Any button dismisses the error.
-  if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_500ML)  ||
-      buttonPressed(BTN_1000ML) || buttonPressed(BTN_QR_PAY) ||
+  if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_250ML)  ||
+      buttonPressed(BTN_500ML)  || buttonPressed(BTN_QR_PAY) ||
       buttonPressed(BTN_COIN_PAY)) {
     resetTransactionState();
     displayReady();
@@ -1422,12 +1422,16 @@ void dispensePump(int volumeMl) {
     // 2. Start Pump
     digitalWrite(RELAY_PUMP, LOW); // Active LOW
     
+    // ANTI-NOISE HACK: Wait 400ms for the motor's electrical startup spike to finish,
+    // and for the water to actually reach the sensor, before we start counting pulses!
+    delay(400); 
+    
     unsigned long startDispenseTime = millis();
 
 #if FLOW_SENSOR_ENABLED
     // ---- FLOW SENSOR MODE ----
     noInterrupts();
-    flowPulseCount = 0;
+    flowPulseCount = 0; // Reset count AFTER the noise spike
     interrupts();
     
     float targetPulses = volumeMl * FLOW_PULSES_PER_ML;
