@@ -338,7 +338,7 @@ void loop() {
         appState = STATE_COIN_WARNING;
         warnTimeoutAt = now + COIN_WARNING_MS;
         screenShownAt = now;
-        displayCoinWarning();
+        displayCoinMode();
       }
       break;
 
