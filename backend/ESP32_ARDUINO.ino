@@ -772,6 +772,28 @@ void displayProcessing() {
 }
 
 // ---------- QR PAYMENT screen ----------
+// Render the given text/URL as a real scannable QR on the TFT at (x0, y0).
+void drawQRCode(const String& text, int x0, int y0, int scale = 4) {
+  const uint8_t qrVersion = 6;
+  const uint8_t qrEcc     = ECC_LOW;
+
+  QRCode qr;
+  uint8_t qrData[qrcode_getBufferSize(qrVersion)];
+  qrcode_initText(&qr, qrData, qrVersion, qrEcc, text.c_str());
+
+  const int qrPx = qr.size * scale;
+  // White rounded card behind the QR for quiet zone
+  tft.fillRoundRect(x0 - scale * 2, y0 - scale * 2,
+                    qrPx + scale * 4, qrPx + scale * 4, 6, TFT_WHITE);
+
+  for (uint8_t y = 0; y < qr.size; y++) {
+    for (uint8_t x = 0; x < qr.size; x++) {
+      uint16_t color = qrcode_getModule(&qr, x, y) ? TFT_BLACK : TFT_WHITE;
+      tft.fillRect(x0 + x * scale, y0 + y * scale, scale, scale, color);
+    }
+  }
+}
+
 void displayQRMessage() {
   tft.fillScreen(COL_BG);
   char hdr[32];
