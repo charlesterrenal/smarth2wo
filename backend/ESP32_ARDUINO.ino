@@ -125,11 +125,17 @@ void IRAM_ATTR flowSensorISR() {
 // ===== Coin Acceptor ISR Variables =====
 volatile int coinPulseCount = 0;
 volatile unsigned long lastCoinPulseTime = 0;
+volatile unsigned long coinBurstStartTime = 0;
+
+// Allan 1239A pulse map (measured): 1 peso=1 pulse, 5 peso=9 pulses, 10 peso=18 pulses
+// Collect all pulses within COIN_BURST_WINDOW_MS then map total to a peso value.
+const unsigned long COIN_BURST_WINDOW_MS = 200;
 
 void IRAM_ATTR coinPulseISR() {
   unsigned long now = millis();
   // Debounce: ignore pulses faster than 20ms apart (allows fast coins)
-  if (now - lastCoinPulseTime > 20) {
+  if (now - lastCoinPulseTime > 15) {
+    if (coinPulseCount == 0) coinBurstStartTime = now;
     coinPulseCount++;
     lastCoinPulseTime = now;
   }
@@ -279,20 +285,29 @@ void loop() {
   // === Process coin acceptor pulses (production only) ===
   // ISR increments coinPulseCount; we process it here in the main loop
   // to avoid calling display/MQTT functions inside an ISR.
-  if (!TEST_MODE && coinPulseCount > 0) {
+  // Process coin pulses AFTER the burst window has elapsed so all pulses
+  // from one coin are captured before we identify the denomination.
+  if (!TEST_MODE && coinPulseCount > 0 &&
+      (millis() - coinBurstStartTime) >= COIN_BURST_WINDOW_MS) {
     noInterrupts();
-    int pulsesToProcess = coinPulseCount;
+    int burstPulses = coinPulseCount;
     coinPulseCount = 0;
     interrupts();
-    
-    // Each pulse = 1 peso (configure on coin slot via DIP switches)
+
+    // Map pulse burst to peso value (Allan 1239A measured):
+    // 1 peso = 1 pulse, 5 peso = 9 pulses, 10 peso = 18 pulses
+    int pesoValue = 0;
+    if      (burstPulses <= 2)  pesoValue = 1;
+    else if (burstPulses <= 13) pesoValue = 5;
+    else                        pesoValue = 10;
+
+    Serial.printf("Coin burst: %d pulses -> P%d\n", burstPulses, pesoValue);
+
     if (appState == STATE_COIN_PAYMENT || appState == STATE_COIN_WARNING) {
-      for (int i = 0; i < pulsesToProcess; i++) {
-        addCoinCredit(1);
-      }
+      addCoinCredit(pesoValue);
     } else {
-      // Hardware Test: If they drop a coin while in the main menu, print it so they know it works!
-      Serial.printf("TEST: Coin dropped! (Pulses: %d). You must select a volume first to pay.\n", pulsesToProcess);
+      Serial.printf("TEST: Coin pulse detected (%d -> P%d). Enter coin mode first.\n",
+                    burstPulses, pesoValue);
     }
   }
 
@@ -735,7 +750,7 @@ void displayDispensing() {
   snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
   uiCenterText(vol, 172, 4, 1, COL_TEXT, COL_BG);
 
-  // Animated progress bar (full — could track flow sensor in future)
+  // Animated progress bar (full ï¿½ could track flow sensor in future)
   uiProgressBar((tft.width() - 240)/2, 204, 240, 10, 1.0f, COL_SUCCESS, COL_BORDER);
 
   // Footer
