@@ -548,250 +548,318 @@ void displayStartup() {
   tft.setTextDatum(TL_DATUM);
 }
 
-void displayReady() {
-  appState      = STATE_READY;
-  screenShownAt = millis();
+// ===== UI SCREEN REDESIGN =================================================
+// All screens optimised for 320x240 landscape TFT.
+// Design rules:
+//   - Dark navy base (COL_BG)
+//   - Single accent stripe at top (3px COL_PRIMARY)
+//   - Content starts at y=40 after a minimal title band
+//   - Large, readable font4 for primary text, font2 for secondary
+//   - Clean cards with ONE left accent stripe — no heavy outlines
+//   - Consistent footer bar (y=220, h=20)
 
-  tft.fillScreen(COL_BG);
-  uiHeader("SmartH2wo", TEST_MODE ? "TEST" : "LIVE", TEST_MODE ? COL_WARNING : COL_SUCCESS);
+// ---------- helpers ----------
 
-  tft.setTextFont(2);
-  tft.setTextColor(COL_DIM, COL_BG);
-  tft.setTextDatum(TL_DATUM);
-  tft.drawString("How would you like to pay?", 17, 46);
+// Top header: tiny brand strip + page title
+void uiTopBar(const char* title, const char* tag, uint16_t tagColor) {
+  tft.fillRect(0, 0, tft.width(), 3, COL_PRIMARY);           // top stripe
+  tft.fillRect(0, 3, tft.width(), 34, COL_ACCENT_BG);        // title band
+  tft.drawFastHLine(0, 37, tft.width(), COL_BORDER);         // divider
 
-  const int cx = 14, cw = tft.width() - 28, ch = 60, cr = 10;
-  
-  // Card 1: QR Pay
-  tft.fillRoundRect(cx, 62, cw, ch, cr, COL_CARD);
-  tft.drawRoundRect(cx, 62, cw, ch, cr, COL_BORDER);
-  tft.fillRoundRect(cx, 62, 4, ch, 2, COL_BLUE);
-  tft.fillRoundRect(cx + 14, 72, 40, 40, 6, COL_BLUE);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_BLUE);
-  tft.setTextDatum(MC_DATUM); tft.drawString("QR", cx + 34, 92);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.setTextDatum(ML_DATUM); tft.drawString("QR PH Payment", cx + 64, 78);
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
-  tft.drawString("GCash, Maya, Bank Apps", cx + 64, 100);
-  tft.fillRoundRect(cx + cw - 58, 78, 44, 18, 9, COL_BLUE);
-  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_BLUE);
-  tft.setTextDatum(MC_DATUM); tft.drawString("QR BTN", cx + cw - 36, 87);
+  // Title (left-aligned)
+  tft.setTextFont(4); tft.setTextSize(1);
+  tft.setTextColor(COL_TEXT, COL_ACCENT_BG);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString(title, 12, 20);
 
-  // Card 2: Coin Pay
-  tft.fillRoundRect(cx, 130, cw, ch, cr, COL_CARD);
-  tft.drawRoundRect(cx, 130, cw, ch, cr, COL_BORDER);
-  tft.fillRoundRect(cx, 130, 4, ch, 2, COL_SUCCESS);
-  tft.fillRoundRect(cx + 14, 140, 40, 40, 6, COL_SUCCESS);
-  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_SUCCESS);
-  tft.setTextDatum(MC_DATUM); tft.drawString("P", cx + 34, 160);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.setTextDatum(ML_DATUM); tft.drawString("Coin Payment", cx + 64, 146);
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
-  tft.drawString("Insert exact coins", cx + 64, 168);
-  tft.fillRoundRect(cx + cw - 64, 146, 50, 18, 9, COL_SUCCESS);
-  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_SUCCESS);
-  tft.setTextDatum(MC_DATUM); tft.drawString("COIN BTN", cx + cw - 39, 155);
-
-  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
-  uiCenterText("100ml - P1  |  250ml - P5  |  500ml - P10", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+  // Tag pill (right-aligned)
+  int tw = strlen(tag) * 7 + 16;
+  int tx = tft.width() - tw - 8;
+  tft.fillRoundRect(tx, 10, tw, 17, 8, tagColor);
+  tft.setTextFont(2); tft.setTextColor(COL_BG, tagColor);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(tag, tx + tw / 2, 19);
   tft.setTextDatum(TL_DATUM);
 }
 
+// Footer hint bar
+void uiFooter(const char* hint) {
+  int fy = tft.height() - 20;
+  tft.fillRect(0, fy, tft.width(), 20, COL_ACCENT_BG);
+  tft.drawFastHLine(0, fy, tft.width(), COL_BORDER);
+  tft.setTextFont(2); tft.setTextSize(1);
+  tft.setTextColor(COL_DIM, COL_ACCENT_BG);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(hint, tft.width() / 2, fy + 10);
+  tft.setTextDatum(TL_DATUM);
+}
+
+// Clean card row: y, height, left-accent color, no border
+void uiCardBase(int y, int h, uint16_t accent) {
+  tft.fillRoundRect(10, y, tft.width() - 20, h, 8, COL_CARD);
+  tft.fillRect(10, y + 4, 4, h - 8, accent);   // accent stripe (clipped to card)
+}
+
+// ---------- READY screen (choose QR or Coin) ----------
+void displayReady() {
+  appState = STATE_READY;
+  screenShownAt = millis();
+  tft.fillScreen(COL_BG);
+  uiTopBar("SmartH2wo", TEST_MODE ? "TEST" : "LIVE",
+           TEST_MODE ? COL_WARNING : COL_SUCCESS);
+
+  // Sub-title
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
+  tft.setTextDatum(TL_DATUM);
+  tft.drawString("Choose payment method", 14, 44);
+
+  // ---- QR card (y=60, h=64) ----
+  uiCardBase(60, 64, COL_BLUE);
+  // Icon: QR letters in circle
+  tft.fillCircle(38, 92, 18, 0x25DB);  // blue circle
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, 0x25DB);
+  tft.setTextDatum(MC_DATUM); tft.drawString("QR", 38, 92);
+  // Labels
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM); tft.drawString("QR PH Pay", 66, 80);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
+  tft.drawString("GCash  Maya  BDO  BPI", 66, 104);
+  // Button hint
+  tft.fillRoundRect(232, 74, 72, 20, 10, 0x25DB);
+  tft.setTextFont(2); tft.setTextColor(COL_BG, 0x25DB);
+  tft.setTextDatum(MC_DATUM); tft.drawString("[QR BTN]", 268, 84);
+
+  // ---- Coin card (y=134, h=64) ----
+  uiCardBase(134, 64, COL_SUCCESS);
+  // Icon: peso sign
+  tft.fillCircle(38, 166, 18, COL_SUCCESS);
+  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_SUCCESS);
+  tft.setTextDatum(MC_DATUM); tft.drawString("P", 38, 166);
+  // Labels
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM); tft.drawString("Coin Pay", 66, 154);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
+  tft.drawString("1 / 5 / 10 peso coins", 66, 178);
+  // Button hint
+  tft.fillRoundRect(228, 148, 76, 20, 10, COL_SUCCESS);
+  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_SUCCESS);
+  tft.setTextDatum(MC_DATUM); tft.drawString("[COIN BTN]", 266, 158);
+
+  uiFooter("P1=100ml   P5=250ml   P10=500ml");
+}
+
+// ---------- CHOOSE VOLUME screen (QR path) ----------
 void displayChooseVolume() {
   tft.fillScreen(COL_BG);
-  uiHeader("SmartH2wo", "QR PAY", COL_PRIMARY);
-  tft.setTextFont(2);
-  tft.setTextColor(COL_DIM, COL_BG);
-  tft.setTextDatum(TL_DATUM);
-  tft.drawString("SELECT VOLUME", 17, 46);
+  uiTopBar("QR Payment", "SCAN", COL_BLUE);
 
-  uiVolumeRow(62,  "100 ml",  "P1",  "1", COL_PRIMARY);
-  uiVolumeRow(120, "250 ml",  "P5",  "2.5", COL_PRIMARY);
-  uiVolumeRow(178, "500 ml",  "P10", "5", COL_PRIMARY);
-
-  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
-  uiCenterText("QR BTN = Back  |  COIN BTN = Switch to Coins", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
   tft.setTextDatum(TL_DATUM);
+  tft.drawString("Select volume to purchase", 14, 44);
+
+  // Row 1: 100ml / P1
+  uiCardBase(58, 48, COL_PRIMARY);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM); tft.drawString("100 ml", 26, 70);
+  tft.fillRoundRect(224, 66, 80, 22, 11, COL_PRIMARY);
+  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
+  tft.setTextDatum(MC_DATUM); tft.drawString("P 1", 264, 77);
+
+  // Row 2: 250ml / P5
+  uiCardBase(114, 48, COL_PRIMARY);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM); tft.drawString("250 ml", 26, 126);
+  tft.fillRoundRect(224, 122, 80, 22, 11, COL_PRIMARY);
+  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
+  tft.setTextDatum(MC_DATUM); tft.drawString("P 5", 264, 133);
+
+  // Row 3: 500ml / P10
+  uiCardBase(170, 48, COL_PRIMARY);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM); tft.drawString("500 ml", 26, 182);
+  tft.fillRoundRect(224, 178, 80, 22, 11, COL_PRIMARY);
+  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
+  tft.setTextDatum(MC_DATUM); tft.drawString("P 10", 264, 189);
+
+  uiFooter("QR=Back   COIN=Switch to coins");
 }
 
+// ---------- COIN MODE screen ----------
 void displayCoinMode() {
   tft.fillScreen(COL_BG);
-  uiHeader("COIN PAYMENT", "COIN", COL_SUCCESS);
 
-  int cx = 14, cw = tft.width() - 28, ch = 48, cr = 8;
-  
-  // Big credit readout
-  char amount[24];
-  snprintf(amount, sizeof(amount), "Credit: P%d", coinCredit);
-  uiCenterText(amount, 54, 4, 1, COL_TEXT, COL_BG);
+  const char* warningMode = (appState == STATE_COIN_WARNING) ? "WARN" : "COIN";
+  uint16_t hColor = (appState == STATE_COIN_WARNING) ? COL_WARNING : COL_SUCCESS;
+  uiTopBar("Coin Payment", warningMode, hColor);
 
-  // Draw 3 tiers
-  int yTiers[3] = {84, 136, 188};
-  int vols[3] = {100, 250, 500};
-  int prices[3] = {1, 5, 10};
+  // ---- Big credit display ----
+  char creditStr[16];
+  snprintf(creditStr, sizeof(creditStr), "P %d", coinCredit);
+  tft.setTextFont(4); tft.setTextSize(2);
+  tft.setTextColor(COL_SUCCESS, COL_BG);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString(creditStr, tft.width() / 2, 44);
+  tft.setTextSize(1);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
+  tft.drawString("inserted", tft.width() / 2, 76);
 
-  for(int i=0; i<3; i++) {
-    bool unlocked = (coinCredit >= prices[i]);
-    uint16_t cardColor = unlocked ? COL_CARD : COL_BG_ALT;
-    uint16_t accent = unlocked ? COL_SUCCESS : COL_BORDER;
-    
-    tft.fillRoundRect(cx, yTiers[i], cw, ch, cr, cardColor);
-    tft.drawRoundRect(cx, yTiers[i], cw, ch, cr, COL_BORDER);
-    tft.fillRoundRect(cx, yTiers[i], 4, ch, 2, accent);
-    
-    // Icon badge
-    tft.fillCircle(cx + 26, yTiers[i] + ch/2, 14, COL_ACCENT_BG);
-    tft.drawCircle(cx + 26, yTiers[i] + ch/2, 14, accent);
-    tft.setTextFont(2); tft.setTextSize(1);
-    tft.setTextColor(accent, COL_ACCENT_BG);
-    tft.setTextDatum(MC_DATUM); 
-    tft.drawString(unlocked ? "!" : "?", cx + 26, yTiers[i] + ch/2);
+  // Divider
+  tft.drawFastHLine(10, 94, tft.width() - 20, COL_BORDER);
 
-    // Label
+  // ---- 3 tier rows ----
+  struct { int vol; int price; int y; } tiers[3] = {
+    {100, 1, 100}, {250, 5, 136}, {500, 10, 172}
+  };
+
+  for (int i = 0; i < 3; i++) {
+    bool unlocked = (coinCredit >= tiers[i].price);
+    uint16_t acc = unlocked ? COL_SUCCESS : COL_BORDER;
+    uint16_t cardCol = unlocked ? COL_CARD : COL_BG;
+
+    tft.fillRoundRect(10, tiers[i].y, tft.width() - 20, 32, 6, cardCol);
+    tft.fillRect(10, tiers[i].y + 4, 4, 24, acc);
+
+    // Volume label
+    char vlbl[12]; snprintf(vlbl, sizeof(vlbl), "%d ml", tiers[i].vol);
     tft.setTextFont(4);
-    tft.setTextColor(unlocked ? COL_TEXT : COL_DIM, cardColor);
+    tft.setTextColor(unlocked ? COL_TEXT : COL_BORDER, cardCol);
     tft.setTextDatum(ML_DATUM);
-    char vStr[16]; snprintf(vStr, sizeof(vStr), "%d ml", vols[i]);
-    tft.drawString(vStr, cx + 50, yTiers[i] + ch/2 - 8);
+    tft.drawString(vlbl, 24, tiers[i].y + 16);
 
-    // Right side hint
+    // Price or status on right
     tft.setTextFont(2);
     tft.setTextDatum(MR_DATUM);
-    if(unlocked) {
-      tft.setTextColor(COL_SUCCESS, cardColor);
-      char pStr[16]; snprintf(pStr, sizeof(pStr), "P%d (READY)", prices[i]);
-      tft.drawString(pStr, cx + cw - 10, yTiers[i] + ch/2);
+    if (unlocked) {
+      tft.fillRoundRect(220, tiers[i].y + 6, 88, 20, 10, COL_SUCCESS);
+      tft.setTextColor(COL_BG, COL_SUCCESS);
+      char pbtn[16]; snprintf(pbtn, sizeof(pbtn), "P%d  PRESS", tiers[i].price);
+      tft.drawString(pbtn, 304, tiers[i].y + 16);
     } else {
-      tft.setTextColor(COL_DIM, cardColor);
-      char pStr[16]; snprintf(pStr, sizeof(pStr), "P%d more", prices[i] - coinCredit);
-      tft.drawString(pStr, cx + cw - 10, yTiers[i] + ch/2);
+      tft.setTextColor(COL_BORDER, cardCol);
+      char need[16]; snprintf(need, sizeof(need), "need P%d", tiers[i].price);
+      tft.drawString(need, 308, tiers[i].y + 16);
     }
   }
 
-  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
-  uiCenterText("Insert coins or press QR to cancel", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
-  tft.setTextDatum(TL_DATUM);
+  uiFooter("Insert coins  |  QR/COIN btn = cancel");
 }
 
+// ---------- NOT ENOUGH overlay ----------
 void displayNotEnough(int shortAmount) {
-  tft.fillRoundRect(40, 80, 240, 80, 10, COL_ERROR);
-  tft.drawRoundRect(40, 80, 240, 80, 10, COL_TEXT);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_ERROR);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString("NOT ENOUGH", tft.width()/2, 106);
-  
-  char buf[32]; snprintf(buf, sizeof(buf), "Insert P%d more", shortAmount);
-  tft.setTextFont(2);
-  tft.drawString(buf, tft.width()/2, 136);
+  // Semi-overlay: just redraw a central card
+  tft.fillRoundRect(20, 70, tft.width() - 40, 100, 12, 0x6000);
+  tft.drawRoundRect(20, 70, tft.width() - 40, 100, 12, COL_ERROR);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, 0x6000);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString("Need more", tft.width() / 2, 88);
+  char buf[24]; snprintf(buf, sizeof(buf), "Insert P%d more", shortAmount);
+  tft.setTextFont(2); tft.setTextColor(COL_MUTED, 0x6000);
+  tft.drawString(buf, tft.width() / 2, 120);
   tft.setTextDatum(TL_DATUM);
 }
 
+// ---------- PROCESSING screen ----------
 void displayProcessing() {
   tft.fillScreen(COL_BG);
-  uiHeader("SmartH2wo", "WAIT", COL_WARNING);
-
-  // Pulsing water drop
-  uiWaterDrop(tft.width()/2, 100, 30, COL_WARNING);
-
-  uiCenterText("Processing...", 150, 4, 1, COL_TEXT, COL_BG);
-  uiCenterText("Generating checkout...", 182, 2, 1, COL_MUTED, COL_BG);
+  uiTopBar("SmartH2wo", "WAIT", COL_WARNING);
+  uiWaterDrop(tft.width() / 2, 120, 34, COL_WARNING);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_BG);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString("Connecting...", tft.width() / 2, 168);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
+  tft.drawString("Generating QR payment link", tft.width() / 2, 194);
+  tft.setTextDatum(TL_DATUM);
 }
 
+// ---------- QR PAYMENT screen ----------
 void displayQRMessage() {
   tft.fillScreen(COL_BG);
+  char hdr[32];
+  snprintf(hdr, sizeof(hdr), "Pay P%d  -  %dml", currentPricePesos, currentVolumeMl);
+  uiTopBar(hdr, "QR PH", COL_BLUE);
 
-  // Header with price
-  char headerText[40];
-  snprintf(headerText, sizeof(headerText), "SCAN TO PAY  P%d", currentPricePesos);
-  uiHeader(headerText, TEST_MODE ? "TEST" : "PAY", COL_PRIMARY);
+  // Draw QR on left
+  String qrPayload = (currentCheckoutUrl.length() > 0)
+    ? currentCheckoutUrl
+    : "https://smarth2wo.tech/pay/" + String(currentVolumeMl) + "ml";
+  const int qrX = 8, qrY = 42;
+  drawQRCode(qrPayload, qrX, qrY, 3);   // scale=3 → ~123x123px
 
-  uiCenterText("Scan QR code below with any e-wallet app", 50, 2, 1, COL_TEXT, COL_BG);
-  uiCenterText("Payment link:", 70, 2, 1, COL_MUTED, COL_BG);
-  uiCenterText(currentCheckoutUrl.c_str(), 90, 2, 1, COL_PRIMARY, COL_BG);
-
-  // Footer band
-  int footerY = tft.height() - 26;
-  tft.fillRect(0, footerY, tft.width(), 26, COL_BG_ALT);
-  tft.drawFastHLine(0, footerY, tft.width(), COL_PRIMARY);
-
-  // Volume left
-  char vol[16];
-  snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
-  tft.setTextFont(2);
-  tft.setTextSize(1);
-  tft.setTextColor(COL_PRIMARY, COL_BG_ALT);
-  tft.setTextDatum(ML_DATUM);
-  tft.drawString(vol, 10, footerY + 13);
-
-  // Hint right
-  tft.setTextColor(COL_MUTED, COL_BG_ALT);
-  tft.setTextDatum(MR_DATUM);
-  tft.drawString(TEST_MODE ? "Auto-pay in ~5s" : "Any button to cancel",
-                 tft.width() - 10, footerY + 13);
+  // Instructions on the right
+  int rx = qrX + 41 * 3 + 14;
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
   tft.setTextDatum(TL_DATUM);
+  tft.drawString("How to pay:", rx, 48);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString("1. Open GCash", rx, 66);
+  tft.drawString("   or Maya", rx, 82);
+  tft.drawString("2. Scan QR", rx, 100);
+  tft.drawString("3. Pay & wait", rx, 118);
+  tft.drawString("   for water!", rx, 134);
+
+  // Volume badge bottom-right
+  tft.fillRoundRect(rx, 160, 98, 26, 8, COL_PRIMARY);
+  char vbuf[12]; snprintf(vbuf, sizeof(vbuf), "%d ml", currentVolumeMl);
+  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(vbuf, rx + 49, 173);
+  tft.setTextDatum(TL_DATUM);
+
+  uiFooter(TEST_MODE ? "Auto-pays in ~5s" : "Press any button to cancel");
 }
 
+// ---------- DISPENSING screen ----------
 void displayDispensing() {
   tft.fillScreen(COL_BG);
-  uiHeader("SmartH2wo", "ACTIVE", COL_SUCCESS);
+  uiTopBar("Dispensing", "ACTIVE", COL_SUCCESS);
 
-  // Success ring with water drop inside
-  int cx = tft.width()/2, cy = 96;
-  tft.fillCircle(cx, cy, 36, COL_SUCCESS);
-  tft.fillCircle(cx, cy, 30, COL_BG);
-  // Inner water drop
-  uiWaterDrop(cx, cy, 18, COL_SUCCESS);
+  // Big animated-look water drop
+  uiWaterDrop(tft.width() / 2, 118, 44, COL_SUCCESS);
 
-  // DISPENSING label
-  uiCenterText("DISPENSING", 146, 4, 1, COL_SUCCESS, COL_BG);
+  // Volume text large
+  char vol[20]; snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
+  tft.setTextFont(4); tft.setTextSize(2);
+  tft.setTextColor(COL_SUCCESS, COL_BG);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString(vol, tft.width() / 2, 174);
+  tft.setTextSize(1);
 
-  // Volume readout
-  char vol[24];
-  snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
-  uiCenterText(vol, 172, 4, 1, COL_TEXT, COL_BG);
-
-  // Animated progress bar (full � could track flow sensor in future)
-  uiProgressBar((tft.width() - 240)/2, 204, 240, 10, 1.0f, COL_SUCCESS, COL_BORDER);
-
-  // Footer
-  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
-  uiCenterText("Please wait...", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+  // Full progress bar
+  uiProgressBar(20, 206, tft.width() - 40, 8, 1.0f, COL_SUCCESS, COL_BORDER);
+  uiFooter("Please wait...");
 }
 
+// ---------- ERROR screen ----------
 void displayError(String message) {
   tft.fillScreen(COL_BG);
+  tft.fillRect(0, 0, tft.width(), 3, COL_ERROR);
+  tft.fillRect(0, 3, tft.width(), 34, 0x4000);
+  tft.drawFastHLine(0, 37, tft.width(), COL_ERROR);
+  tft.fillRect(0, 3, 4, 34, COL_ERROR);
 
-  // Error header bar with icon
-  tft.fillRect(0, 0, tft.width(), 36, 0x6000);  // dark red header
-  tft.fillRect(0, 0, 3, 36, COL_ERROR);          // left red stripe
-  tft.drawFastHLine(0, 36, tft.width(), COL_ERROR);
-  tft.setTextFont(4); tft.setTextSize(1);
-  tft.setTextColor(COL_TEXT, 0x6000);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString("Error", tft.width()/2, 18);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, 0x4000);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString("Error", 16, 20);
 
-  // Error X icon in a ring
-  int cx = tft.width()/2, cy = 102;
-  tft.fillCircle(cx, cy, 30, COL_ERROR);
-  tft.fillCircle(cx, cy, 24, COL_BG);
-  tft.drawCircle(cx, cy, 30, COL_ERROR);
-  // X lines (3px thick each direction)
+  // X icon
+  int cx = tft.width() / 2, cy = 118;
+  tft.fillCircle(cx, cy, 38, 0x4000);
+  tft.drawCircle(cx, cy, 38, COL_ERROR);
+  tft.drawCircle(cx, cy, 37, COL_ERROR);
   for (int t = -1; t <= 1; t++) {
-    tft.drawLine(cx - 12, cy - 12 + t, cx + 12, cy + 12 + t, COL_ERROR);
-    tft.drawLine(cx - 12, cy + 12 + t, cx + 12, cy - 12 + t, COL_ERROR);
+    tft.drawLine(cx - 16, cy - 16 + t, cx + 16, cy + 16 + t, COL_ERROR);
+    tft.drawLine(cx - 16, cy + 16 + t, cx + 16, cy - 16 + t, COL_ERROR);
   }
 
-  uiCenterText(message.c_str(), 150, 2, 1, COL_MUTED, COL_BG);
+  tft.setTextFont(2); tft.setTextColor(COL_MUTED, COL_BG);
+  tft.setTextDatum(TC_DATUM);
+  tft.drawString(message.c_str(), tft.width() / 2, 170);
 
-  // Retry chip
-  int chipW = 160, chipH = 22;
-  int chipX = (tft.width() - chipW) / 2;
-  tft.fillRoundRect(chipX, 190, chipW, chipH, 11, COL_BORDER);
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BORDER);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString("Press any button to retry", chipX + chipW/2, 201);
+  uiFooter("Press any button to continue");
   tft.setTextDatum(TL_DATUM);
 }
+
+// ===== END UI REDESIGN =====================================================
 
 // ===== WiFi Functions =====
 void connectWiFi() {
