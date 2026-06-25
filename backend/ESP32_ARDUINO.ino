@@ -129,12 +129,12 @@ volatile unsigned long coinBurstStartTime = 0;
 
 // Allan 1239A pulse map (measured): 1 peso=1 pulse, 5 peso=9 pulses, 10 peso=18 pulses
 // Collect all pulses within COIN_BURST_WINDOW_MS then map total to a peso value.
-const unsigned long COIN_BURST_WINDOW_MS = 200;
+const unsigned long COIN_BURST_WINDOW_MS = 350;  // 350ms to capture slow coin pulses
 
 void IRAM_ATTR coinPulseISR() {
   unsigned long now = millis();
   // Debounce: ignore pulses faster than 20ms apart (allows fast coins)
-  if (now - lastCoinPulseTime > 15) {
+  if (now - lastCoinPulseTime > 20) {
     if (coinPulseCount == 0) coinBurstStartTime = now;
     coinPulseCount++;
     lastCoinPulseTime = now;
@@ -294,11 +294,14 @@ void loop() {
     coinPulseCount = 0;
     interrupts();
 
-    // Map pulse burst to peso value (Allan 1239A measured):
-    // 1 peso = 1 pulse, 5 peso = 9 pulses, 10 peso = 18 pulses
+    // Map pulse burst to peso value (Allan 1239A).
+    // Bands are wide to handle ±2 pulse variance from debounce noise.
+    //   1 peso:  1-3 pulses
+    //   5 peso:  4-14 pulses  (observed: 7-9)
+    //   10 peso: 15+ pulses   (observed: 17-19)
     int pesoValue = 0;
-    if      (burstPulses <= 2)  pesoValue = 1;
-    else if (burstPulses <= 13) pesoValue = 5;
+    if      (burstPulses <= 3)  pesoValue = 1;
+    else if (burstPulses <= 14) pesoValue = 5;
     else                        pesoValue = 10;
 
     Serial.printf("Coin burst: %d pulses -> P%d\n", burstPulses, pesoValue);
