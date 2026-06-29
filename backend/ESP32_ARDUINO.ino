@@ -85,10 +85,12 @@ const int FLOW_SENSOR_PIN = 34;  // ZJ-S201 pulse output (input-only, ext 10kΩ 
 const int US_TRIG_PIN     = 17;  // HC-SR04 trigger
 const int US_ECHO_PIN     = 35;  // HC-SR04 echo (input-only, voltage divider)
 const int COIN_PULSE_PIN  = 22;  // Allan 1239A coin acceptor (moved to 22 to use internal pull-up)
-const int COIN_INHIBIT_PIN = 19;  // Allan 1239A grey wire
+const int COIN_INHIBIT_PIN = 19;  // Allan 1239A grey (inhibit) wire
 
-void enableCoinAcceptor()  { digitalWrite(COIN_INHIBIT_PIN, HIGH); }
-void disableCoinAcceptor() { digitalWrite(COIN_INHIBIT_PIN, LOW);  }
+// Inhibit = HIGH means REJECT coins (active-high inhibit for most Allan units).
+// If coins still pass through when they shouldn't, swap HIGH<->LOW below.
+void enableCoinAcceptor()  { digitalWrite(COIN_INHIBIT_PIN, LOW);  }  // LOW = accept
+void disableCoinAcceptor() { digitalWrite(COIN_INHIBIT_PIN, HIGH); }  // HIGH = inhibit/reject
 
 // LED for TEST_MODE only (same physical pin as RELAY_PUMP)
 const int LED_PIN = 26;
@@ -125,17 +127,11 @@ void IRAM_ATTR flowSensorISR() {
 // ===== Coin Acceptor ISR Variables =====
 volatile int coinPulseCount = 0;
 volatile unsigned long lastCoinPulseTime = 0;
-volatile unsigned long coinBurstStartTime = 0;
-
-// Allan 1239A pulse map (measured): 1 peso=1 pulse, 5 peso=9 pulses, 10 peso=18 pulses
-// Collect all pulses within COIN_BURST_WINDOW_MS then map total to a peso value.
-const unsigned long COIN_BURST_WINDOW_MS = 350;  // 350ms to capture slow coin pulses
 
 void IRAM_ATTR coinPulseISR() {
   unsigned long now = millis();
   // Debounce: ignore pulses faster than 20ms apart (allows fast coins)
   if (now - lastCoinPulseTime > 20) {
-    if (coinPulseCount == 0) coinBurstStartTime = now;
     coinPulseCount++;
     lastCoinPulseTime = now;
   }
@@ -159,13 +155,13 @@ PubSubClient mqttClient(espClient);
 // Replaces the old isWaitingForPayment boolean with a proper state enum so
 // the button handler can dispatch correctly per screen.
 enum AppState {
-  STATE_READY,            // payment method selector (QR or COIN)
-  STATE_CHOOSE_VOLUME,    // QR path: pick a volume (was STATE_CHOOSE_PAYMENT)
-  STATE_QR_PAYMENT,       // QR shown, waiting for webhook
-  STATE_COIN_PAYMENT,     // coin-first: insert coins, then pick volume
-  STATE_COIN_WARNING,     // partial credit warning before forfeit
-  STATE_DISPENSING,       // dispensing water
-  STATE_ERROR             // error, any button dismisses
+  STATE_READY,            // main menu: pick a volume
+  STATE_CHOOSE_PAYMENT,   // volume picked, asking QR or Coin
+  STATE_QR_PAYMENT,       // QR shown, waiting for webhook (or TEST timer)
+  STATE_COIN_PAYMENT,     // showing "Insert coins" progress screen
+  STATE_COIN_WARNING,     // partial credit, gentle warning before forfeit
+  STATE_DISPENSING,       // dispensing in progress (LED on)
+  STATE_ERROR             // error screen, returns to READY on any press
 };
 AppState appState = STATE_READY;
 
@@ -232,8 +228,8 @@ void setup() {
     // Coin acceptor interrupt
     pinMode(COIN_PULSE_PIN, INPUT_PULLUP); // Using ESP32's built-in internal resistor!
     attachInterrupt(digitalPinToInterrupt(COIN_PULSE_PIN), coinPulseISR, FALLING);
-    
-    // Coin Acceptor Inhibit Pin
+
+    // Inhibit pin: start with coins REJECTED (disabled at boot)
     pinMode(COIN_INHIBIT_PIN, OUTPUT);
     disableCoinAcceptor();
     
@@ -285,32 +281,20 @@ void loop() {
   // === Process coin acceptor pulses (production only) ===
   // ISR increments coinPulseCount; we process it here in the main loop
   // to avoid calling display/MQTT functions inside an ISR.
-  // Process coin pulses AFTER the burst window has elapsed so all pulses
-  // from one coin are captured before we identify the denomination.
-  if (!TEST_MODE && coinPulseCount > 0 &&
-      (millis() - coinBurstStartTime) >= COIN_BURST_WINDOW_MS) {
+  if (!TEST_MODE && coinPulseCount > 0) {
     noInterrupts();
-    int burstPulses = coinPulseCount;
+    int pulsesToProcess = coinPulseCount;
     coinPulseCount = 0;
     interrupts();
-
-    // Map pulse burst to peso value (Allan 1239A).
-    // Bands are wide to handle ±2 pulse variance from debounce noise.
-    //   1 peso:  1-3 pulses
-    //   5 peso:  4-14 pulses  (observed: 7-9)
-    //   10 peso: 15+ pulses   (observed: 17-19)
-    int pesoValue = 0;
-    if      (burstPulses <= 3)  pesoValue = 1;
-    else if (burstPulses <= 14) pesoValue = 5;
-    else                        pesoValue = 10;
-
-    Serial.printf("Coin burst: %d pulses -> P%d\n", burstPulses, pesoValue);
-
+    
+    // Each pulse = 1 peso (configure on coin slot via DIP switches)
     if (appState == STATE_COIN_PAYMENT || appState == STATE_COIN_WARNING) {
-      addCoinCredit(pesoValue);
+      for (int i = 0; i < pulsesToProcess; i++) {
+        addCoinCredit(1);
+      }
     } else {
-      Serial.printf("TEST: Coin pulse detected (%d -> P%d). Enter coin mode first.\n",
-                    burstPulses, pesoValue);
+      // Hardware Test: If they drop a coin while in the main menu, print it so they know it works!
+      Serial.printf("TEST: Coin dropped! (Pulses: %d). You must select a volume first to pay.\n", pulsesToProcess);
     }
   }
 
@@ -340,7 +324,7 @@ void loop() {
       }
       break;
 
-    case STATE_CHOOSE_VOLUME:
+    case STATE_CHOOSE_PAYMENT:
       // Auto-cancel back to READY if the user walks away
       if (now > chooseTimeoutAt) {
         Serial.println("Payment select timed out - returning to READY");
@@ -356,7 +340,7 @@ void loop() {
         appState = STATE_COIN_WARNING;
         warnTimeoutAt = now + COIN_WARNING_MS;
         screenShownAt = now;
-        displayCoinMode();
+        displayCoinWarning();
       }
       break;
 
@@ -551,231 +535,54 @@ void displayStartup() {
   tft.setTextDatum(TL_DATUM);
 }
 
-// ===== UI SCREEN REDESIGN =================================================
-// All screens optimised for 320x240 landscape TFT.
-// Design rules:
-//   - Dark navy base (COL_BG)
-//   - Single accent stripe at top (3px COL_PRIMARY)
-//   - Content starts at y=40 after a minimal title band
-//   - Large, readable font4 for primary text, font2 for secondary
-//   - Clean cards with ONE left accent stripe — no heavy outlines
-//   - Consistent footer bar (y=220, h=20)
-
-// ---------- helpers ----------
-
-// Top header: tiny brand strip + page title
-void uiTopBar(const char* title, const char* tag, uint16_t tagColor) {
-  tft.fillRect(0, 0, tft.width(), 3, COL_PRIMARY);           // top stripe
-  tft.fillRect(0, 3, tft.width(), 34, COL_ACCENT_BG);        // title band
-  tft.drawFastHLine(0, 37, tft.width(), COL_BORDER);         // divider
-
-  // Title (left-aligned)
-  tft.setTextFont(4); tft.setTextSize(1);
-  tft.setTextColor(COL_TEXT, COL_ACCENT_BG);
-  tft.setTextDatum(ML_DATUM);
-  tft.drawString(title, 12, 20);
-
-  // Tag pill (right-aligned)
-  int tw = strlen(tag) * 7 + 16;
-  int tx = tft.width() - tw - 8;
-  tft.fillRoundRect(tx, 10, tw, 17, 8, tagColor);
-  tft.setTextFont(2); tft.setTextColor(COL_BG, tagColor);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(tag, tx + tw / 2, 19);
-  tft.setTextDatum(TL_DATUM);
-}
-
-// Footer hint bar
-void uiFooter(const char* hint) {
-  int fy = tft.height() - 20;
-  tft.fillRect(0, fy, tft.width(), 20, COL_ACCENT_BG);
-  tft.drawFastHLine(0, fy, tft.width(), COL_BORDER);
-  tft.setTextFont(2); tft.setTextSize(1);
-  tft.setTextColor(COL_DIM, COL_ACCENT_BG);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(hint, tft.width() / 2, fy + 10);
-  tft.setTextDatum(TL_DATUM);
-}
-
-// Clean card row: y, height, left-accent color, no border
-void uiCardBase(int y, int h, uint16_t accent) {
-  tft.fillRoundRect(10, y, tft.width() - 20, h, 8, COL_CARD);
-  tft.fillRect(10, y + 4, 4, h - 8, accent);   // accent stripe (clipped to card)
-}
-
-// ---------- READY screen (choose QR or Coin) ----------
 void displayReady() {
-  appState = STATE_READY;
+  // Always anchor on STATE_READY when this screen is drawn.
+  appState      = STATE_READY;
   screenShownAt = millis();
+
   tft.fillScreen(COL_BG);
-  uiTopBar("SmartH2wo", TEST_MODE ? "TEST" : "LIVE",
+
+  uiHeader("SmartH2wo",
+           TEST_MODE ? "TEST" : "LIVE",
            TEST_MODE ? COL_WARNING : COL_SUCCESS);
 
-  // Sub-title
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
+  // Section label — muted, small, like dashboard section headers
+  tft.setTextFont(2);
+  tft.setTextColor(COL_DIM, COL_BG);
   tft.setTextDatum(TL_DATUM);
-  tft.drawString("Choose payment method", 14, 44);
+  tft.drawString("SELECT VOLUME", 17, 46);
 
-  // ---- QR card (y=60, h=64) ----
-  uiCardBase(60, 64, COL_BLUE);
-  // Icon: QR letters in circle
-  tft.fillCircle(38, 92, 18, 0x25DB);  // blue circle
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, 0x25DB);
-  tft.setTextDatum(MC_DATUM); tft.drawString("QR", 38, 92);
-  // Labels
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.setTextDatum(ML_DATUM); tft.drawString("QR PH Pay", 66, 80);
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
-  tft.drawString("GCash  Maya  BDO  BPI", 66, 104);
-  // Button hint
-  tft.fillRoundRect(232, 74, 72, 20, 10, 0x25DB);
-  tft.setTextFont(2); tft.setTextColor(COL_BG, 0x25DB);
-  tft.setTextDatum(MC_DATUM); tft.drawString("[QR BTN]", 268, 84);
+  // Three volume cards stacked
+  uiVolumeRow(62,  "100 ml",  "P2",  "1", COL_PRIMARY);
+  uiVolumeRow(120, "250 ml",  "P5",  "2.5", COL_PRIMARY);
+  uiVolumeRow(178, "500 ml",  "P10", "5", COL_PRIMARY);
 
-  // ---- Coin card (y=134, h=64) ----
-  uiCardBase(134, 64, COL_SUCCESS);
-  // Icon: peso sign
-  tft.fillCircle(38, 166, 18, COL_SUCCESS);
-  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_SUCCESS);
-  tft.setTextDatum(MC_DATUM); tft.drawString("P", 38, 166);
-  // Labels
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.setTextDatum(ML_DATUM); tft.drawString("Coin Pay", 66, 154);
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
-  tft.drawString("1 / 5 / 10 peso coins", 66, 178);
-  // Button hint
-  tft.fillRoundRect(228, 148, 76, 20, 10, COL_SUCCESS);
-  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_SUCCESS);
-  tft.setTextDatum(MC_DATUM); tft.drawString("[COIN BTN]", 266, 158);
-
-  uiFooter("P1=100ml   P5=250ml   P10=500ml");
+  // Footer hint bar
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("Press a button to begin",
+               tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
 }
 
-// ---------- CHOOSE VOLUME screen (QR path) ----------
-void displayChooseVolume() {
-  tft.fillScreen(COL_BG);
-  uiTopBar("QR Payment", "SCAN", COL_BLUE);
-
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
-  tft.setTextDatum(TL_DATUM);
-  tft.drawString("Select volume to purchase", 14, 44);
-
-  // Row 1: 100ml / P1
-  uiCardBase(58, 48, COL_PRIMARY);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.setTextDatum(ML_DATUM); tft.drawString("100 ml", 26, 70);
-  tft.fillRoundRect(224, 66, 80, 22, 11, COL_PRIMARY);
-  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
-  tft.setTextDatum(MC_DATUM); tft.drawString("P 1", 264, 77);
-
-  // Row 2: 250ml / P5
-  uiCardBase(114, 48, COL_PRIMARY);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.setTextDatum(ML_DATUM); tft.drawString("250 ml", 26, 126);
-  tft.fillRoundRect(224, 122, 80, 22, 11, COL_PRIMARY);
-  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
-  tft.setTextDatum(MC_DATUM); tft.drawString("P 5", 264, 133);
-
-  // Row 3: 500ml / P10
-  uiCardBase(170, 48, COL_PRIMARY);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
-  tft.setTextDatum(ML_DATUM); tft.drawString("500 ml", 26, 182);
-  tft.fillRoundRect(224, 178, 80, 22, 11, COL_PRIMARY);
-  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
-  tft.setTextDatum(MC_DATUM); tft.drawString("P 10", 264, 189);
-
-  uiFooter("QR=Back   COIN=Switch to coins");
-}
-
-// ---------- COIN MODE screen ----------
-void displayCoinMode() {
-  tft.fillScreen(COL_BG);
-
-  const char* warningMode = (appState == STATE_COIN_WARNING) ? "WARN" : "COIN";
-  uint16_t hColor = (appState == STATE_COIN_WARNING) ? COL_WARNING : COL_SUCCESS;
-  uiTopBar("Coin Payment", warningMode, hColor);
-
-  // ---- Big credit display ----
-  char creditStr[16];
-  snprintf(creditStr, sizeof(creditStr), "P %d", coinCredit);
-  tft.setTextFont(4); tft.setTextSize(2);
-  tft.setTextColor(COL_SUCCESS, COL_BG);
-  tft.setTextDatum(TC_DATUM);
-  tft.drawString(creditStr, tft.width() / 2, 44);
-  tft.setTextSize(1);
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
-  tft.drawString("inserted", tft.width() / 2, 76);
-
-  // Divider
-  tft.drawFastHLine(10, 94, tft.width() - 20, COL_BORDER);
-
-  // ---- 3 tier rows ----
-  struct { int vol; int price; int y; } tiers[3] = {
-    {100, 1, 100}, {250, 5, 136}, {500, 10, 172}
-  };
-
-  for (int i = 0; i < 3; i++) {
-    bool unlocked = (coinCredit >= tiers[i].price);
-    uint16_t acc = unlocked ? COL_SUCCESS : COL_BORDER;
-    uint16_t cardCol = unlocked ? COL_CARD : COL_BG;
-
-    tft.fillRoundRect(10, tiers[i].y, tft.width() - 20, 32, 6, cardCol);
-    tft.fillRect(10, tiers[i].y + 4, 4, 24, acc);
-
-    // Volume label
-    char vlbl[12]; snprintf(vlbl, sizeof(vlbl), "%d ml", tiers[i].vol);
-    tft.setTextFont(4);
-    tft.setTextColor(unlocked ? COL_TEXT : COL_BORDER, cardCol);
-    tft.setTextDatum(ML_DATUM);
-    tft.drawString(vlbl, 24, tiers[i].y + 16);
-
-    // Price or status on right
-    tft.setTextFont(2);
-    tft.setTextDatum(MR_DATUM);
-    if (unlocked) {
-      tft.fillRoundRect(220, tiers[i].y + 6, 88, 20, 10, COL_SUCCESS);
-      tft.setTextColor(COL_BG, COL_SUCCESS);
-      char pbtn[16]; snprintf(pbtn, sizeof(pbtn), "P%d  PRESS", tiers[i].price);
-      tft.drawString(pbtn, 304, tiers[i].y + 16);
-    } else {
-      tft.setTextColor(COL_BORDER, cardCol);
-      char need[16]; snprintf(need, sizeof(need), "need P%d", tiers[i].price);
-      tft.drawString(need, 308, tiers[i].y + 16);
-    }
-  }
-
-  uiFooter("Insert coins  |  QR/COIN btn = cancel");
-}
-
-// ---------- NOT ENOUGH overlay ----------
-void displayNotEnough(int shortAmount) {
-  // Semi-overlay: just redraw a central card
-  tft.fillRoundRect(20, 70, tft.width() - 40, 100, 12, 0x6000);
-  tft.drawRoundRect(20, 70, tft.width() - 40, 100, 12, COL_ERROR);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, 0x6000);
-  tft.setTextDatum(TC_DATUM);
-  tft.drawString("Need more", tft.width() / 2, 88);
-  char buf[24]; snprintf(buf, sizeof(buf), "Insert P%d more", shortAmount);
-  tft.setTextFont(2); tft.setTextColor(COL_MUTED, 0x6000);
-  tft.drawString(buf, tft.width() / 2, 120);
-  tft.setTextDatum(TL_DATUM);
-}
-
-// ---------- PROCESSING screen ----------
 void displayProcessing() {
   tft.fillScreen(COL_BG);
-  uiTopBar("SmartH2wo", "WAIT", COL_WARNING);
-  uiWaterDrop(tft.width() / 2, 120, 34, COL_WARNING);
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_BG);
-  tft.setTextDatum(TC_DATUM);
-  tft.drawString("Connecting...", tft.width() / 2, 168);
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
-  tft.drawString("Generating QR payment link", tft.width() / 2, 194);
-  tft.setTextDatum(TL_DATUM);
+  uiHeader("SmartH2wo", "WAIT", COL_WARNING);
+
+  // Pulsing water drop
+  uiWaterDrop(tft.width()/2, 100, 30, COL_WARNING);
+
+  uiCenterText("Processing...", 150, 4, 1, COL_TEXT, COL_BG);
+  uiCenterText("Generating checkout...", 182, 2, 1, COL_MUTED, COL_BG);
+
+  // Animated dots (3 staggered pills)
+  int cy = 212, cx = tft.width()/2;
+  tft.fillRoundRect(cx - 22, cy - 3, 12, 6, 3, COL_PRIMARY);
+  tft.fillRoundRect(cx - 5,  cy - 3, 12, 6, 3, COL_DIM);
+  tft.fillRoundRect(cx + 12, cy - 3, 12, 6, 3, COL_BORDER);
 }
 
-// ---------- QR PAYMENT screen ----------
 // Render the given text/URL as a real scannable QR on the TFT at (x0, y0).
+// Uses ricmoo/QRCode. Version 6 (41x41) at ECC LOW comfortably holds typical
+// PayMongo checkout URLs (~90 chars). Bump version up if your URL is longer.
 void drawQRCode(const String& text, int x0, int y0, int scale = 4) {
   const uint8_t qrVersion = 6;
   const uint8_t qrEcc     = ECC_LOW;
@@ -785,7 +592,8 @@ void drawQRCode(const String& text, int x0, int y0, int scale = 4) {
   qrcode_initText(&qr, qrData, qrVersion, qrEcc, text.c_str());
 
   const int qrPx = qr.size * scale;
-  // White rounded card behind the QR for quiet zone
+
+  // White rounded card behind the QR for nicer presentation + quiet zone
   tft.fillRoundRect(x0 - scale * 2, y0 - scale * 2,
                     qrPx + scale * 4, qrPx + scale * 4, 6, TFT_WHITE);
 
@@ -797,94 +605,344 @@ void drawQRCode(const String& text, int x0, int y0, int scale = 4) {
   }
 }
 
+// Draw one numbered step in the instructions list.
+void uiStep(int num, int y, const char* line1, const char* line2,
+            int textX, uint16_t bg) {
+  // Numbered circle badge
+  int badgeX = textX;
+  int badgeY = y + 8;
+  tft.fillCircle(badgeX, badgeY, 8, COL_PRIMARY);
+  char nbuf[3];
+  snprintf(nbuf, sizeof(nbuf), "%d", num);
+  tft.setTextFont(2);
+  tft.setTextSize(1);
+  tft.setTextColor(COL_BG, COL_PRIMARY);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(nbuf, badgeX, badgeY);
+
+  // Step text (lines wrapped manually so we control layout)
+  tft.setTextColor(COL_TEXT, bg);
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextFont(2);
+  tft.drawString(line1, badgeX + 14, y);
+  if (line2 && line2[0]) {
+    tft.setTextColor(COL_MUTED, bg);
+    tft.drawString(line2, badgeX + 14, y + 14);
+  }
+}
+
+// ----- Payment-method picker (after a volume is selected) -----
+
+// Single payment-method row (icon + label + which button to press).
+void uiPaymentRow(int y, const char* icon, const char* label,
+                  const char* hint, uint16_t accent) {
+  const int x = 16;
+  const int w = tft.width() - 32;
+  const int h = 56;
+
+  tft.fillRoundRect(x, y, w, h, 8, COL_CARD);
+  tft.drawRoundRect(x, y, w, h, 8, COL_BG_ALT);
+
+  // Accent stripe
+  tft.fillRect(x + 1, y + 1, 4, h - 2, accent);
+
+  // Icon badge (text-based for simplicity)
+  tft.fillRoundRect(x + 14, y + 12, 32, 32, 4, accent);
+  tft.setTextFont(2);
+  tft.setTextSize(1);
+  tft.setTextColor(COL_BG, accent);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString(icon, x + 30, y + 28);
+
+  // Label
+  tft.setTextFont(4);
+  tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString(label, x + 56, y + 20);
+
+  // Hint (which button to press)
+  tft.setTextFont(2);
+  tft.setTextColor(COL_MUTED, COL_CARD);
+  tft.drawString(hint, x + 56, y + 42);
+
+  tft.setTextDatum(TL_DATUM);
+}
+
+void displayChoosePayment() {
+  tft.fillScreen(COL_BG);
+
+  char hdr[32];
+  snprintf(hdr, sizeof(hdr), "%d ml - P%d", currentVolumeMl, currentPricePesos);
+  uiHeader(hdr, "PAY", COL_PRIMARY);
+
+  // Section label
+  tft.setTextFont(2);
+  tft.setTextColor(COL_DIM, COL_BG);
+  tft.setTextDatum(TL_DATUM);
+  tft.drawString("CHOOSE PAYMENT METHOD", 17, 46);
+
+  // QR Payment card
+  const int cx = 14, cw = tft.width() - 28, ch = 64, cr = 10;
+
+  // Card 1: QR Pay
+  tft.fillRoundRect(cx, 62, cw, ch, cr, COL_CARD);
+  tft.drawRoundRect(cx, 62, cw, ch, cr, COL_BORDER);
+  tft.fillRoundRect(cx, 62, 4, ch, 2, COL_BLUE);
+  // Icon badge
+  tft.fillRoundRect(cx + 14, 74, 40, 40, 6, COL_BLUE);
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_BLUE);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("QR", cx + 34, 94);
+  // Label
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString("QR PH Pay", cx + 64, 80);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
+  tft.drawString("GCash, Maya, Bank Apps", cx + 64, 102);
+  // Button hint chip
+  tft.fillRoundRect(cx + cw - 58, 80, 44, 18, 9, COL_BLUE);
+  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_BLUE);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("QR BTN", cx + cw - 36, 89);
+
+  // Card 2: Coin Pay
+  tft.fillRoundRect(cx, 134, cw, ch, cr, COL_CARD);
+  tft.drawRoundRect(cx, 134, cw, ch, cr, COL_BORDER);
+  tft.fillRoundRect(cx, 134, 4, ch, 2, COL_SUCCESS);
+  // Icon badge
+  tft.fillRoundRect(cx + 14, 146, 40, 40, 6, COL_SUCCESS);
+  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_SUCCESS);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("P", cx + 34, 166);
+  // Label
+  tft.setTextFont(4); tft.setTextColor(COL_TEXT, COL_CARD);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString("Coin Insert", cx + 64, 152);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_CARD);
+  tft.drawString("Drop coins to pay", cx + 64, 174);
+  // Button hint chip
+  tft.fillRoundRect(cx + cw - 64, 152, 50, 18, 9, COL_SUCCESS);
+  tft.setTextFont(2); tft.setTextColor(COL_BG, COL_SUCCESS);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("COIN BTN", cx + cw - 39, 161);
+
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("Auto-cancel in 15s", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+
+  tft.setTextDatum(TL_DATUM);
+}
+
+// Redraw only the header when the user picks a different volume on the
+// payment-select screen (avoids a full screen flash).
+void refreshChoosePayment() {
+  chooseTimeoutAt = millis() + CHOOSE_TIMEOUT_MS;  // reset the auto-cancel timer
+  char hdr[32];
+  snprintf(hdr, sizeof(hdr), "%d ml - P%d", currentVolumeMl, currentPricePesos);
+  uiHeader(hdr, "PAY", COL_PRIMARY);
+}
+
+// ----- Coin payment screen (progress) -----
+
+void displayCoinPayment() {
+  tft.fillScreen(COL_BG);
+
+  char hdr[32];
+  snprintf(hdr, sizeof(hdr), "INSERT COINS - P%d", currentPricePesos);
+  uiHeader(hdr, "COIN", COL_SUCCESS);
+
+  // Coin icon circle
+  int cx = tft.width()/2;
+  tft.fillCircle(cx, 80, 24, COL_SUCCESS);
+  tft.fillCircle(cx, 80, 19, COL_BG);
+  tft.setTextFont(4); tft.setTextColor(COL_SUCCESS, COL_BG);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("P", cx, 80);
+
+  // Big credit / price readout
+  char amount[24];
+  snprintf(amount, sizeof(amount), "P%d of P%d", coinCredit, currentPricePesos);
+  uiCenterText(amount, 112, 4, 1, COL_TEXT, COL_BG);
+
+  // Progress bar
+  float pct = (currentPricePesos > 0)
+    ? min(1.0f, (float)coinCredit / (float)currentPricePesos)
+    : 0.0f;
+  uiProgressBar((tft.width() - 240)/2, 146, 240, 14, pct, COL_SUCCESS, COL_BORDER);
+
+  // Remaining label
+  int remaining = max(0, currentPricePesos - coinCredit);
+  char remStr[32];
+  snprintf(remStr, sizeof(remStr), "P%d remaining", remaining);
+  uiCenterText(remStr, 170, 2, 1, COL_MUTED, COL_BG);
+
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("COIN BTN = Cancel  |  60s timeout",
+               tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+}
+
+// ----- Coin warning (partial credit, soft timeout extension) -----
+
+void displayCoinWarning() {
+  tft.fillScreen(COL_BG);
+  uiHeader("STILL WAITING", "WARN", COL_WARNING);
+
+  // Warning triangle
+  int cx = tft.width()/2, cy = 86;
+  tft.fillTriangle(cx - 28, cy + 24, cx + 28, cy + 24, cx, cy - 24, COL_WARNING);
+  tft.fillTriangle(cx - 22, cy + 18, cx + 22, cy + 18, cx, cy - 16, COL_BG);
+  tft.fillRoundRect(cx - 2, cy - 8, 5, 14, 2, COL_WARNING);
+  tft.fillCircle(cx, cy + 12, 3, COL_WARNING);
+
+  // Status
+  int remaining = max(0, currentPricePesos - coinCredit);
+  char st[40];
+  snprintf(st, sizeof(st), "P%d more needed", remaining);
+  uiCenterText(st, 124, 4, 1, COL_TEXT, COL_BG);
+  uiCenterText("Insert coins or press COIN to cancel.", 156, 2, 1, COL_MUTED, COL_BG);
+
+  // Progress bar (partial)
+  float pct = (currentPricePesos > 0)
+    ? min(1.0f, (float)coinCredit / (float)currentPricePesos)
+    : 0.0f;
+  uiProgressBar((tft.width() - 200)/2, 178, 200, 10, pct, COL_WARNING, COL_BORDER);
+
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  char cr[32];
+  snprintf(cr, sizeof(cr), "Inserted: P%d  -  Forfeiting in 30s", coinCredit);
+  uiCenterText(cr, tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+}
+
 void displayQRMessage() {
   tft.fillScreen(COL_BG);
-  char hdr[32];
-  snprintf(hdr, sizeof(hdr), "Pay P%d  -  %dml", currentPricePesos, currentVolumeMl);
-  uiTopBar(hdr, "QR PH", COL_BLUE);
 
-  // Draw QR on left
-  String qrPayload = (currentCheckoutUrl.length() > 0)
-    ? currentCheckoutUrl
-    : "https://smarth2wo.tech/pay/" + String(currentVolumeMl) + "ml";
-  const int qrX = 8, qrY = 42;
-  drawQRCode(qrPayload, qrX, qrY, 3);   // scale=3 → ~123x123px
+  // Header with price
+  char headerText[40];
+  snprintf(headerText, sizeof(headerText), "SCAN TO PAY  P%d", currentPricePesos);
+  uiHeader(headerText, TEST_MODE ? "TEST" : "PAY", COL_PRIMARY);
 
-  // Instructions on the right
-  int rx = qrX + 41 * 3 + 14;
-  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BG);
-  tft.setTextDatum(TL_DATUM);
-  tft.drawString("How to pay:", rx, 48);
-  tft.setTextColor(COL_TEXT, COL_BG);
-  tft.drawString("1. Open GCash", rx, 66);
-  tft.drawString("   or Maya", rx, 82);
-  tft.drawString("2. Scan QR", rx, 100);
-  tft.drawString("3. Pay & wait", rx, 118);
-  tft.drawString("   for water!", rx, 134);
-
-  // Volume badge bottom-right
-  tft.fillRoundRect(rx, 160, 98, 26, 8, COL_PRIMARY);
-  char vbuf[12]; snprintf(vbuf, sizeof(vbuf), "%d ml", currentVolumeMl);
-  tft.setTextFont(4); tft.setTextColor(COL_BG, COL_PRIMARY);
-  tft.setTextDatum(MC_DATUM);
-  tft.drawString(vbuf, rx + 49, 173);
-  tft.setTextDatum(TL_DATUM);
-
-  uiFooter(TEST_MODE ? "Auto-pays in ~5s" : "Press any button to cancel");
-}
-
-// ---------- DISPENSING screen ----------
-void displayDispensing() {
-  tft.fillScreen(COL_BG);
-  uiTopBar("Dispensing", "ACTIVE", COL_SUCCESS);
-
-  // Big animated-look water drop
-  uiWaterDrop(tft.width() / 2, 118, 44, COL_SUCCESS);
-
-  // Volume text large
-  char vol[20]; snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
-  tft.setTextFont(4); tft.setTextSize(2);
-  tft.setTextColor(COL_SUCCESS, COL_BG);
-  tft.setTextDatum(TC_DATUM);
-  tft.drawString(vol, tft.width() / 2, 174);
-  tft.setTextSize(1);
-
-  // Full progress bar
-  uiProgressBar(20, 206, tft.width() - 40, 8, 1.0f, COL_SUCCESS, COL_BORDER);
-  uiFooter("Please wait...");
-}
-
-// ---------- ERROR screen ----------
-void displayError(String message) {
-  tft.fillScreen(COL_BG);
-  tft.fillRect(0, 0, tft.width(), 3, COL_ERROR);
-  tft.fillRect(0, 3, tft.width(), 34, 0x4000);
-  tft.drawFastHLine(0, 37, tft.width(), COL_ERROR);
-  tft.fillRect(0, 3, 4, 34, COL_ERROR);
-
-  tft.setTextFont(4); tft.setTextColor(COL_TEXT, 0x4000);
-  tft.setTextDatum(ML_DATUM);
-  tft.drawString("Error", 16, 20);
-
-  // X icon
-  int cx = tft.width() / 2, cy = 118;
-  tft.fillCircle(cx, cy, 38, 0x4000);
-  tft.drawCircle(cx, cy, 38, COL_ERROR);
-  tft.drawCircle(cx, cy, 37, COL_ERROR);
-  for (int t = -1; t <= 1; t++) {
-    tft.drawLine(cx - 16, cy - 16 + t, cx + 16, cy + 16 + t, COL_ERROR);
-    tft.drawLine(cx - 16, cy + 16 + t, cx + 16, cy - 16 + t, COL_ERROR);
+  // Decide what to encode in the QR
+  String qrPayload;
+  if (currentCheckoutUrl.length() > 0) {
+    qrPayload = currentCheckoutUrl;          // real PayMongo URL
+  } else {
+    // TEST_MODE fallback - any URL works for verifying scanability
+    qrPayload = "https://smarth2wo.test/pay/" + String(currentVolumeMl) + "ml";
   }
 
-  tft.setTextFont(2); tft.setTextColor(COL_MUTED, COL_BG);
-  tft.setTextDatum(TC_DATUM);
-  tft.drawString(message.c_str(), tft.width() / 2, 170);
+  // QR on the LEFT (scale 4 = 164px, plus white quiet zone)
+  const int qrX = 14, qrY = 42;
+  drawQRCode(qrPayload, qrX, qrY, 4);
 
-  uiFooter("Press any button to continue");
+  // Instructions on the RIGHT
+  const int rightX = qrX + 41*4 + 14;   // QR pixel-width + gap
+
+  // "QR PH" badge so users know it's universal
+  tft.fillRoundRect(rightX, 38, 42, 16, 3, COL_PRIMARY);
+  tft.setTextFont(2);
+  tft.setTextSize(1);
+  tft.setTextColor(COL_BG, COL_PRIMARY);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("QR PH", rightX + 21, 46);
+
+  // Section title beside the badge
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString("How to pay", rightX + 48, 46);
+
+  // Steps: scan -> PayMongo -> save QR PH -> upload to bank app -> pay
+  uiStep(1,  68,  "Scan QR with",  "camera app",   rightX + 8, COL_BG);
+  uiStep(2,  104, "Pick QR Ph,",   "save image",   rightX + 8, COL_BG);
+  uiStep(3,  140, "Upload to",     "ewallet/bank", rightX + 8, COL_BG);
+  uiStep(4,  176, "Pay & wait",    "for water",    rightX + 8, COL_BG);
+
+  // Footer band
+  int footerY = tft.height() - 26;
+  tft.fillRect(0, footerY, tft.width(), 26, COL_BG_ALT);
+  tft.drawFastHLine(0, footerY, tft.width(), COL_PRIMARY);
+
+  // Volume left
+  char vol[16];
+  snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
+  tft.setTextFont(2);
+  tft.setTextSize(1);
+  tft.setTextColor(COL_PRIMARY, COL_BG_ALT);
+  tft.setTextDatum(ML_DATUM);
+  tft.drawString(vol, 10, footerY + 13);
+
+  // Hint right
+  tft.setTextColor(COL_MUTED, COL_BG_ALT);
+  tft.setTextDatum(MR_DATUM);
+  tft.drawString(TEST_MODE ? "Auto-pay in ~5s" : "Any button to cancel",
+                 tft.width() - 10, footerY + 13);
+
   tft.setTextDatum(TL_DATUM);
 }
 
-// ===== END UI REDESIGN =====================================================
+void displayDispensing() {
+  tft.fillScreen(COL_BG);
+  uiHeader("SmartH2wo", "ACTIVE", COL_SUCCESS);
+
+  // Success ring with water drop inside
+  int cx = tft.width()/2, cy = 96;
+  tft.fillCircle(cx, cy, 36, COL_SUCCESS);
+  tft.fillCircle(cx, cy, 30, COL_BG);
+  // Inner water drop
+  uiWaterDrop(cx, cy, 18, COL_SUCCESS);
+
+  // DISPENSING label
+  uiCenterText("DISPENSING", 146, 4, 1, COL_SUCCESS, COL_BG);
+
+  // Volume readout
+  char vol[24];
+  snprintf(vol, sizeof(vol), "%d ml", currentVolumeMl);
+  uiCenterText(vol, 172, 4, 1, COL_TEXT, COL_BG);
+
+  // Animated progress bar (full — could track flow sensor in future)
+  uiProgressBar((tft.width() - 240)/2, 204, 240, 10, 1.0f, COL_SUCCESS, COL_BORDER);
+
+  // Footer
+  tft.fillRect(0, tft.height() - 20, tft.width(), 20, COL_ACCENT_BG);
+  uiCenterText("Please wait...", tft.height() - 14, 2, 1, COL_DIM, COL_ACCENT_BG);
+}
+
+void displayError(String message) {
+  tft.fillScreen(COL_BG);
+
+  // Error header bar with icon
+  tft.fillRect(0, 0, tft.width(), 36, 0x6000);  // dark red header
+  tft.fillRect(0, 0, 3, 36, COL_ERROR);          // left red stripe
+  tft.drawFastHLine(0, 36, tft.width(), COL_ERROR);
+  tft.setTextFont(4); tft.setTextSize(1);
+  tft.setTextColor(COL_TEXT, 0x6000);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("Error", tft.width()/2, 18);
+
+  // Error X icon in a ring
+  int cx = tft.width()/2, cy = 102;
+  tft.fillCircle(cx, cy, 30, COL_ERROR);
+  tft.fillCircle(cx, cy, 24, COL_BG);
+  tft.drawCircle(cx, cy, 30, COL_ERROR);
+  // X lines (3px thick each direction)
+  for (int t = -1; t <= 1; t++) {
+    tft.drawLine(cx - 12, cy - 12 + t, cx + 12, cy + 12 + t, COL_ERROR);
+    tft.drawLine(cx - 12, cy + 12 + t, cx + 12, cy - 12 + t, COL_ERROR);
+  }
+
+  uiCenterText(message.c_str(), 150, 2, 1, COL_MUTED, COL_BG);
+
+  // Retry chip
+  int chipW = 160, chipH = 22;
+  int chipX = (tft.width() - chipW) / 2;
+  tft.fillRoundRect(chipX, 190, chipW, chipH, 11, COL_BORDER);
+  tft.setTextFont(2); tft.setTextColor(COL_DIM, COL_BORDER);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("Press any button to retry", chipX + chipW/2, 201);
+
+  tft.setTextDatum(TL_DATUM);
+}
 
 // ===== WiFi Functions =====
 void connectWiFi() {
@@ -1062,8 +1120,12 @@ void publishStatus(String status, String message) {
 }
 
 // ===== State & Button Helpers =====
+
+// Clear all per-transaction state. Called when returning to READY for any
+// reason (cancel, timeout, dispense complete, error dismissed).
 void resetTransactionState() {
   appState              = STATE_READY;
+  disableCoinAcceptor(); // physically reject coins when not in coin mode
   currentCheckoutUrl    = "";
   currentTransactionId  = "";
   currentVolumeMl       = 0;
@@ -1076,20 +1138,29 @@ void resetTransactionState() {
   coinTimeoutAt         = 0;
   warnTimeoutAt         = 0;
   screenShownAt         = 0;
-  disableCoinAcceptor();
 }
 
+// Cancel whatever is happening and go back to READY.
 void cancelCheckout(const char* reason) {
+  Serial.print("Cancelled: ");
+  Serial.println(reason ? reason : "user");
+  if (coinCredit > 0) {
+    Serial.printf("Coin credit forfeited on cancel: P%d\n", coinCredit);
+    // TODO Phase 2: log forfeit to backend
+  }
   resetTransactionState();
   displayReady();
 }
 
+// Read a button with debounce. Returns true if confirmed pressed.
 bool buttonPressed(int pin) {
   if (digitalRead(pin) != LOW) return false;
   delay(20);
   return digitalRead(pin) == LOW;
 }
 
+// Block until the user releases all buttons (prevents one long press from
+// being interpreted as multiple presses across screens).
 void waitForRelease() {
   while (digitalRead(BTN_100ML)   == LOW ||
          digitalRead(BTN_250ML)   == LOW ||
@@ -1101,26 +1172,43 @@ void waitForRelease() {
   delay(30);  // extra tail debounce
 }
 
+// True if the screen has been visible long enough to accept the next input
+// (prevents the press that OPENED this screen from immediately acting on it).
 bool pastLockout() {
   return screenShownAt > 0 && (millis() - screenShownAt) > CANCEL_LOCKOUT_MS;
 }
 
+// ===== Button Dispatch =====
+// Each screen has its own button handler. checkButtons() routes to the right
+// one based on appState.
+
 void handleReadyButtons() {
-  if (buttonPressed(BTN_QR_PAY))   { startQRPath();   waitForRelease(); return; }
-  if (buttonPressed(BTN_COIN_PAY)) { startCoinMode(); waitForRelease(); return; }
+  // Pressing a volume button starts a checkout.
+  // The payment-method buttons are ignored on this screen.
+  if (buttonPressed(BTN_100ML))  { startCheckout(100, 2);  waitForRelease(); return; }
+  if (buttonPressed(BTN_250ML))  { startCheckout(250, 5);  waitForRelease(); return; }
+  if (buttonPressed(BTN_500ML))  { startCheckout(500, 10); waitForRelease(); return; }
 }
 
-void handleChooseVolumeButtons() {
+void handleChoosePaymentButtons() {
   if (!pastLockout()) return;
-  if (buttonPressed(BTN_100ML))  { startQRCheckout(100, 1);  waitForRelease(); return; }
-  if (buttonPressed(BTN_250ML))  { startQRCheckout(250, 5);  waitForRelease(); return; }
-  if (buttonPressed(BTN_500ML))  { startQRCheckout(500, 10); waitForRelease(); return; }
-  if (buttonPressed(BTN_QR_PAY))   { resetTransactionState(); displayReady(); waitForRelease(); return; }
-  if (buttonPressed(BTN_COIN_PAY)) { startCoinMode(); waitForRelease(); return; }
+
+  // Pressing a different volume just updates the selection (no need to back out).
+  if (buttonPressed(BTN_100ML))  { currentVolumeMl = 100; currentPricePesos = 2;
+                                   refreshChoosePayment(); waitForRelease(); return; }
+  if (buttonPressed(BTN_250ML))  { currentVolumeMl = 250; currentPricePesos = 5;
+                                   refreshChoosePayment(); waitForRelease(); return; }
+  if (buttonPressed(BTN_500ML))  { currentVolumeMl = 500; currentPricePesos = 10;
+                                   refreshChoosePayment(); waitForRelease(); return; }
+
+  // Commit to a payment method.
+  if (buttonPressed(BTN_QR_PAY))   { chooseQR();   waitForRelease(); return; }
+  if (buttonPressed(BTN_COIN_PAY)) { chooseCoin(); waitForRelease(); return; }
 }
 
 void handleQrButtons() {
   if (!pastLockout()) return;
+  // ANY of the 5 buttons cancels the QR.
   if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_250ML)  ||
       buttonPressed(BTN_500ML)  || buttonPressed(BTN_QR_PAY) ||
       buttonPressed(BTN_COIN_PAY)) {
@@ -1132,17 +1220,29 @@ void handleQrButtons() {
 void handleCoinButtons() {
   if (!pastLockout()) return;
 
-  if (buttonPressed(BTN_100ML))  { tryCoinDispense(100, 1);  waitForRelease(); return; }
-  if (buttonPressed(BTN_250ML))  { tryCoinDispense(250, 5);  waitForRelease(); return; }
-  if (buttonPressed(BTN_500ML))  { tryCoinDispense(500, 10); waitForRelease(); return; }
-
-  if (buttonPressed(BTN_QR_PAY) || buttonPressed(BTN_COIN_PAY)) {
-    cancelCheckout("user cancelled coin mode");
-    waitForRelease();
+  if (TEST_MODE) {
+    // In TEST_MODE, physical volume buttons simulate coins
+    if (buttonPressed(BTN_100ML))  { addCoinCredit(1);  waitForRelease(); return; }
+    if (buttonPressed(BTN_250ML))  { addCoinCredit(5);  waitForRelease(); return; }
+    if (buttonPressed(BTN_500ML))  { addCoinCredit(10); waitForRelease(); return; }
+  } else {
+    // In production, volume buttons CANCEL out of the coin screen
+    // because real coins arrive via the coinPulseISR on GPIO 36
+    if (buttonPressed(BTN_100ML) || buttonPressed(BTN_250ML) || buttonPressed(BTN_500ML)) {
+      cancelCheckout("user cancelled coin");
+      waitForRelease();
+      return;
+    }
   }
+
+  // QR Pay button = switch payment method to QR (carry the volume)
+  if (buttonPressed(BTN_QR_PAY))   { chooseQR();   waitForRelease(); return; }
+  // Coin Pay button (the one that got us here) = cancel back to READY
+  if (buttonPressed(BTN_COIN_PAY)) { cancelCheckout("user cancelled coin"); waitForRelease(); return; }
 }
 
 void handleErrorButtons() {
+  // Any button dismisses the error.
   if (buttonPressed(BTN_100ML)  || buttonPressed(BTN_250ML)  ||
       buttonPressed(BTN_500ML)  || buttonPressed(BTN_QR_PAY) ||
       buttonPressed(BTN_COIN_PAY)) {
@@ -1155,31 +1255,56 @@ void handleErrorButtons() {
 void checkButtons() {
   switch (appState) {
     case STATE_READY:          handleReadyButtons();         break;
-    case STATE_CHOOSE_VOLUME:  handleChooseVolumeButtons();  break;
+    case STATE_CHOOSE_PAYMENT: handleChoosePaymentButtons(); break;
     case STATE_QR_PAYMENT:     handleQrButtons();            break;
     case STATE_COIN_PAYMENT:
     case STATE_COIN_WARNING:   handleCoinButtons();          break;
     case STATE_ERROR:          handleErrorButtons();         break;
-    case STATE_DISPENSING:     break;
+    case STATE_DISPENSING:     /* ignore buttons while dispensing */ break;
   }
 }
 
-void startQRPath() {
-  appState        = STATE_CHOOSE_VOLUME;
-  chooseTimeoutAt = millis() + CHOOSE_TIMEOUT_MS;
-  screenShownAt   = millis();
-  displayChooseVolume();
+// ===== Checkout Flow =====
+// startCheckout(): user picked a volume on READY. Move to CHOOSE_PAYMENT.
+// chooseQR()    : on CHOOSE_PAYMENT or COIN screen, kick off PayMongo flow.
+// chooseCoin()  : on CHOOSE_PAYMENT, move to COIN_PAYMENT screen.
+// addCoinCredit(): called per coin (button in Phase 1, interrupt in Phase 2).
+
+void startCheckout(int volumeMl, int pricePesos) {
+  if (appState != STATE_READY) return;
+
+  currentVolumeMl   = volumeMl;
+  currentPricePesos = pricePesos;
+  coinCredit        = 0;
+  appState          = STATE_CHOOSE_PAYMENT;
+  chooseTimeoutAt   = millis() + CHOOSE_TIMEOUT_MS;
+  screenShownAt     = millis();
+
+  Serial.printf("Volume selected: %dml / P%d - awaiting payment method\n",
+                volumeMl, pricePesos);
+  displayChoosePayment();
 }
 
-void startQRCheckout(int volumeMl, int pricePesos) {
-  currentVolumeMl = volumeMl;
-  currentPricePesos = pricePesos;
-  appState = STATE_QR_PAYMENT;
+void chooseQR() {
+  Serial.println("Payment method: QR PH");
+
+  // If we arrived from the coin screen with partial credit, log it as forfeit
+  // (we don't carry credit across methods in Phase 1).
+  if (coinCredit > 0) {
+    Serial.printf("Switching to QR: forfeiting P%d in coin credit\n", coinCredit);
+    coinCredit = 0;
+  }
+
+  appState         = STATE_QR_PAYMENT;
   qrDisplayTimeout = millis() + QR_DISPLAY_DURATION;
-  currentCheckoutUrl = "";
+  currentCheckoutUrl   = "";
   currentTransactionId = "";
+
   displayProcessing();
 
+  // In TEST_MODE, we now call the backend to test the real PayMongo integration.
+
+  // ----- Live mode: call backend -----
   if (WiFi.status() != WL_CONNECTED) {
     displayError("WiFi disconnected");
     appState = STATE_ERROR;
@@ -1198,72 +1323,92 @@ void startQRCheckout(int volumeMl, int pricePesos) {
   String payload;
   serializeJson(doc, payload);
 
+  Serial.println("Sending request...");
   int httpCode = http.POST(payload);
+
   if (httpCode == 200) {
     String response = http.getString();
+    Serial.println("Response: " + response);
+
+    // We only care about the small string fields; ignore the big base64 blob.
     StaticJsonDocument<128> filter;
     filter["transaction_id"] = true;
     filter["checkout_url"]   = true;
+
     DynamicJsonDocument responseDoc(1024);
-    DeserializationError err = deserializeJson(responseDoc, response, DeserializationOption::Filter(filter));
+    DeserializationError err = deserializeJson(
+      responseDoc, response, DeserializationOption::Filter(filter));
 
     if (err) {
+      Serial.print("JSON parse error: ");
+      Serial.println(err.c_str());
       displayError("Bad server reply");
       appState = STATE_ERROR;
       screenShownAt = millis();
     } else {
       currentTransactionId = responseDoc["transaction_id"].as<String>();
       currentCheckoutUrl   = responseDoc["checkout_url"].as<String>();
+      Serial.println("Transaction ID: " + currentTransactionId);
+      Serial.println("Checkout URL:   " + currentCheckoutUrl);
+
       displayQRMessage();
       screenShownAt = millis();
       qrShownAt     = millis();
       publishStatus("waiting_payment", "QR code displayed");
     }
   } else {
+    Serial.printf("HTTP error: %d\n", httpCode);
     displayError("Connection failed");
     appState = STATE_ERROR;
     screenShownAt = millis();
   }
+
   http.end();
 }
 
-void startCoinMode() {
-  appState          = STATE_COIN_PAYMENT;
-  coinCredit        = 0;
-  currentVolumeMl   = 0;
-  currentPricePesos = 0;
-  coinTimeoutAt     = millis() + COIN_TIMEOUT_MS;
-  screenShownAt     = millis();
-  enableCoinAcceptor();
-  displayCoinMode();
-}
-
-void tryCoinDispense(int volumeMl, int pricePesos) {
-  if (coinCredit < pricePesos) {
-    displayNotEnough(pricePesos - coinCredit);
-    delay(1200);
-    displayCoinMode();
-    return;
-  }
-  disableCoinAcceptor();
-  currentVolumeMl   = volumeMl;
-  currentPricePesos = pricePesos;
-  int excess = coinCredit - pricePesos;
-  if (excess > 0) Serial.printf("Excess: P%d\n", excess);
-  publishStatus("paid_coin", "Coin payment complete");
-  dispensePump(volumeMl);
-}
-
-void addCoinCredit(int pesos) {
-  if (appState != STATE_COIN_PAYMENT && appState != STATE_COIN_WARNING) return;
-  coinCredit += pesos;
-  if (appState == STATE_COIN_WARNING) {
-    appState = STATE_COIN_PAYMENT;
-    warnTimeoutAt = 0;
-  }
+void chooseCoin() {
+  Serial.printf("Payment method: COIN (target P%d)\n", currentPricePesos);
+  enableCoinAcceptor(); // now allow coins in
+  appState      = STATE_COIN_PAYMENT;
+  coinCredit    = 0;
   coinTimeoutAt = millis() + COIN_TIMEOUT_MS;
   screenShownAt = millis();
-  displayCoinMode();
+  displayCoinPayment();
+}
+
+// Called when a coin is "received" (Phase 1: simulated by volume button press;
+// Phase 2: real pulse on GPIO 34 -> interrupt -> calls this).
+void addCoinCredit(int pesos) {
+  if (appState != STATE_COIN_PAYMENT && appState != STATE_COIN_WARNING) return;
+
+  coinCredit += pesos;
+  Serial.printf("Coin: +P%d (total P%d / P%d)\n",
+                pesos, coinCredit, currentPricePesos);
+
+  if (coinCredit >= currentPricePesos) {
+    // Paid in full - dispense now.
+    int change = coinCredit - currentPricePesos;
+    if (change > 0) {
+      Serial.printf("Note: P%d overpaid (no change given)\n", change);
+    }
+    publishStatus("paid_coin", "Coin payment complete");
+    dispensePump(currentVolumeMl);
+    return;
+  }
+
+  // Not enough yet - refresh the progress screen and reset the soft timeout.
+  // (Bumping the timeout while they're actively inserting coins is friendly.)
+  if (appState == STATE_COIN_PAYMENT) {
+    coinTimeoutAt = millis() + COIN_TIMEOUT_MS;
+    displayCoinPayment();
+  } else {
+    // They started paying again during the warning - go back to normal screen.
+    appState      = STATE_COIN_PAYMENT;
+    coinTimeoutAt = millis() + COIN_TIMEOUT_MS;
+    warnTimeoutAt = 0;
+    screenShownAt = millis();
+    displayCoinPayment();
+  }
 }
 
 // ===== Pump Function =====
