@@ -289,8 +289,13 @@ void loop() {
     
     // Each pulse = 1 peso (configure on coin slot via DIP switches)
     if (appState == STATE_COIN_PAYMENT || appState == STATE_COIN_WARNING) {
-      for (int i = 0; i < pulsesToProcess; i++) {
-        addCoinCredit(1);
+      // Ignore pulses within the first 1000ms of entering the screen to avoid turn-on noise
+      if (millis() - screenShownAt > 1000) {
+        for (int i = 0; i < pulsesToProcess; i++) {
+          addCoinCredit(1);
+        }
+      } else {
+        Serial.printf("Ignored %d startup noise pulse(s)\n", pulsesToProcess);
       }
     } else {
       // Hardware Test: If they drop a coin while in the main menu, print it so they know it works!
