@@ -558,7 +558,7 @@ void displayReady() {
   tft.drawString("SELECT VOLUME", 17, 46);
 
   // Three volume cards stacked
-  uiVolumeRow(62,  "100 ml",  "P2",  "1", COL_PRIMARY);
+  uiVolumeRow(62,  "100 ml",  "P1",  "1", COL_PRIMARY);
   uiVolumeRow(120, "250 ml",  "P5",  "2.5", COL_PRIMARY);
   uiVolumeRow(178, "500 ml",  "P10", "5", COL_PRIMARY);
 
@@ -1190,7 +1190,7 @@ bool pastLockout() {
 void handleReadyButtons() {
   // Pressing a volume button starts a checkout.
   // The payment-method buttons are ignored on this screen.
-  if (buttonPressed(BTN_100ML))  { startCheckout(100, 2);  waitForRelease(); return; }
+  if (buttonPressed(BTN_100ML))  { startCheckout(100, 1);  waitForRelease(); return; }
   if (buttonPressed(BTN_250ML))  { startCheckout(250, 5);  waitForRelease(); return; }
   if (buttonPressed(BTN_500ML))  { startCheckout(500, 10); waitForRelease(); return; }
 }
@@ -1199,7 +1199,7 @@ void handleChoosePaymentButtons() {
   if (!pastLockout()) return;
 
   // Pressing a different volume just updates the selection (no need to back out).
-  if (buttonPressed(BTN_100ML))  { currentVolumeMl = 100; currentPricePesos = 2;
+  if (buttonPressed(BTN_100ML))  { currentVolumeMl = 100; currentPricePesos = 1;
                                    refreshChoosePayment(); waitForRelease(); return; }
   if (buttonPressed(BTN_250ML))  { currentVolumeMl = 250; currentPricePesos = 5;
                                    refreshChoosePayment(); waitForRelease(); return; }
