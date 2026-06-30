@@ -130,8 +130,8 @@ volatile unsigned long lastCoinPulseTime = 0;
 
 void IRAM_ATTR coinPulseISR() {
   unsigned long now = millis();
-  // Debounce: ignore pulses faster than 40ms apart (filters out hardware bouncing)
-  if (now - lastCoinPulseTime > 40) {
+  // Debounce: ignore pulses faster than 80ms apart (aggressively filters 1-peso ghost pulses)
+  if (now - lastCoinPulseTime > 80) {
     coinPulseCount++;
     lastCoinPulseTime = now;
   }
