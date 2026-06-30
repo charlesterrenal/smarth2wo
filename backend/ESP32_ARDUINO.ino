@@ -85,7 +85,7 @@ const int FLOW_SENSOR_PIN = 34;  // ZJ-S201 pulse output (input-only, ext 10kΩ 
 const int US_TRIG_PIN     = 17;  // HC-SR04 trigger
 const int US_ECHO_PIN     = 35;  // HC-SR04 echo (input-only, voltage divider)
 const int COIN_PULSE_PIN  = 22;  // Allan 1239A coin acceptor (moved to 22 to use internal pull-up)
-const int COIN_INHIBIT_PIN = 19;  // Allan 1239A grey (inhibit) wire
+const int COIN_INHIBIT_PIN = 21;  // Relay IN pin for coin slot power
 
 // Inhibit = HIGH means REJECT coins (active-high inhibit for most Allan units).
 // If coins still pass through when they shouldn't, swap HIGH<->LOW below.
