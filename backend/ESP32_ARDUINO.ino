@@ -1369,6 +1369,13 @@ void chooseQR() {
 void chooseCoin() {
   Serial.printf("Payment method: COIN (target P%d)\n", currentPricePesos);
   enableCoinAcceptor(); // now allow coins in
+  
+  // Wait for the coin slot relay/circuit to settle, then clear any false startup pulses
+  delay(300);
+  noInterrupts();
+  coinPulseCount = 0;
+  interrupts();
+
   appState      = STATE_COIN_PAYMENT;
   coinCredit    = 0;
   coinTimeoutAt = millis() + COIN_TIMEOUT_MS;
