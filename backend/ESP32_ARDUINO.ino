@@ -89,8 +89,8 @@ const int COIN_INHIBIT_PIN = 19;  // Allan 1239A grey (inhibit) wire
 
 // Inhibit = HIGH means REJECT coins (active-high inhibit for most Allan units).
 // If coins still pass through when they shouldn't, swap HIGH<->LOW below.
-void enableCoinAcceptor()  { digitalWrite(COIN_INHIBIT_PIN, HIGH);  }  // HIGH = accept
-void disableCoinAcceptor() { digitalWrite(COIN_INHIBIT_PIN, LOW); }  // LOW = inhibit/reject
+void enableCoinAcceptor()  { digitalWrite(COIN_INHIBIT_PIN, LOW);  }  // LOW = Relay ON (cuts 12V) = accept
+void disableCoinAcceptor() { digitalWrite(COIN_INHIBIT_PIN, HIGH); }  // HIGH = Relay OFF (passes 12V) = inhibit
 
 // LED for TEST_MODE only (same physical pin as RELAY_PUMP)
 const int LED_PIN = 26;
