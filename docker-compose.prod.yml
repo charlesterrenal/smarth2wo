@@ -18,9 +18,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=https://api.smarth2wo.tech
+      dockerfile: Dockerfile.prebuilt
     ports:
       - "80:80"
     restart: unless-stopped
